@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1640 760" role="img" aria-labelledby="aria-flow-title aria-flow-desc" preserveAspectRatio="xMidYMid meet" class="architecture-diagram">
+  <title id="aria-flow-title">F024 ARIA-GOLF differentiable glottal source and vocal-tract flow</title>
+  <desc id="aria-flow-desc">Left-to-right flow diagram for F024 ARIA-GOLF 16 kHz. F0 is pre-extracted and conditions both encoder and decoder phase.</desc>
+  <defs>
+    <style>
+      text { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; fill: #111827; letter-spacing: 0; text-rendering: geometricPrecision; }
+      .title { font-size: 27px; font-weight: 600; fill: #0f172a; }
+      .subtitle { font-size: 13.5px; font-weight: 500; fill: #334155; }
+      .label { font-size: 16.5px; font-weight: 600; fill: #0f172a; }
+      .small { font-size: 12.5px; font-weight: 500; fill: #334155; }
+      .tiny { font-size: 10.8px; font-weight: 500; fill: #475569; }
+      .box { stroke-width: 2.25; rx: 10; }
+      .signal { fill: #eef2f6; stroke: #405268; }
+      .neural { fill: #fff0ec; stroke: #90443b; }
+      .dsp { fill: #f8efd4; stroke: #7e641f; }
+      .control { fill: #e8f3ea; stroke: #2f684d; }
+      .observed { fill: #eef2f6; stroke: #405268; }
+      .sum { fill: #fff0ec; stroke: #90443b; }
+      .loss { fill: #fff0ec; stroke: #90443b; }
+      .arrow { stroke: #111827; stroke-width: 3.25; fill: none; marker-end: url(#aria-flow-arrowBlack); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowThin { stroke: #111827; stroke-width: 2.55; fill: none; marker-end: url(#aria-flow-arrowBlackSmall); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowCtrl { stroke: #235c40; stroke-width: 2.55; fill: none; marker-end: url(#aria-flow-arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowLoss { stroke: #90443b; stroke-width: 2.8; fill: none; marker-end: url(#aria-flow-arrowRed); stroke-linecap: round; stroke-linejoin: round; }
+      .dash { stroke-dasharray: 7 6; }
+      .waveFill { fill: #172033; opacity: .94; }
+      .signalLine { stroke: #111827; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .response { stroke: #6b530f; stroke-width: 2.25; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .axis { stroke: #94a3b8; stroke-width: 1.15; opacity: .85; }
+    </style>
+    <marker id="aria-flow-arrowBlack" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,4 L0,8 Z" fill="#111827"/></marker>
+    <marker id="aria-flow-arrowBlackSmall" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="#111827"/></marker>
+    <marker id="aria-flow-arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="#235c40"/></marker>
+    <marker id="aria-flow-arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3.5 L0,7 Z" fill="#90443b"/></marker>
+  </defs>
+
+  <rect width="1640" height="760" fill="#ffffff"/>
+  <text x="820" y="38" class="title" text-anchor="middle">F024 ARIA-GOLF Source-Filter Autoencoder</text>
+  <text x="820" y="63" class="subtitle" text-anchor="middle">BLCU F024 single-speaker Mandarin, 16 kHz | observed F0 and learned controls drive deterministic source-filter synthesis</text>
+
+  <g id="observed-audio">
+    <rect x="42" y="176" width="160" height="260" class="box signal" rx="10"/>
+    <text x="122" y="232" class="label" text-anchor="middle">Observed</text>
+    <text x="122" y="256" class="label" text-anchor="middle">Audio</text>
+    <text x="122" y="281" class="small" text-anchor="middle">wav + .pv F0</text>
+    <path class="waveFill" d="M68.0,352.3 L69.9,352.0 L71.8,351.8 L73.7,351.8 L75.6,351.8 L77.5,351.8 L79.3,351.8 L81.2,351.8 L83.1,351.8 L85.0,351.8 L86.9,351.8 L88.8,351.7 L90.7,351.1 L92.6,350.0 L94.5,349.3 L96.4,349.2 L98.3,349.6 L100.1,349.6 L102.0,349.2 L103.9,347.9 L105.8,344.8 L107.7,339.6 L109.6,333.7 L111.5,328.6 L113.4,325.2 L115.3,323.4 L117.2,322.6 L119.1,322.2 L120.9,322.2 L122.8,322.5 L124.7,323.3 L126.6,324.5 L128.5,326.2 L130.4,328.4 L132.3,330.9 L134.2,333.8 L136.1,337.0 L138.0,340.0 L139.9,342.3 L141.7,343.6 L143.6,344.3 L145.5,344.9 L147.4,345.6 L149.3,346.5 L151.2,347.7 L153.1,348.8 L155.0,349.8 L156.9,350.5 L158.8,351.2 L160.7,351.6 L162.5,351.8 L164.4,351.8 L166.3,351.8 L168.2,351.8 L170.1,352.0 L172.0,352.3 L172.0,359.7 L170.1,360.0 L168.2,360.2 L166.3,360.2 L164.4,360.2 L162.5,360.2 L160.7,360.4 L158.8,360.8 L156.9,361.5 L155.0,362.2 L153.1,363.2 L151.2,364.3 L149.3,365.5 L147.4,366.4 L145.5,367.1 L143.6,367.7 L141.7,368.4 L139.9,369.7 L138.0,372.0 L136.1,375.0 L134.2,378.2 L132.3,381.1 L130.4,383.6 L128.5,385.8 L126.6,387.5 L124.7,388.7 L122.8,389.5 L120.9,389.8 L119.1,389.8 L117.2,389.4 L115.3,388.6 L113.4,386.8 L111.5,383.4 L109.6,378.3 L107.7,372.4 L105.8,367.2 L103.9,364.1 L102.0,362.8 L100.1,362.4 L98.3,362.4 L96.4,362.8 L94.5,362.7 L92.6,362.0 L90.7,360.9 L88.8,360.3 L86.9,360.2 L85.0,360.2 L83.1,360.2 L81.2,360.2 L79.3,360.2 L77.5,360.2 L75.6,360.2 L73.7,360.2 L71.8,360.2 L69.9,360.0 L68.0,359.7 Z"/>
+    <text x="122" y="404" class="tiny" text-anchor="middle">real F024 waveform</text>
+  </g>
+
+  <g id="encoder">
+    <rect x="260" y="218" width="170" height="188" class="box neural" rx="10"/>
+    <text x="345" y="284" class="label" text-anchor="middle">Encoder</text>
+    <text x="345" y="309" class="small" text-anchor="middle">UNet + LSTM</text>
+    <text x="345" y="337" class="tiny" text-anchor="middle">learned predictor</text>
+    <text x="345" y="354" class="tiny" text-anchor="middle">STFT + log(1+F0)</text>
+    <text x="345" y="382" class="tiny" text-anchor="middle">outputs controls</text>
+  </g>
+  <path class="arrow" d="M202 306 H258"/>
+  <text x="230" y="294" class="tiny" text-anchor="middle">wav + F0</text>
+
+  <g id="control-bus">
+    <path class="arrowCtrl dash" d="M430 312 H456"/>
+    <path d="M456 142 V472" stroke="#235c40" stroke-width="2.25" fill="none" stroke-dasharray="5 7"/>
+  </g>
+
+  <g id="controls">
+    <rect x="500" y="108" width="150" height="68" class="box observed" rx="10"/>
+    <text x="575" y="138" class="label" text-anchor="middle">F0 (.pv)</text>
+    <text x="575" y="158" class="tiny" text-anchor="middle">observed, fixed</text>
+
+    <rect x="500" y="218" width="150" height="68" class="box control" rx="10"/>
+    <text x="575" y="248" class="label" text-anchor="middle">R_d</text>
+    <text x="575" y="268" class="tiny" text-anchor="middle">learned control</text>
+
+    <rect x="500" y="328" width="150" height="68" class="box control" rx="10"/>
+    <text x="575" y="358" class="label" text-anchor="middle">Noise mag</text>
+    <text x="575" y="378" class="tiny" text-anchor="middle">learned control</text>
+
+    <rect x="500" y="438" width="150" height="78" class="box control" rx="10"/>
+    <text x="575" y="468" class="label" text-anchor="middle">VT ctrl</text>
+    <text x="575" y="489" class="tiny" text-anchor="middle">learned control</text>
+    <text x="575" y="506" class="tiny" text-anchor="middle">F1/B1, F2/B2</text>
+  </g>
+
+  <path class="arrowCtrl dash" d="M202 240 L456 142 H498"/>
+  <path class="arrowCtrl dash" d="M456 252 H498"/>
+  <path class="arrowCtrl dash" d="M456 362 H498"/>
+  <path class="arrowCtrl dash" d="M456 472 H498"/>
+
+  <g id="lf-source">
+    <rect x="700" y="126" width="220" height="138" class="box dsp" rx="10"/>
+    <text x="810" y="170" class="label" text-anchor="middle">LF Glottal</text>
+    <text x="810" y="194" class="label" text-anchor="middle">Source</text>
+    <text x="810" y="219" class="small" text-anchor="middle">deterministic oscillator</text>
+    <path class="signalLine" d="M716 241 C724 225 735 224 742 240 C747 252 751 260 760 260 C770 259 773 246 779 237 C788 222 801 224 808 240 C813 252 817 260 826 260 C836 259 840 246 846 237 C856 222 868 224 876 241 C881 252 885 260 894 260 C901 259 904 248 906 241"/>
+  </g>
+  <path class="arrowCtrl" d="M650 142 H698"/>
+  <path class="arrowCtrl" d="M650 252 H698"/>
+
+  <g id="noise-source">
+    <rect x="700" y="346" width="160" height="110" class="box dsp" rx="10"/>
+    <text x="780" y="386" class="label" text-anchor="middle">White</text>
+    <text x="780" y="410" class="label" text-anchor="middle">Noise</text>
+    <text x="780" y="435" class="tiny" text-anchor="middle">stochastic source</text>
+    <path class="signalLine" d="M714 425 L720 410 L728 432 L736 414 L744 424 L752 407 L760 431 L768 416 L776 423 L784 409 L792 430 L800 405 L808 421 L816 413 L824 432 L832 411 L840 426 L848 418"/>
+  </g>
+
+  <g id="noise-filter">
+    <rect x="920" y="346" width="180" height="110" class="box dsp" rx="10"/>
+    <text x="1010" y="386" class="label" text-anchor="middle">Time-varying</text>
+    <text x="1010" y="410" class="label" text-anchor="middle">FIR</text>
+    <text x="1010" y="432" class="small" text-anchor="middle">deterministic filter</text>
+    <path class="signalLine" d="M934 426 C948 405 966 404 982 419 C998 434 1014 430 1028 414 C1042 398 1058 408 1072 421 C1078 427 1083 429 1088 427"/>
+  </g>
+  <path class="arrowThin" d="M860 401 H918"/>
+  <path class="arrowCtrl" d="M650 362 H888 V376 H918"/>
+
+  <g id="sum">
+    <circle cx="1160" cy="320" r="29" class="sum" stroke-width="2.6"/>
+    <path d="M1148 320 H1172 M1160 308 V332" stroke="#90443b" stroke-width="4.8" stroke-linecap="round"/>
+    <text x="1160" y="372" class="tiny" text-anchor="middle">source + shaped noise</text>
+  </g>
+  <path class="arrow" d="M920 195 H1120 V306 H1129"/>
+  <path class="arrow" d="M1100 401 H1120 V334 H1131"/>
+
+  <g id="vocal-tract">
+    <rect x="1234" y="220" width="224" height="200" class="box dsp" rx="10"/>
+    <text x="1346" y="262" class="label" text-anchor="middle">Vocal-Tract</text>
+    <text x="1346" y="286" class="label" text-anchor="middle">Cascade</text>
+    <text x="1346" y="313" class="small" text-anchor="middle">deterministic cascade</text>
+    <text x="1346" y="332" class="small" text-anchor="middle">from learned VT ctrl</text>
+    <line class="axis" x1="1260" y1="396" x2="1430" y2="396"/>
+    <line class="axis" x1="1260" y1="342" x2="1260" y2="396"/>
+    <path class="response" d="M1260 376 C1268 357 1278 342 1288 342 C1298 342 1304 360 1316 369 C1328 378 1336 363 1348 349 C1360 335 1372 345 1380 365 C1390 388 1408 396 1430 396"/>
+    <text x="1346" y="406" class="tiny" text-anchor="middle">all-pole spectral envelope</text>
+  </g>
+  <path class="arrow" d="M1189 320 H1232"/>
+  <path class="arrowCtrl" d="M650 477 H1198 V380 H1232"/>
+  <path class="arrow" d="M1458 320 H1498"/>
+
+  <g id="synth-audio">
+    <rect x="1500" y="220" width="120" height="230" class="box signal" rx="10"/>
+    <text x="1560" y="272" class="label" text-anchor="middle">Synthesized</text>
+    <text x="1560" y="296" class="label" text-anchor="middle">Audio</text>
+    <path class="waveFill" d="M1514.0,350.3 L1515.6,350.0 L1517.1,349.9 L1518.7,349.9 L1520.3,349.9 L1521.8,349.9 L1523.4,349.9 L1524.9,349.9 L1526.5,349.9 L1528.1,349.9 L1529.6,349.9 L1531.2,349.9 L1532.8,349.9 L1534.3,349.9 L1535.9,349.5 L1537.5,348.5 L1539.0,347.4 L1540.6,347.1 L1542.1,347.5 L1543.7,347.8 L1545.3,347.7 L1546.8,347.2 L1548.4,344.9 L1550.0,340.1 L1551.5,334.0 L1553.1,328.6 L1554.7,325.0 L1556.2,322.5 L1557.8,320.9 L1559.3,320.2 L1560.9,320.2 L1562.5,320.7 L1564.0,322.2 L1565.6,324.6 L1567.2,327.2 L1568.7,329.5 L1570.3,331.6 L1571.9,333.6 L1573.4,335.6 L1575.0,337.4 L1576.5,339.0 L1578.1,340.4 L1579.7,341.5 L1581.2,342.4 L1582.8,343.3 L1584.4,344.4 L1585.9,345.6 L1587.5,346.8 L1589.1,347.7 L1590.6,348.5 L1592.2,349.1 L1593.7,349.6 L1595.3,349.8 L1596.9,349.9 L1598.4,350.0 L1600.0,350.3 L1600.0,357.7 L1598.4,358.0 L1596.9,358.1 L1595.3,358.2 L1593.7,358.4 L1592.2,358.9 L1590.6,359.5 L1589.1,360.3 L1587.5,361.2 L1585.9,362.4 L1584.4,363.6 L1582.8,364.7 L1581.2,365.6 L1579.7,366.5 L1578.1,367.6 L1576.5,369.0 L1575.0,370.6 L1573.4,372.4 L1571.9,374.4 L1570.3,376.4 L1568.7,378.5 L1567.2,380.8 L1565.6,383.4 L1564.0,385.8 L1562.5,387.3 L1560.9,387.8 L1559.3,387.8 L1557.8,387.1 L1556.2,385.5 L1554.7,383.0 L1553.1,379.4 L1551.5,374.0 L1550.0,367.9 L1548.4,363.1 L1546.8,360.8 L1545.3,360.3 L1543.7,360.2 L1542.1,360.5 L1540.6,360.9 L1539.0,360.6 L1537.5,359.5 L1535.9,358.5 L1534.3,358.1 L1532.8,358.1 L1531.2,358.1 L1529.6,358.1 L1528.1,358.1 L1526.5,358.1 L1524.9,358.1 L1523.4,358.1 L1521.8,358.1 L1520.3,358.1 L1518.7,358.1 L1517.1,358.1 L1515.6,358.0 L1514.0,357.7 Z"/>
+    <text x="1560" y="408" class="tiny" text-anchor="middle">model recon</text>
+  </g>
+  <g id="loss">
+    <rect x="300" y="640" width="1000" height="72" class="box loss" rx="10"/>
+    <text x="800" y="672" class="label" text-anchor="middle">Multi-Scale Spectrogram Loss</text>
+    <text x="800" y="696" class="small" text-anchor="middle">MSSLoss, n_ffts = 255 / 511 / 1023, alpha = 1.0</text>
+  </g>
+  <path class="arrowLoss" d="M122 436 V676 H298"/>
+  <path class="arrowLoss" d="M1560 450 V676 H1302"/>
+</svg>
