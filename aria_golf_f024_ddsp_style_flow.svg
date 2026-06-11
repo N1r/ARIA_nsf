@@ -25,6 +25,9 @@
       .chipDsp { fill: #f5e6ba; stroke: #8a6d21; stroke-width: 1.2; }
       .chipText { font-size: 9.8px; font-weight: 600; fill: #334155; letter-spacing: .03em; }
       .ctrlNote { font-size: 10.2px; font-weight: 600; fill: #2f684d; }
+      .orderCallout { fill: #fff8e5; stroke: #9b7a25; stroke-width: 1.6; }
+      .orderText { font-size: 11.5px; font-weight: 600; fill: #5f4912; }
+      .orderTiny { font-size: 9.6px; font-weight: 500; fill: #6b530f; }
       .arrow { stroke: #1f2937; stroke-width: 2.9; fill: none; marker-end: url(#aria-flow-arrowBlack); stroke-linecap: round; stroke-linejoin: round; }
       .arrowThin { stroke: #1f2937; stroke-width: 2.25; fill: none; marker-end: url(#aria-flow-arrowBlackSmall); stroke-linecap: round; stroke-linejoin: round; }
       .arrowCtrl { stroke: #2f684d; stroke-width: 2.35; fill: none; marker-end: url(#aria-flow-arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
@@ -86,7 +89,7 @@
     <rect x="500" y="438" width="150" height="78" class="box control" rx="10"/>
     <text x="575" y="468" class="label" text-anchor="middle">VT ctrl</text>
     <text x="575" y="489" class="tiny" text-anchor="middle">learned params</text>
-    <text x="575" y="506" class="tiny" text-anchor="middle">F1/B1, F2/B2</text>
+    <text x="575" y="506" class="tiny" text-anchor="middle">n_learned = 8</text>
   </g>
 
   <path class="arrowCtrl dash" d="M202 240 L456 142 H498"/>
@@ -129,6 +132,11 @@
   </g>
   <path class="arrow" d="M920 195 H1120 V306 H1129"/>
   <path class="arrow" d="M1100 401 H1120 V334 H1131"/>
+  <g id="lpc-order-callout">
+    <rect x="1224" y="148" width="258" height="38" class="orderCallout" rx="9"/>
+    <text x="1353" y="164" class="orderText" text-anchor="middle">8 learned biquads</text>
+    <text x="1353" y="179" class="orderTiny" text-anchor="middle">LPC order = 2 x (3 + 8) = 22</text>
+  </g>
 
   <g id="vocal-tract">
     <rect x="1224" y="200" width="258" height="238" class="box dsp" rx="12"/>
@@ -150,7 +158,7 @@
     <text x="1292" y="382" class="chipText" text-anchor="middle">DSP STAGES</text>
     <rect x="1366" y="368" width="96" height="20" class="chipLearned" rx="10"/>
     <text x="1414" y="382" class="chipText" text-anchor="middle">LEARNED PARAMS</text>
-    <text x="1353" y="408" class="tiny" text-anchor="middle">learned VT params set deterministic filter coefficients</text>
+    <text x="1353" y="408" class="tiny" text-anchor="middle">3 fixed + 8 learned -> deterministic coefficients</text>
     <line class="axis" x1="1248" y1="424" x2="1458" y2="424"/>
     <path class="response" d="M1248 416 C1260 394 1274 380 1289 380 C1302 380 1311 400 1325 409 C1338 417 1348 399 1362 386 C1377 373 1391 383 1402 403 C1414 423 1434 426 1458 420"/>
   </g>
