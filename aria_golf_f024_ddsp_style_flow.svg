@@ -9,22 +9,30 @@
       .label { font-size: 16.5px; font-weight: 600; fill: #0f172a; }
       .small { font-size: 12.5px; font-weight: 500; fill: #334155; }
       .tiny { font-size: 10.8px; font-weight: 500; fill: #475569; }
-      .box { stroke-width: 2.25; rx: 10; }
-      .signal { fill: #eef2f6; stroke: #405268; }
-      .neural { fill: #fff0ec; stroke: #90443b; }
-      .dsp { fill: #f8efd4; stroke: #7e641f; }
-      .control { fill: #e8f3ea; stroke: #2f684d; }
-      .observed { fill: #eef2f6; stroke: #405268; }
-      .sum { fill: #fff0ec; stroke: #90443b; }
-      .loss { fill: #fff0ec; stroke: #90443b; }
-      .arrow { stroke: #111827; stroke-width: 3.25; fill: none; marker-end: url(#aria-flow-arrowBlack); stroke-linecap: round; stroke-linejoin: round; }
-      .arrowThin { stroke: #111827; stroke-width: 2.55; fill: none; marker-end: url(#aria-flow-arrowBlackSmall); stroke-linecap: round; stroke-linejoin: round; }
-      .arrowCtrl { stroke: #235c40; stroke-width: 2.55; fill: none; marker-end: url(#aria-flow-arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
+      .box { stroke-width: 2; rx: 10; }
+      .signal { fill: #f1f5f9; stroke: #52657a; }
+      .neural { fill: #fff2ee; stroke: #9b5147; }
+      .dsp { fill: #fbf1d8; stroke: #876c22; }
+      .control { fill: #eaf5ed; stroke: #2f684d; }
+      .observed { fill: #f1f5f9; stroke: #52657a; }
+      .sum { fill: #fff2ee; stroke: #9b5147; }
+      .loss { fill: #fff2ee; stroke: #9b5147; }
+      .innerDsp { fill: #fffaf0; stroke: #9b7a25; stroke-width: 1.7; }
+      .innerControl { fill: #f2fbf4; stroke: #3f7a5b; stroke-width: 1.5; }
+      .stageLabel { font-size: 12.3px; font-weight: 600; fill: #0f172a; }
+      .stageTiny { font-size: 10.2px; font-weight: 500; fill: #475569; }
+      .chipLearned { fill: #dff0e4; stroke: #3f7a5b; stroke-width: 1.2; }
+      .chipDsp { fill: #f5e6ba; stroke: #8a6d21; stroke-width: 1.2; }
+      .chipText { font-size: 9.8px; font-weight: 600; fill: #334155; letter-spacing: .03em; }
+      .ctrlNote { font-size: 10.2px; font-weight: 600; fill: #2f684d; }
+      .arrow { stroke: #1f2937; stroke-width: 2.9; fill: none; marker-end: url(#aria-flow-arrowBlack); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowThin { stroke: #1f2937; stroke-width: 2.25; fill: none; marker-end: url(#aria-flow-arrowBlackSmall); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowCtrl { stroke: #2f684d; stroke-width: 2.35; fill: none; marker-end: url(#aria-flow-arrowGreen); stroke-linecap: round; stroke-linejoin: round; }
       .arrowLoss { stroke: #90443b; stroke-width: 2.8; fill: none; marker-end: url(#aria-flow-arrowRed); stroke-linecap: round; stroke-linejoin: round; }
       .dash { stroke-dasharray: 7 6; }
-      .waveFill { fill: #172033; opacity: .94; }
-      .signalLine { stroke: #111827; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-      .response { stroke: #6b530f; stroke-width: 2.25; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .waveFill { fill: #172033; opacity: .9; }
+      .signalLine { stroke: #1f2937; stroke-width: 2.05; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .response { stroke: #785c14; stroke-width: 2.1; fill: none; stroke-linecap: round; stroke-linejoin: round; }
       .axis { stroke: #94a3b8; stroke-width: 1.15; opacity: .85; }
     </style>
     <marker id="aria-flow-arrowBlack" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L9,4 L0,8 Z" fill="#111827"/></marker>
@@ -77,7 +85,7 @@
 
     <rect x="500" y="438" width="150" height="78" class="box control" rx="10"/>
     <text x="575" y="468" class="label" text-anchor="middle">VT ctrl</text>
-    <text x="575" y="489" class="tiny" text-anchor="middle">learned control</text>
+    <text x="575" y="489" class="tiny" text-anchor="middle">learned params</text>
     <text x="575" y="506" class="tiny" text-anchor="middle">F1/B1, F2/B2</text>
   </g>
 
@@ -123,19 +131,33 @@
   <path class="arrow" d="M1100 401 H1120 V334 H1131"/>
 
   <g id="vocal-tract">
-    <rect x="1234" y="220" width="224" height="200" class="box dsp" rx="10"/>
-    <text x="1346" y="262" class="label" text-anchor="middle">Vocal-Tract</text>
-    <text x="1346" y="286" class="label" text-anchor="middle">Cascade</text>
-    <text x="1346" y="313" class="small" text-anchor="middle">deterministic cascade</text>
-    <text x="1346" y="332" class="small" text-anchor="middle">from learned VT ctrl</text>
-    <line class="axis" x1="1260" y1="396" x2="1430" y2="396"/>
-    <line class="axis" x1="1260" y1="342" x2="1260" y2="396"/>
-    <path class="response" d="M1260 376 C1268 357 1278 342 1288 342 C1298 342 1304 360 1316 369 C1328 378 1336 363 1348 349 C1360 335 1372 345 1380 365 C1390 388 1408 396 1430 396"/>
-    <text x="1346" y="406" class="tiny" text-anchor="middle">all-pole spectral envelope</text>
+    <rect x="1224" y="200" width="258" height="238" class="box dsp" rx="12"/>
+    <text x="1353" y="240" class="label" text-anchor="middle">Vocal-Tract Cascade</text>
+    <text x="1353" y="262" class="small" text-anchor="middle">deterministic all-pole filtering</text>
+
+    <rect x="1244" y="286" width="90" height="68" class="innerDsp" rx="8"/>
+    <text x="1289" y="310" class="stageLabel" text-anchor="middle">All-pole 1</text>
+    <text x="1289" y="329" class="stageTiny" text-anchor="middle">F1 / B1</text>
+    <text x="1289" y="344" class="stageTiny" text-anchor="middle">resonator</text>
+
+    <rect x="1372" y="286" width="90" height="68" class="innerDsp" rx="8"/>
+    <text x="1417" y="310" class="stageLabel" text-anchor="middle">All-pole 2</text>
+    <text x="1417" y="329" class="stageTiny" text-anchor="middle">F2 / B2</text>
+    <text x="1417" y="344" class="stageTiny" text-anchor="middle">resonator</text>
+
+    <path class="arrowThin" d="M1336 320 H1370"/>
+    <rect x="1248" y="368" width="88" height="20" class="chipDsp" rx="10"/>
+    <text x="1292" y="382" class="chipText" text-anchor="middle">DSP STAGES</text>
+    <rect x="1366" y="368" width="96" height="20" class="chipLearned" rx="10"/>
+    <text x="1414" y="382" class="chipText" text-anchor="middle">LEARNED PARAMS</text>
+    <text x="1353" y="408" class="tiny" text-anchor="middle">learned VT params set deterministic filter coefficients</text>
+    <line class="axis" x1="1248" y1="424" x2="1458" y2="424"/>
+    <path class="response" d="M1248 416 C1260 394 1274 380 1289 380 C1302 380 1311 400 1325 409 C1338 417 1348 399 1362 386 C1377 373 1391 383 1402 403 C1414 423 1434 426 1458 420"/>
   </g>
-  <path class="arrow" d="M1189 320 H1232"/>
-  <path class="arrowCtrl" d="M650 477 H1198 V380 H1232"/>
-  <path class="arrow" d="M1458 320 H1498"/>
+  <path class="arrow" d="M1189 320 H1222"/>
+  <path class="arrowCtrl" d="M650 477 H1198 V262 H1222"/>
+  <text x="1148" y="252" class="ctrlNote" text-anchor="middle">learned F/B controls</text>
+  <path class="arrow" d="M1482 320 H1498"/>
 
   <g id="synth-audio">
     <rect x="1500" y="220" width="120" height="230" class="box signal" rx="10"/>
