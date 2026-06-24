@@ -1,0 +1,1138 @@
+{
+  "continua": [
+    {
+      "id": "pitch",
+      "label": "Pitch \u00b7 F0",
+      "left": "low",
+      "right": "high",
+      "axis": "F0 \u00d70.7\u21921.55",
+      "examples": [
+        {
+          "syl": "h\u01ceo",
+          "src_audio": "audio/pitch_hao3_src.wav",
+          "steps": [
+            {
+              "audio": "audio/pitch_hao3_0.wav",
+              "spec": "spec/pitch_hao3_0.png",
+              "f1": 944.2685546875,
+              "f2": 1268.554931640625,
+              "f0": 161.1120399152737
+            },
+            {
+              "audio": "audio/pitch_hao3_1.wav",
+              "spec": "spec/pitch_hao3_1.png",
+              "f1": 948.4640502929688,
+              "f2": 1276.08837890625,
+              "f0": 194.2798428330275
+            },
+            {
+              "audio": "audio/pitch_hao3_2.wav",
+              "spec": "spec/pitch_hao3_2.png",
+              "f1": 947.8607788085938,
+              "f2": 1263.198974609375,
+              "f0": 226.90116807778404
+            },
+            {
+              "audio": "audio/pitch_hao3_3.wav",
+              "spec": "spec/pitch_hao3_3.png",
+              "f1": 980.5090942382812,
+              "f2": 1242.30810546875,
+              "f0": 259.1624610607304
+            },
+            {
+              "audio": "audio/pitch_hao3_4.wav",
+              "spec": "spec/pitch_hao3_4.png",
+              "f1": 959.98486328125,
+              "f2": 1271.99072265625,
+              "f0": 291.2312754514454
+            },
+            {
+              "audio": "audio/pitch_hao3_5.wav",
+              "spec": "spec/pitch_hao3_5.png",
+              "f1": 962.3646850585938,
+              "f2": 1256.71728515625,
+              "f0": 323.6964485991535
+            },
+            {
+              "audio": "audio/pitch_hao3_6.wav",
+              "spec": "spec/pitch_hao3_6.png",
+              "f1": 982.667724609375,
+              "f2": 1318.592041015625,
+              "f0": 355.06243616438337
+            }
+          ]
+        },
+        {
+          "syl": "f\u00e9i",
+          "src_audio": "audio/pitch_fei2_src.wav",
+          "steps": [
+            {
+              "audio": "audio/pitch_fei2_0.wav",
+              "spec": "spec/pitch_fei2_0.png",
+              "f1": 575.1763305664062,
+              "f2": 2316.9248046875,
+              "f0": 173.43565597102125
+            },
+            {
+              "audio": "audio/pitch_fei2_1.wav",
+              "spec": "spec/pitch_fei2_1.png",
+              "f1": 603.2071533203125,
+              "f2": 2290.57861328125,
+              "f0": 208.1553719425982
+            },
+            {
+              "audio": "audio/pitch_fei2_2.wav",
+              "spec": "spec/pitch_fei2_2.png",
+              "f1": 548.1187744140625,
+              "f2": 2322.03662109375,
+              "f0": 243.84542086907015
+            },
+            {
+              "audio": "audio/pitch_fei2_3.wav",
+              "spec": "spec/pitch_fei2_3.png",
+              "f1": 561.8900146484375,
+              "f2": 2329.425537109375,
+              "f0": 279.02571814703987
+            },
+            {
+              "audio": "audio/pitch_fei2_4.wav",
+              "spec": "spec/pitch_fei2_4.png",
+              "f1": 597.4762573242188,
+              "f2": 2346.263427734375,
+              "f0": 313.2173958845395
+            },
+            {
+              "audio": "audio/pitch_fei2_5.wav",
+              "spec": "spec/pitch_fei2_5.png",
+              "f1": 611.6923828125,
+              "f2": 2339.72900390625,
+              "f0": 347.3564144247837
+            },
+            {
+              "audio": "audio/pitch_fei2_6.wav",
+              "spec": "spec/pitch_fei2_6.png",
+              "f1": 610.3250732421875,
+              "f2": 2252.92578125,
+              "f0": 381.7040515740394
+            }
+          ]
+        },
+        {
+          "syl": "w\u00e1ng",
+          "src_audio": "audio/pitch_wang2_src.wav",
+          "steps": [
+            {
+              "audio": "audio/pitch_wang2_0.wav",
+              "spec": "spec/pitch_wang2_0.png",
+              "f1": 675.3470458984375,
+              "f2": 1282.753662109375,
+              "f0": 174.6403835376542
+            },
+            {
+              "audio": "audio/pitch_wang2_1.wav",
+              "spec": "spec/pitch_wang2_1.png",
+              "f1": 675.0050659179688,
+              "f2": 1286.5343017578125,
+              "f0": 209.69594283794396
+            },
+            {
+              "audio": "audio/pitch_wang2_2.wav",
+              "spec": "spec/pitch_wang2_2.png",
+              "f1": 658.3328857421875,
+              "f2": 1289.1058349609375,
+              "f0": 244.9544295746855
+            },
+            {
+              "audio": "audio/pitch_wang2_3.wav",
+              "spec": "spec/pitch_wang2_3.png",
+              "f1": 728.3175048828125,
+              "f2": 1265.768798828125,
+              "f0": 279.67496271209507
+            },
+            {
+              "audio": "audio/pitch_wang2_4.wav",
+              "spec": "spec/pitch_wang2_4.png",
+              "f1": 734.8287353515625,
+              "f2": 1292.73388671875,
+              "f0": 314.32031317558904
+            },
+            {
+              "audio": "audio/pitch_wang2_5.wav",
+              "spec": "spec/pitch_wang2_5.png",
+              "f1": 817.5270385742188,
+              "f2": 1280.029052734375,
+              "f0": 348.6709813900471
+            },
+            {
+              "audio": "audio/pitch_wang2_6.wav",
+              "spec": "spec/pitch_wang2_6.png",
+              "f1": 819.2900390625,
+              "f2": 1260.80517578125,
+              "f0": 383.8749037634886
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f1",
+      "label": "Openness \u00b7 F1",
+      "left": "open",
+      "right": "close",
+      "axis": "F1 \u2193",
+      "examples": [
+        {
+          "syl": "b\u0101",
+          "src_audio": "audio/f1_ba1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f1_ba1_0.wav",
+              "spec": "spec/f1_ba1_0.png",
+              "f1": 1196.8212890625,
+              "f2": 1713.221435546875
+            },
+            {
+              "audio": "audio/f1_ba1_1.wav",
+              "spec": "spec/f1_ba1_1.png",
+              "f1": 1062.8798828125,
+              "f2": 1701.7066650390625
+            },
+            {
+              "audio": "audio/f1_ba1_2.wav",
+              "spec": "spec/f1_ba1_2.png",
+              "f1": 999.7614135742188,
+              "f2": 1728.5869140625
+            },
+            {
+              "audio": "audio/f1_ba1_3.wav",
+              "spec": "spec/f1_ba1_3.png",
+              "f1": 974.3709716796875,
+              "f2": 1733.37548828125
+            },
+            {
+              "audio": "audio/f1_ba1_4.wav",
+              "spec": "spec/f1_ba1_4.png",
+              "f1": 933.6258544921875,
+              "f2": 1771.0482177734375
+            },
+            {
+              "audio": "audio/f1_ba1_5.wav",
+              "spec": "spec/f1_ba1_5.png",
+              "f1": 789.45263671875,
+              "f2": 1771.2305908203125
+            },
+            {
+              "audio": "audio/f1_ba1_6.wav",
+              "spec": "spec/f1_ba1_6.png",
+              "f1": 663.6048583984375,
+              "f2": 1738.477783203125
+            }
+          ]
+        },
+        {
+          "syl": "h\u00e1i",
+          "src_audio": "audio/f1_hai2_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f1_hai2_0.wav",
+              "spec": "spec/f1_hai2_0.png",
+              "f1": 1132.3197021484375,
+              "f2": 2018.693359375
+            },
+            {
+              "audio": "audio/f1_hai2_1.wav",
+              "spec": "spec/f1_hai2_1.png",
+              "f1": 1060.96484375,
+              "f2": 1988.759521484375
+            },
+            {
+              "audio": "audio/f1_hai2_2.wav",
+              "spec": "spec/f1_hai2_2.png",
+              "f1": 988.1890869140625,
+              "f2": 2006.7862548828125
+            },
+            {
+              "audio": "audio/f1_hai2_3.wav",
+              "spec": "spec/f1_hai2_3.png",
+              "f1": 951.1177368164062,
+              "f2": 2050.920166015625
+            },
+            {
+              "audio": "audio/f1_hai2_4.wav",
+              "spec": "spec/f1_hai2_4.png",
+              "f1": 865.8020629882812,
+              "f2": 2019.659423828125
+            },
+            {
+              "audio": "audio/f1_hai2_5.wav",
+              "spec": "spec/f1_hai2_5.png",
+              "f1": 745.7723388671875,
+              "f2": 2021.30419921875
+            },
+            {
+              "audio": "audio/f1_hai2_6.wav",
+              "spec": "spec/f1_hai2_6.png",
+              "f1": 658.9180908203125,
+              "f2": 2043.3533935546875
+            }
+          ]
+        },
+        {
+          "syl": "d\u00e0o",
+          "src_audio": "audio/f1_dao4_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f1_dao4_0.wav",
+              "spec": "spec/f1_dao4_0.png",
+              "f1": 1042.482177734375,
+              "f2": 1404.8046875
+            },
+            {
+              "audio": "audio/f1_dao4_1.wav",
+              "spec": "spec/f1_dao4_1.png",
+              "f1": 979.5814208984375,
+              "f2": 1404.367919921875
+            },
+            {
+              "audio": "audio/f1_dao4_2.wav",
+              "spec": "spec/f1_dao4_2.png",
+              "f1": 899.71630859375,
+              "f2": 1390.06298828125
+            },
+            {
+              "audio": "audio/f1_dao4_3.wav",
+              "spec": "spec/f1_dao4_3.png",
+              "f1": 835.839599609375,
+              "f2": 1383.56005859375
+            },
+            {
+              "audio": "audio/f1_dao4_4.wav",
+              "spec": "spec/f1_dao4_4.png",
+              "f1": 739.7156982421875,
+              "f2": 1381.91455078125
+            },
+            {
+              "audio": "audio/f1_dao4_5.wav",
+              "spec": "spec/f1_dao4_5.png",
+              "f1": 665.7857666015625,
+              "f2": 1376.599365234375
+            },
+            {
+              "audio": "audio/f1_dao4_6.wav",
+              "spec": "spec/f1_dao4_6.png",
+              "f1": 575.3509521484375,
+              "f2": 1341.657958984375
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "label": "Backness \u00b7 F2 (front \u2192 back)",
+      "left": "front / bright",
+      "right": "back / dark",
+      "axis": "F2 \u2193",
+      "examples": [
+        {
+          "syl": "y\u012b",
+          "src_audio": "audio/f2_yi1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f2_yi1_0.wav",
+              "spec": "spec/f2_yi1_0.png",
+              "f1": 354.7610778808594,
+              "f2": 2652.32666015625
+            },
+            {
+              "audio": "audio/f2_yi1_1.wav",
+              "spec": "spec/f2_yi1_1.png",
+              "f1": 357.0667724609375,
+              "f2": 2376.890869140625
+            },
+            {
+              "audio": "audio/f2_yi1_2.wav",
+              "spec": "spec/f2_yi1_2.png",
+              "f1": 361.28900146484375,
+              "f2": 2153.98193359375
+            },
+            {
+              "audio": "audio/f2_yi1_3.wav",
+              "spec": "spec/f2_yi1_3.png",
+              "f1": 363.33209228515625,
+              "f2": 1896.911376953125
+            },
+            {
+              "audio": "audio/f2_yi1_4.wav",
+              "spec": "spec/f2_yi1_4.png",
+              "f1": 369.75128173828125,
+              "f2": 1664.447998046875
+            },
+            {
+              "audio": "audio/f2_yi1_5.wav",
+              "spec": "spec/f2_yi1_5.png",
+              "f1": 372.5678405761719,
+              "f2": 1399.93994140625
+            },
+            {
+              "audio": "audio/f2_yi1_6.wav",
+              "spec": "spec/f2_yi1_6.png",
+              "f1": 365.9351501464844,
+              "f2": 1148.3165283203125
+            }
+          ]
+        },
+        {
+          "syl": "l\u012b",
+          "src_audio": "audio/f2_li1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f2_li1_0.wav",
+              "spec": "spec/f2_li1_0.png",
+              "f1": 376.0227966308594,
+              "f2": 2808.85205078125
+            },
+            {
+              "audio": "audio/f2_li1_1.wav",
+              "spec": "spec/f2_li1_1.png",
+              "f1": 391.7393493652344,
+              "f2": 2550.33642578125
+            },
+            {
+              "audio": "audio/f2_li1_2.wav",
+              "spec": "spec/f2_li1_2.png",
+              "f1": 394.9687194824219,
+              "f2": 2331.85205078125
+            },
+            {
+              "audio": "audio/f2_li1_3.wav",
+              "spec": "spec/f2_li1_3.png",
+              "f1": 396.655029296875,
+              "f2": 2088.81298828125
+            },
+            {
+              "audio": "audio/f2_li1_4.wav",
+              "spec": "spec/f2_li1_4.png",
+              "f1": 397.2860412597656,
+              "f2": 1810.99462890625
+            },
+            {
+              "audio": "audio/f2_li1_5.wav",
+              "spec": "spec/f2_li1_5.png",
+              "f1": 396.38006591796875,
+              "f2": 1457.77978515625
+            },
+            {
+              "audio": "audio/f2_li1_6.wav",
+              "spec": "spec/f2_li1_6.png",
+              "f1": 367.576904296875,
+              "f2": 1161.03271484375
+            }
+          ]
+        },
+        {
+          "syl": "y\u0113",
+          "src_audio": "audio/f2_ye1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/f2_ye1_0.wav",
+              "spec": "spec/f2_ye1_0.png",
+              "f1": 747.9012451171875,
+              "f2": 2255.5732421875
+            },
+            {
+              "audio": "audio/f2_ye1_1.wav",
+              "spec": "spec/f2_ye1_1.png",
+              "f1": 766.598876953125,
+              "f2": 2036.4107666015625
+            },
+            {
+              "audio": "audio/f2_ye1_2.wav",
+              "spec": "spec/f2_ye1_2.png",
+              "f1": 758.0192260742188,
+              "f2": 1832.669189453125
+            },
+            {
+              "audio": "audio/f2_ye1_3.wav",
+              "spec": "spec/f2_ye1_3.png",
+              "f1": 750.828369140625,
+              "f2": 1670.4112548828125
+            },
+            {
+              "audio": "audio/f2_ye1_4.wav",
+              "spec": "spec/f2_ye1_4.png",
+              "f1": 769.2514038085938,
+              "f2": 1383.491943359375
+            },
+            {
+              "audio": "audio/f2_ye1_5.wav",
+              "spec": "spec/f2_ye1_5.png",
+              "f1": 744.8001708984375,
+              "f2": 1160.5191650390625
+            },
+            {
+              "audio": "audio/f2_ye1_6.wav",
+              "spec": "spec/f2_ye1_6.png",
+              "f1": 610.265869140625,
+              "f2": 1018.8857421875
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vowel",
+      "label": "Vowel morph \u00b7 F1+F2 path",
+      "left": "start vowel",
+      "right": "target vowel",
+      "axis": "F1\u00b7F2 \u00d70.3\u20131.7 (large shift)",
+      "examples": [
+        {
+          "syl": "/a/ \u2192 /i/",
+          "src_audio": "audio/vowel_a1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/vowel_a1_0.wav",
+              "spec": "spec/vowel_a1_0.png",
+              "f1": 1215.32666015625,
+              "f2": 1621.019775390625
+            },
+            {
+              "audio": "audio/vowel_a1_1.wav",
+              "spec": "spec/vowel_a1_1.png",
+              "f1": 999.4603881835938,
+              "f2": 1782.497802734375
+            },
+            {
+              "audio": "audio/vowel_a1_2.wav",
+              "spec": "spec/vowel_a1_2.png",
+              "f1": 933.080322265625,
+              "f2": 1934.8419189453125
+            },
+            {
+              "audio": "audio/vowel_a1_3.wav",
+              "spec": "spec/vowel_a1_3.png",
+              "f1": 727.2055053710938,
+              "f2": 2113.5595703125
+            },
+            {
+              "audio": "audio/vowel_a1_4.wav",
+              "spec": "spec/vowel_a1_4.png",
+              "f1": 645.6292114257812,
+              "f2": 2280.2568359375
+            },
+            {
+              "audio": "audio/vowel_a1_5.wav",
+              "spec": "spec/vowel_a1_5.png",
+              "f1": 589.7284545898438,
+              "f2": 2508.202880859375
+            },
+            {
+              "audio": "audio/vowel_a1_6.wav",
+              "spec": "spec/vowel_a1_6.png",
+              "f1": 400.3360290527344,
+              "f2": 2576.16162109375
+            }
+          ]
+        },
+        {
+          "syl": "/i/ \u2192 /u/",
+          "src_audio": "audio/vowel_yi1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/vowel_yi1_0.wav",
+              "spec": "spec/vowel_yi1_0.png",
+              "f1": 356.2988586425781,
+              "f2": 2632.405029296875
+            },
+            {
+              "audio": "audio/vowel_yi1_1.wav",
+              "spec": "spec/vowel_yi1_1.png",
+              "f1": 360.9319763183594,
+              "f2": 2167.09765625
+            },
+            {
+              "audio": "audio/vowel_yi1_2.wav",
+              "spec": "spec/vowel_yi1_2.png",
+              "f1": 369.951416015625,
+              "f2": 1752.8583984375
+            },
+            {
+              "audio": "audio/vowel_yi1_3.wav",
+              "spec": "spec/vowel_yi1_3.png",
+              "f1": 376.6370849609375,
+              "f2": 1484.518798828125
+            },
+            {
+              "audio": "audio/vowel_yi1_4.wav",
+              "spec": "spec/vowel_yi1_4.png",
+              "f1": 376.35260009765625,
+              "f2": 1186.134033203125
+            },
+            {
+              "audio": "audio/vowel_yi1_5.wav",
+              "spec": "spec/vowel_yi1_5.png",
+              "f1": 359.0780029296875,
+              "f2": 1014.124755859375
+            },
+            {
+              "audio": "audio/vowel_yi1_6.wav",
+              "spec": "spec/vowel_yi1_6.png",
+              "f1": 355.87115478515625,
+              "f2": 954.3211059570312
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "breathy",
+      "label": "Phonation \u00b7 modal \u2192 breathy",
+      "left": "modal",
+      "right": "breathy",
+      "axis": "glottal R_d 0.2\u21921.0",
+      "examples": [
+        {
+          "syl": "a2",
+          "src_audio": "audio/breathy_a2_src.wav",
+          "steps": [
+            {
+              "audio": "audio/breathy_a2_0.wav",
+              "spec": "spec/breathy_a2_0.png",
+              "f1": 1177.451416015625,
+              "f2": 1620.733642578125
+            },
+            {
+              "audio": "audio/breathy_a2_1.wav",
+              "spec": "spec/breathy_a2_1.png",
+              "f1": 1168.49072265625,
+              "f2": 1612.15283203125
+            },
+            {
+              "audio": "audio/breathy_a2_2.wav",
+              "spec": "spec/breathy_a2_2.png",
+              "f1": 1160.3681640625,
+              "f2": 1611.3963623046875
+            },
+            {
+              "audio": "audio/breathy_a2_3.wav",
+              "spec": "spec/breathy_a2_3.png",
+              "f1": 1161.920654296875,
+              "f2": 1604.33642578125
+            },
+            {
+              "audio": "audio/breathy_a2_4.wav",
+              "spec": "spec/breathy_a2_4.png",
+              "f1": 1163.4552001953125,
+              "f2": 1606.528076171875
+            },
+            {
+              "audio": "audio/breathy_a2_5.wav",
+              "spec": "spec/breathy_a2_5.png",
+              "f1": 1161.906982421875,
+              "f2": 1578.21875
+            },
+            {
+              "audio": "audio/breathy_a2_6.wav",
+              "spec": "spec/breathy_a2_6.png",
+              "f1": 1176.11474609375,
+              "f2": 1575.158447265625
+            }
+          ]
+        },
+        {
+          "syl": "ma4",
+          "src_audio": "audio/breathy_ma4_src.wav",
+          "steps": [
+            {
+              "audio": "audio/breathy_ma4_0.wav",
+              "spec": "spec/breathy_ma4_0.png",
+              "f1": 1087.9178466796875,
+              "f2": 1618.27392578125
+            },
+            {
+              "audio": "audio/breathy_ma4_1.wav",
+              "spec": "spec/breathy_ma4_1.png",
+              "f1": 1078.5595703125,
+              "f2": 1613.58447265625
+            },
+            {
+              "audio": "audio/breathy_ma4_2.wav",
+              "spec": "spec/breathy_ma4_2.png",
+              "f1": 1075.728759765625,
+              "f2": 1608.2117919921875
+            },
+            {
+              "audio": "audio/breathy_ma4_3.wav",
+              "spec": "spec/breathy_ma4_3.png",
+              "f1": 1068.487060546875,
+              "f2": 1594.068115234375
+            },
+            {
+              "audio": "audio/breathy_ma4_4.wav",
+              "spec": "spec/breathy_ma4_4.png",
+              "f1": 1068.32080078125,
+              "f2": 1581.956298828125
+            },
+            {
+              "audio": "audio/breathy_ma4_5.wav",
+              "spec": "spec/breathy_ma4_5.png",
+              "f1": 1079.6142578125,
+              "f2": 1568.21337890625
+            },
+            {
+              "audio": "audio/breathy_ma4_6.wav",
+              "spec": "spec/breathy_ma4_6.png",
+              "f1": 1076.191650390625,
+              "f2": 1563.529052734375
+            }
+          ]
+        },
+        {
+          "syl": "la1",
+          "src_audio": "audio/breathy_la1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/breathy_la1_0.wav",
+              "spec": "spec/breathy_la1_0.png",
+              "f1": 1113.39111328125,
+              "f2": 1693.573974609375
+            },
+            {
+              "audio": "audio/breathy_la1_1.wav",
+              "spec": "spec/breathy_la1_1.png",
+              "f1": 1120.948486328125,
+              "f2": 1697.894287109375
+            },
+            {
+              "audio": "audio/breathy_la1_2.wav",
+              "spec": "spec/breathy_la1_2.png",
+              "f1": 1103.708740234375,
+              "f2": 1661.0089111328125
+            },
+            {
+              "audio": "audio/breathy_la1_3.wav",
+              "spec": "spec/breathy_la1_3.png",
+              "f1": 1074.7874755859375,
+              "f2": 1659.539306640625
+            },
+            {
+              "audio": "audio/breathy_la1_4.wav",
+              "spec": "spec/breathy_la1_4.png",
+              "f1": 1090.077392578125,
+              "f2": 1477.430908203125
+            },
+            {
+              "audio": "audio/breathy_la1_5.wav",
+              "spec": "spec/breathy_la1_5.png",
+              "f1": 1103.22119140625,
+              "f2": 1468.6474609375
+            },
+            {
+              "audio": "audio/breathy_la1_6.wav",
+              "spec": "spec/breathy_la1_6.png",
+              "f1": 1090.37451171875,
+              "f2": 1437.1884765625
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "prominence",
+      "label": "Prominence \u00b7 reduced \u2192 prominent",
+      "left": "reduced",
+      "right": "prominent",
+      "axis": "energy + F0 + effort",
+      "examples": [
+        {
+          "syl": "b\u00e1i",
+          "src_audio": "audio/prominence_bai2_src.wav",
+          "steps": [
+            {
+              "audio": "audio/prominence_bai2_0.wav",
+              "spec": "spec/prominence_bai2_0.png",
+              "f1": 974.6676025390625,
+              "f2": 1978.3939208984375,
+              "f0": 228.03012609846934
+            },
+            {
+              "audio": "audio/prominence_bai2_1.wav",
+              "spec": "spec/prominence_bai2_1.png",
+              "f1": 972.5069580078125,
+              "f2": 1922.853271484375,
+              "f0": 240.30013398788586
+            },
+            {
+              "audio": "audio/prominence_bai2_2.wav",
+              "spec": "spec/prominence_bai2_2.png",
+              "f1": 973.1351318359375,
+              "f2": 1897.29296875,
+              "f0": 253.88966898952825
+            },
+            {
+              "audio": "audio/prominence_bai2_3.wav",
+              "spec": "spec/prominence_bai2_3.png",
+              "f1": 981.4681396484375,
+              "f2": 1909.7421875,
+              "f0": 265.18956123295004
+            },
+            {
+              "audio": "audio/prominence_bai2_4.wav",
+              "spec": "spec/prominence_bai2_4.png",
+              "f1": 985.1954345703125,
+              "f2": 1920.1473388671875,
+              "f0": 274.35628364389623
+            },
+            {
+              "audio": "audio/prominence_bai2_5.wav",
+              "spec": "spec/prominence_bai2_5.png",
+              "f1": 983.4581298828125,
+              "f2": 1900.12353515625,
+              "f0": 285.5365325439514
+            },
+            {
+              "audio": "audio/prominence_bai2_6.wav",
+              "spec": "spec/prominence_bai2_6.png",
+              "f1": 982.1156616210938,
+              "f2": 1905.4288330078125,
+              "f0": 296.7429301893741
+            }
+          ]
+        },
+        {
+          "syl": "d\u00f2ng",
+          "src_audio": "audio/prominence_dong4_src.wav",
+          "steps": [
+            {
+              "audio": "audio/prominence_dong4_0.wav",
+              "spec": "spec/prominence_dong4_0.png",
+              "f1": 559.4878540039062,
+              "f2": 1182.9371337890625,
+              "f0": 268.27033511979846
+            },
+            {
+              "audio": "audio/prominence_dong4_1.wav",
+              "spec": "spec/prominence_dong4_1.png",
+              "f1": 556.03857421875,
+              "f2": 1193.764404296875,
+              "f0": 283.4607278085982
+            },
+            {
+              "audio": "audio/prominence_dong4_2.wav",
+              "spec": "spec/prominence_dong4_2.png",
+              "f1": 577.99560546875,
+              "f2": 1237.014404296875,
+              "f0": 295.86501049351426
+            },
+            {
+              "audio": "audio/prominence_dong4_3.wav",
+              "spec": "spec/prominence_dong4_3.png",
+              "f1": 516.4100341796875,
+              "f2": 1226.3955078125,
+              "f0": 308.5007131501201
+            },
+            {
+              "audio": "audio/prominence_dong4_4.wav",
+              "spec": "spec/prominence_dong4_4.png",
+              "f1": 522.7489013671875,
+              "f2": 1249.8558349609375,
+              "f0": 321.76741906188676
+            },
+            {
+              "audio": "audio/prominence_dong4_5.wav",
+              "spec": "spec/prominence_dong4_5.png",
+              "f1": 516.2755126953125,
+              "f2": 1254.4951171875,
+              "f0": 334.85177505851254
+            },
+            {
+              "audio": "audio/prominence_dong4_6.wav",
+              "spec": "spec/prominence_dong4_6.png",
+              "f1": 536.2606811523438,
+              "f2": 1244.173095703125,
+              "f0": 347.9148485047339
+            }
+          ]
+        },
+        {
+          "syl": "sh\u016b",
+          "src_audio": "audio/prominence_shu1_src.wav",
+          "steps": [
+            {
+              "audio": "audio/prominence_shu1_0.wav",
+              "spec": "spec/prominence_shu1_0.png",
+              "f1": 356.4938659667969,
+              "f2": 1047.3502197265625,
+              "f0": 306.2128920745366
+            },
+            {
+              "audio": "audio/prominence_shu1_1.wav",
+              "spec": "spec/prominence_shu1_1.png",
+              "f1": 371.4200439453125,
+              "f2": 1069.70654296875,
+              "f0": 320.95792421163014
+            },
+            {
+              "audio": "audio/prominence_shu1_2.wav",
+              "spec": "spec/prominence_shu1_2.png",
+              "f1": 395.0035095214844,
+              "f2": 1073.179931640625,
+              "f0": 336.22911776486546
+            },
+            {
+              "audio": "audio/prominence_shu1_3.wav",
+              "spec": "spec/prominence_shu1_3.png",
+              "f1": 401.087646484375,
+              "f2": 1103.8726806640625,
+              "f0": 350.4302684552223
+            },
+            {
+              "audio": "audio/prominence_shu1_4.wav",
+              "spec": "spec/prominence_shu1_4.png",
+              "f1": 421.84674072265625,
+              "f2": 1143.665283203125,
+              "f0": 365.3029982540401
+            },
+            {
+              "audio": "audio/prominence_shu1_5.wav",
+              "spec": "spec/prominence_shu1_5.png",
+              "f1": 444.6899719238281,
+              "f2": 1155.32470703125,
+              "f0": 380.1759964844215
+            },
+            {
+              "audio": "audio/prominence_shu1_6.wav",
+              "spec": "spec/prominence_shu1_6.png",
+              "f1": 463.2854919433594,
+              "f2": 1175.7587890625,
+              "f0": 395.00111242678526
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nasal",
+      "label": "Nasalisation \u00b7 oral \u2192 nasal (v7b)",
+      "left": "oral",
+      "right": "nasal",
+      "axis": "A1\u2193 + wider F1 bandwidth + anti-formants (\u00d73) \u2014 vowel identity held",
+      "ltas": "spec/nasal_a1p0.png",
+      "examples": [
+        {
+          "syl": "\u0101",
+          "src_audio": "audio/nasal_a1_src.wav",
+          "fz": 1197,
+          "steps": [
+            {
+              "audio": "audio/nasal_a1_0.wav",
+              "spec": "spec/nasal_a1_0.png",
+              "f1": 1195.98193359375,
+              "f2": 1616.855712890625,
+              "bz": 600
+            },
+            {
+              "audio": "audio/nasal_a1_1.wav",
+              "spec": "spec/nasal_a1_1.png",
+              "f1": 1248.2061767578125,
+              "f2": 1607.726318359375,
+              "bz": 507
+            },
+            {
+              "audio": "audio/nasal_a1_2.wav",
+              "spec": "spec/nasal_a1_2.png",
+              "f1": 1254.716796875,
+              "f2": 1616.092529296875,
+              "bz": 413
+            },
+            {
+              "audio": "audio/nasal_a1_3.wav",
+              "spec": "spec/nasal_a1_3.png",
+              "f1": 1251.20458984375,
+              "f2": 1631.77197265625,
+              "bz": 320
+            },
+            {
+              "audio": "audio/nasal_a1_4.wav",
+              "spec": "spec/nasal_a1_4.png",
+              "f1": 1167.10595703125,
+              "f2": 1661.25732421875,
+              "bz": 227
+            },
+            {
+              "audio": "audio/nasal_a1_5.wav",
+              "spec": "spec/nasal_a1_5.png",
+              "f1": 582.8093872070312,
+              "f2": 1687.3388671875,
+              "bz": 133
+            },
+            {
+              "audio": "audio/nasal_a1_6.wav",
+              "spec": "spec/nasal_a1_6.png",
+              "f1": 487.1309509277344,
+              "f2": 1691.63134765625,
+              "bz": 40
+            }
+          ]
+        },
+        {
+          "syl": "\u0113",
+          "src_audio": "audio/nasal_e1_src.wav",
+          "fz": 750,
+          "steps": [
+            {
+              "audio": "audio/nasal_e1_0.wav",
+              "spec": "spec/nasal_e1_0.png",
+              "f1": 752.8578491210938,
+              "f2": 1600.150390625,
+              "bz": 600
+            },
+            {
+              "audio": "audio/nasal_e1_1.wav",
+              "spec": "spec/nasal_e1_1.png",
+              "f1": 724.4374389648438,
+              "f2": 1595.6832275390625,
+              "bz": 507
+            },
+            {
+              "audio": "audio/nasal_e1_2.wav",
+              "spec": "spec/nasal_e1_2.png",
+              "f1": 703.9608154296875,
+              "f2": 1594.8212890625,
+              "bz": 413
+            },
+            {
+              "audio": "audio/nasal_e1_3.wav",
+              "spec": "spec/nasal_e1_3.png",
+              "f1": 702.1024169921875,
+              "f2": 1593.595947265625,
+              "bz": 320
+            },
+            {
+              "audio": "audio/nasal_e1_4.wav",
+              "spec": "spec/nasal_e1_4.png",
+              "f1": 659.5218505859375,
+              "f2": 1593.094482421875,
+              "bz": 227
+            },
+            {
+              "audio": "audio/nasal_e1_5.wav",
+              "spec": "spec/nasal_e1_5.png",
+              "f1": 547.9906616210938,
+              "f2": 1595.4169921875,
+              "bz": 133
+            },
+            {
+              "audio": "audio/nasal_e1_6.wav",
+              "spec": "spec/nasal_e1_6.png",
+              "f1": 494.617431640625,
+              "f2": 1594.801025390625,
+              "bz": 40
+            }
+          ]
+        },
+        {
+          "syl": "l\u00e1i",
+          "src_audio": "audio/nasal_lai2_src.wav",
+          "fz": 993,
+          "steps": [
+            {
+              "audio": "audio/nasal_lai2_0.wav",
+              "spec": "spec/nasal_lai2_0.png",
+              "f1": 993.7401123046875,
+              "f2": 1846.9205322265625,
+              "bz": 600
+            },
+            {
+              "audio": "audio/nasal_lai2_1.wav",
+              "spec": "spec/nasal_lai2_1.png",
+              "f1": 859.3522338867188,
+              "f2": 1805.306396484375,
+              "bz": 507
+            },
+            {
+              "audio": "audio/nasal_lai2_2.wav",
+              "spec": "spec/nasal_lai2_2.png",
+              "f1": 798.6915893554688,
+              "f2": 1827.91943359375,
+              "bz": 413
+            },
+            {
+              "audio": "audio/nasal_lai2_3.wav",
+              "spec": "spec/nasal_lai2_3.png",
+              "f1": 694.779541015625,
+              "f2": 1846.165283203125,
+              "bz": 320
+            },
+            {
+              "audio": "audio/nasal_lai2_4.wav",
+              "spec": "spec/nasal_lai2_4.png",
+              "f1": 528.1577758789062,
+              "f2": 1852.118896484375,
+              "bz": 227
+            },
+            {
+              "audio": "audio/nasal_lai2_5.wav",
+              "spec": "spec/nasal_lai2_5.png",
+              "f1": 477.0196838378906,
+              "f2": 1863.595703125,
+              "bz": 133
+            },
+            {
+              "audio": "audio/nasal_lai2_6.wav",
+              "spec": "spec/nasal_lai2_6.png",
+              "f1": 452.8831787109375,
+              "f2": 1897.8447265625,
+              "bz": 40
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "vowel_space": [
+    {
+      "ipa": "/a/",
+      "f1": 1201.7004834588029,
+      "f2": 1612.1151179487515
+    },
+    {
+      "ipa": "/i/",
+      "f1": 349.8498226236691,
+      "f2": 2612.1190583196862
+    },
+    {
+      "ipa": "/u/",
+      "f1": 338.63591644167553,
+      "f2": 975.1377514859843
+    },
+    {
+      "ipa": "/\u0264/",
+      "f1": 727.0771244228085,
+      "f2": 1578.9585944772864
+    },
+    {
+      "ipa": "/y/",
+      "f1": 329.71872308592253,
+      "f2": 2460.9202828072816
+    }
+  ],
+  "recon": [
+    {
+      "id": "F024_a1",
+      "ipa": "/a/",
+      "gloss": "a"
+    },
+    {
+      "id": "F024_yi1",
+      "ipa": "/i/",
+      "gloss": "yi"
+    },
+    {
+      "id": "F024_wu1",
+      "ipa": "/u/",
+      "gloss": "wu"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#1a1a1a"/></marker>
+    <marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#1f4e79"/></marker>
+    <marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#2d6a4f"/></marker>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#9b2226"/></marker>
+    <filter id="s" x="-12%" y="-12%" width="124%" height="135%"><feDropShadow dx="1.2" dy="2" stdDeviation="1.6" flood-color="#000" flood-opacity="0.16"/></filter>
+  </defs>
+  <rect width="1200" height="760" fill="#fff"/>
+  <text x="600" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#1a1a1a">ARIA — controllable source–filter synthesis (DDSP): neural control, differentiable-DSP synthesis</text>
+
+  <!-- legend -->
+  <rect x="1015" y="50" width="160" height="26" rx="6" fill="#dce6f1" stroke="#1f4e79" stroke-width="1.4"/>
+  <text x="1095" y="67" text-anchor="middle" font-size="11" fill="#1a3a5c">Neural (trainable)</text>
+  <rect x="1015" y="84" width="160" height="40" rx="6" fill="#fff" stroke="#2d6a4f" stroke-width="1.4"/>
+  <text x="1095" y="100" text-anchor="middle" font-size="11" fill="#1d4d38">Differentiable DSP</text>
+  <text x="1095" y="115" text-anchor="middle" font-size="11" fill="#1d4d38">(deterministic)</text>
+
+  <!-- input + encoder -->
+  <g filter="url(#s)"><rect x="40" y="300" width="120" height="56" rx="8" fill="#eef0f2" stroke="#9aa3ab" stroke-width="1.3"/></g>
+  <text x="100" y="322" text-anchor="middle" font-size="12" fill="#333">waveform</text><text x="100" y="340" text-anchor="middle" font-size="12" fill="#333">+ F0</text>
+  <g filter="url(#s)"><rect x="40" y="392" width="120" height="56" rx="8" fill="#dce6f1" stroke="#1f4e79" stroke-width="1.6"/></g>
+  <text x="100" y="414" text-anchor="middle" font-size="13" font-weight="600" fill="#1a3a5c">Encoder</text><text x="100" y="431" text-anchor="middle" font-size="9.5" fill="#5a7798">UNet + LSTM</text>
+  <line x1="100" y1="356" x2="100" y2="390" stroke="#1a1a1a" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- SOURCE region -->
+  <rect x="230" y="280" width="270" height="240" rx="12" fill="none" stroke="#1f4e79" stroke-width="2" stroke-dasharray="9 5"/>
+  <text x="244" y="300" font-size="13" font-weight="700" fill="#1f4e79">SOURCE (excitation)</text>
+  <g filter="url(#s)"><rect x="252" y="320" width="226" height="74" rx="8" fill="#fff" stroke="#2d6a4f" stroke-width="1.6"/></g>
+  <text x="365" y="342" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1d4d38">Glottal LF Table</text>
+  <text x="365" y="358" text-anchor="middle" font-size="9.5" fill="#1d4d38">fixed LF pulses, R&#8202;d-indexed</text>
+  <text x="365" y="378" text-anchor="middle" font-size="11.5" fill="#1d4d38">R&#8202;d → voice quality</text>
+  <g filter="url(#s)"><rect x="252" y="420" width="95" height="56" rx="8" fill="#fff" stroke="#2d6a4f" stroke-width="1.4"/></g>
+  <text x="299" y="444" text-anchor="middle" font-size="11" fill="#1d4d38">noise</text><text x="299" y="459" text-anchor="middle" font-size="9" fill="#1d4d38">N(0,1)</text>
+  <g filter="url(#s)"><rect x="368" y="420" width="105" height="56" rx="8" fill="#dce6f1" stroke="#1f4e79" stroke-width="1.4"/></g>
+  <text x="420" y="444" text-anchor="middle" font-size="11" fill="#1a3a5c">noise FIR</text><text x="420" y="459" text-anchor="middle" font-size="9" fill="#1a3a5c">learned coef</text>
+  <line x1="347" y1="448" x2="366" y2="448" stroke="#2d6a4f" stroke-width="1.4" marker-end="url(#ag)"/>
+  <path d="M160 420 L195 420 L195 357 L250 357" fill="none" stroke="#1a1a1a" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="205" y="350" font-size="9.5" fill="#666">logits</text>
+
+  <!-- VOCAL-TRACT region -->
+  <rect x="540" y="150" width="430" height="440" rx="12" fill="none" stroke="#1f4e79" stroke-width="2" stroke-dasharray="9 5"/>
+  <text x="554" y="170" font-size="12.5" font-weight="700" fill="#1f4e79">VOCAL-TRACT CASCADE — hybrid analytic + learned all-pole filter</text>
+  <g filter="url(#s)"><rect x="562" y="196" width="386" height="40" rx="7" fill="#dce6f1" stroke="#1f4e79" stroke-width="1.4"/></g>
+  <text x="755" y="220" text-anchor="middle" font-size="11" fill="#1a3a5c">decode logits → α, F1/B1, F2/B2, F3/B3, learned logits</text>
+  <g filter="url(#s)"><rect x="562" y="256" width="386" height="68" rx="7" fill="#fff" stroke="#2d6a4f" stroke-width="1.6"/></g>
+  <text x="755" y="276" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1d4d38">analytic formant biquads</text>
+  <text x="755" y="293" text-anchor="middle" font-size="10.5" fill="#1d4d38">r = exp(−πB/sr),  θ = 2πF/sr  → [1, −2r·cosθ, r²]</text>
+  <text x="755" y="310" text-anchor="middle" font-size="10.5" fill="#1d4d38">tilt (1st-order): [1, −α, 0]</text>
+  <g filter="url(#s)"><rect x="562" y="344" width="386" height="56" rx="7" fill="#dce6f1" stroke="#1f4e79" stroke-width="1.6"/></g>
+  <text x="755" y="366" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1a3a5c">learned conj biquads  (residual sections)</text>
+  <text x="755" y="384" text-anchor="middle" font-size="10.5" fill="#1a3a5c">conj param → |pole| &lt; 0.99 (guaranteed stable)</text>
+  <g filter="url(#s)"><rect x="562" y="420" width="386" height="64" rx="7" fill="#fff" stroke="#2d6a4f" stroke-width="1.6"/></g>
+  <text x="755" y="440" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1d4d38">cascade in coefficient domain</text>
+  <text x="755" y="457" text-anchor="middle" font-size="10.5" fill="#1d4d38">biquads2lpc (polynomial product) → single AR poly a</text>
+  <text x="755" y="474" text-anchor="middle" font-size="9" fill="#1d4d38">avoids serial-LPC backward NaN</text>
+  <g filter="url(#s)"><rect x="562" y="504" width="386" height="54" rx="7" fill="#fff" stroke="#2d6a4f" stroke-width="1.6"/></g>
+  <text x="755" y="525" text-anchor="middle" font-size="11.5" font-weight="600" fill="#1d4d38">sample_wise_lpc(excitation, a)</text>
+  <text x="755" y="542" text-anchor="middle" font-size="10" fill="#1d4d38">deterministic time-domain all-pole synthesis</text>
+
+  <!-- internal VT arrows -->
+  <line x1="755" y1="236" x2="755" y2="254" stroke="#1a1a1a" stroke-width="1.3" marker-end="url(#a)"/>
+  <line x1="755" y1="324" x2="755" y2="342" stroke="#1a1a1a" stroke-width="1.3" marker-end="url(#a)"/>
+  <line x1="755" y1="400" x2="755" y2="418" stroke="#1a1a1a" stroke-width="1.3" marker-end="url(#a)"/>
+  <line x1="755" y1="484" x2="755" y2="502" stroke="#1a1a1a" stroke-width="1.3" marker-end="url(#a)"/>
+
+  <!-- encoder logits → decode (control, dashed) -->
+  <path d="M160 410 L175 410 L175 130 L755 130 L755 194" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-dasharray="5 4" marker-end="url(#a)"/>
+  <text x="430" y="123" font-size="9.5" fill="#888">control logits → filter coefficients</text>
+
+  <!-- excitation → lpc -->
+  <path d="M478 380 L515 380 L515 531 L560 531" fill="none" stroke="#1f4e79" stroke-width="1.6" marker-end="url(#ab)"/>
+  <text x="525" y="455" font-size="9.5" fill="#666">excitation</text>
+
+  <!-- coarse -->
+  <line x1="948" y1="531" x2="1018" y2="531" stroke="#1a1a1a" stroke-width="1.6" marker-end="url(#a)"/>
+  <g filter="url(#s)"><rect x="1020" y="504" width="130" height="54" rx="8" fill="#eef0f2" stroke="#9aa3ab" stroke-width="1.3"/></g>
+  <text x="1085" y="525" text-anchor="middle" font-size="12" fill="#333">coarse</text><text x="1085" y="542" text-anchor="middle" font-size="12" fill="#333">waveform</text>
+
+  <!-- QUALITY -->
+  <rect x="540" y="630" width="430" height="110" rx="12" fill="none" stroke="#9b2226" stroke-width="2" stroke-dasharray="9 5"/>
+  <text x="554" y="650" font-size="13" font-weight="700" fill="#9b2226">QUALITY · enhance, control untouched</text>
+  <g filter="url(#s)"><rect x="600" y="666" width="290" height="56" rx="8" fill="#f4e3e3" stroke="#9b2226" stroke-width="1.6"/></g>
+  <text x="745" y="688" text-anchor="middle" font-size="12.5" font-weight="600" fill="#9b2226">GAN  /  mel-flow enhancer</text>
+  <text x="745" y="705" text-anchor="middle" font-size="9" fill="#7a2a2c">neural; does not touch control params</text>
+  <g filter="url(#s)"><rect x="360" y="666" width="140" height="56" rx="8" fill="#eef0f2" stroke="#1a1a1a" stroke-width="1.5"/></g>
+  <text x="430" y="688" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a1a1a">final</text><text x="430" y="705" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1a1a1a">waveform</text>
+  <path d="M1085 558 L1085 694 L892 694" fill="none" stroke="#1a1a1a" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="1098" y="630" font-size="9.5" fill="#666">coarse</text>
+  <line x1="600" y1="694" x2="502" y2="694" stroke="#9b2226" stroke-width="1.6" marker-end="url(#ar)"/>
+</svg>

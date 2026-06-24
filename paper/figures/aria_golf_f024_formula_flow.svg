@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1680" role="img" aria-labelledby="aria-formula-title aria-formula-desc" preserveAspectRatio="xMidYMid meet">
+  <title id="aria-formula-title">Formula-style ARIA-GOLF signal flow</title>
+  <desc id="aria-formula-desc">Black-and-white formula-style diagram of the ARIA-GOLF frame-rate encoder and sample-rate differentiable source-filter decoder.</desc>
+  <defs>
+    <style>
+      text { font-family: "Times New Roman", Times, serif; fill: #000; text-rendering: geometricPrecision; letter-spacing: 0; }
+      .title { font-size: 40px; font-weight: 400; }
+      .region { fill: none; stroke: #000; stroke-width: 2.6; stroke-dasharray: 8 8; }
+      .regionFine { fill: none; stroke: #000; stroke-width: 2.2; stroke-dasharray: 3 4; }
+      .box { fill: #fff; stroke: #000; stroke-width: 2.4; }
+      .smallBox { fill: #fff; stroke: #000; stroke-width: 2.1; }
+      .label { font-size: 35px; font-weight: 400; }
+      .mid { font-size: 30px; font-weight: 400; }
+      .small { font-size: 25px; font-weight: 400; }
+      .tiny { font-size: 20px; font-weight: 400; }
+      .math { font-style: italic; font-size: 35px; }
+      .mathSmall { font-style: italic; font-size: 28px; }
+      .note { font-size: 24px; font-weight: 400; }
+      .arrow { stroke: #000; stroke-width: 2.7; fill: none; marker-end: url(#arrow); stroke-linecap: square; stroke-linejoin: miter; }
+      .arrowThin { stroke: #000; stroke-width: 2.2; fill: none; marker-end: url(#arrow); stroke-linecap: square; stroke-linejoin: miter; }
+      .arrowDash { stroke: #000; stroke-width: 2.2; fill: none; marker-end: url(#arrow); stroke-dasharray: 8 7; stroke-linecap: square; stroke-linejoin: miter; }
+      .sum { fill: #fff; stroke: #000; stroke-width: 2.7; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,6 L0,12 Z" fill="#000"/>
+    </marker>
+  </defs>
+
+  <rect width="1080" height="1680" fill="#fff"/>
+  <text x="540" y="58" class="title" text-anchor="middle">ARIA-GOLF Differentiable Source-Filter Vocoder</text>
+
+  <rect x="70" y="96" width="940" height="430" class="region"/>
+  <text x="248" y="147" class="label" text-anchor="middle">Vocoder Features</text>
+  <text x="874" y="147" class="label" text-anchor="middle">Frame rate</text>
+
+  <g id="frame-rate">
+    <rect x="262" y="210" width="252" height="94" class="box"/>
+    <text x="388" y="266" class="label" text-anchor="middle">NN Encoder</text>
+
+    <path class="arrow" d="M388 154 V208"/>
+    <rect x="262" y="360" width="252" height="104" class="box"/>
+    <text x="388" y="405" class="mid" text-anchor="middle">Control</text>
+    <text x="388" y="444" class="mid" text-anchor="middle">Heads</text>
+    <path class="arrow" d="M388 304 V358"/>
+
+    <path class="arrowThin" d="M262 257 H146 V418"/>
+    <text x="120" y="434" class="math" text-anchor="middle">F0</text>
+    <text x="118" y="469" class="tiny" text-anchor="middle">observed .pv</text>
+
+    <path class="arrowThin" d="M514 257 H665 V418"/>
+    <text x="665" y="434" class="math" text-anchor="middle">Rd, m</text>
+
+    <path class="arrowThin" d="M514 257 H900 V418"/>
+    <text x="900" y="434" class="math" text-anchor="middle">v</text>
+    <text x="900" y="469" class="tiny" text-anchor="middle">{F, B}</text>
+
+    <path class="arrow" d="M388 464 V558"/>
+    <text x="442" y="548" class="math" text-anchor="middle">c</text>
+  </g>
+
+  <rect x="70" y="620" width="940" height="920" class="regionFine"/>
+  <text x="178" y="1516" class="label" text-anchor="middle">Sample rate</text>
+
+  <g id="upsample">
+    <rect x="236" y="558" width="608" height="88" class="box"/>
+    <text x="540" y="613" class="label" text-anchor="middle">Upsample</text>
+    <path class="arrowDash" d="M665 456 V556"/>
+    <path class="arrowDash" d="M900 456 V556"/>
+
+    <text x="378" y="708" class="math" text-anchor="middle">phase</text>
+    <text x="690" y="708" class="math" text-anchor="middle">Rd, m</text>
+    <text x="862" y="708" class="math" text-anchor="middle">v</text>
+    <path class="arrow" d="M410 646 V756"/>
+    <path class="arrow" d="M628 646 V756"/>
+    <path class="arrow" d="M828 646 V756"/>
+  </g>
+
+  <g id="sample-rate-dsp">
+    <rect x="230" y="762" width="250" height="106" class="box"/>
+    <text x="355" y="808" class="mid" text-anchor="middle">LF Glottal</text>
+    <text x="355" y="847" class="mid" text-anchor="middle">Source</text>
+
+    <circle cx="545" cy="783" r="26" class="sum"/>
+    <path d="M526 783 H564 M545 764 V802" stroke="#000" stroke-width="2.6"/>
+    <text x="555" y="735" class="tiny" text-anchor="middle">phase integrate</text>
+    <path class="arrowThin" d="M410 756 V783 H517"/>
+
+    <circle cx="545" cy="885" r="26" class="sum"/>
+    <path d="M528 868 L562 902 M562 868 L528 902" stroke="#000" stroke-width="2.6"/>
+    <path class="arrow" d="M545 809 V857"/>
+    <path class="arrow" d="M628 756 V885 H573"/>
+    <path class="arrow" d="M517 885 H482"/>
+    <path class="arrow" d="M545 911 V1012"/>
+  </g>
+
+  <g id="noise-dsp">
+    <text x="760" y="800" class="mid" text-anchor="middle">Noise</text>
+    <circle cx="805" cy="930" r="26" class="sum"/>
+    <path d="M788 913 L822 947 M822 913 L788 947" stroke="#000" stroke-width="2.6"/>
+    <path class="arrow" d="M805 818 V902"/>
+    <path class="arrow" d="M628 756 V930 H777"/>
+    <path class="arrow" d="M805 956 V1036 H568"/>
+  </g>
+
+  <g id="vocal-tract-coefficients">
+    <path class="arrowThin" d="M120 456 V815 H228"/>
+    <text x="158" y="776" class="math" text-anchor="middle">F0</text>
+
+    <path class="arrowThin" d="M900 456 V1160 H692"/>
+    <text x="948" y="782" class="math" text-anchor="middle">v</text>
+  </g>
+
+  <g id="excitation-mix">
+    <circle cx="540" cy="1036" r="28" class="sum"/>
+    <path d="M520 1036 H560 M540 1016 V1056" stroke="#000" stroke-width="2.6"/>
+  </g>
+
+  <g id="vocal-tract-filter">
+    <rect x="390" y="1110" width="300" height="112" class="box"/>
+    <text x="540" y="1160" class="label" text-anchor="middle">VTC / LPC</text>
+    <text x="540" y="1192" class="tiny" text-anchor="middle">F1/F2 + 8 learned biquads</text>
+    <path class="arrow" d="M540 1064 V1108"/>
+    <rect x="118" y="1268" width="360" height="82" class="smallBox"/>
+    <text x="298" y="1300" class="tiny" text-anchor="middle">H_VT = H_F1,F2 * product_i H_i</text>
+    <text x="298" y="1332" class="tiny" text-anchor="middle">i = 1..8, LPC order = 22</text>
+  </g>
+
+  <g id="output">
+    <path class="arrow" d="M540 1222 V1432"/>
+    <text x="540" y="1508" class="label" text-anchor="middle">Synthesized Speech</text>
+  </g>
+
+  <g id="loss-note">
+    <rect x="262" y="90" width="0" height="0" fill="none"/>
+    <text x="540" y="1640" class="tiny" text-anchor="middle">Training objective: multi-scale spectrogram loss between observed and synthesized waveform</text>
+  </g>
+</svg>

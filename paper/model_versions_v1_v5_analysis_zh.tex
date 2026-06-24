@@ -1,0 +1,408 @@
+\documentclass[11pt,fontset=none]{ctexart}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta,positioning,calc,fit}
+
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  urlcolor=blue!45!black,
+  citecolor=blue!45!black
+}
+
+\title{ARIA-GOLF v1--v5：结构差异与模型公式}
+\author{内部架构说明}
+\date{\today}
+
+\newcommand{\fs}{f_{\mathrm{s}}}
+\newcommand{\src}{s}
+\newcommand{\harm}{h}
+\newcommand{\noise}{\eta}
+\newcommand{\vt}{H_{\mathrm{VT}}}
+\newcommand{\room}{H_{\mathrm{room}}}
+\newcommand{\nfilt}{H_{\mathrm{N}}}
+\newcommand{\ap}{A}
+\newcommand{\lf}{g_{\mathrm{LF}}}
+\newcommand{\biquad}{B}
+\newcommand{\pole}{P}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文把 ARIA-GOLF v1--v5 的配置差异整理成一个便于理解和展示的模型比较说明。
+五个版本共享相同的编码器系列、观测到的 $F_0$ 条件、LF 声门流振荡器、白噪声发生器、
+room filter 以及 multi-scale spectrogram loss。真正的结构差异集中在两个位置：
+一是 v1--v3 逐步调整的解析声道级联滤波器，二是 v3--v5 改动的谐波/噪声激励拓扑。
+在所有版本中，谐波支路和噪声支路先在 source level 合成为一个激励信号 $\src$，
+然后这个合成后的 source 再整体经过一次 VocalTractCascade / LPC-like 声道滤波器。
+下面的公式把这些变化写成一个可解释的 ablation sequence。
+\end{abstract}
+
+\section*{如何阅读这五个版本}
+
+最简单的读法是：v1--v5 不是五个互不相关的系统，而是沿着两条轴线展开的结构消融。
+第一条轴线是 v1--v3：它们主要在调整解析 vocal tract，即显式 formant control、
+bandwidth constraint、spectral tilt 和 learned residual all-pole capacity 之间的平衡。
+第二条轴线是 v3--v5：v4 和 v5 保留 v3 的 vocal tract，只改变 excitation mixture，
+因为 v3 剩下的主要问题来自 additive harmonic-plus-noise source 中的高频周期性条纹。
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  >=Latex,
+  model/.style={draw=black, rounded corners=2pt, align=left, text width=2.9cm,
+    minimum height=1.55cm, inner sep=5pt, fill=white},
+  vt/.style={model, fill=blue!5},
+  src/.style={model, fill=orange!10},
+  band/.style={draw=black!40, dashed, rounded corners=3pt, inner sep=7pt},
+  note/.style={align=center, font=\sffamily\footnotesize},
+  arrow/.style={->, line width=0.8pt}
+]
+  \node[vt] (v1) at (0,0) {\textbf{v1}\\tilt on\\宽 bandwidth\\无 F supervision};
+  \node[vt] (v2) at (4.15,0) {\textbf{v2}\\tilt off\\紧 bandwidth\\additive source};
+  \node[vt] (v3) at (8.3,0) {\textbf{v3}\\tilt restored\\紧 bandwidth\\additive source};
+  \node[src] (v4) at (13.05,1.18) {\textbf{v4}\\v3 vocal tract\\独立 AP head $A$};
+  \node[src] (v5) at (13.05,-1.18) {\textbf{v5}\\v3 vocal tract\\bounded crossfade $q$};
+
+  \draw[arrow] (v1) -- (v2);
+  \draw[arrow] (v2) -- (v3);
+  \coordinate (split) at ($(v3.east)+(0.9,0)$);
+  \draw[arrow] (v3.east) -- (split) |- (v4.west);
+  \draw[arrow] (v3.east) -- (split) |- (v5.west);
+  \node[band, fit=(v1)(v2)(v3)] (vtband) {};
+  \node[band, draw=orange!70!black, fit=(v4)(v5)] (srcband) {};
+  \node[note, blue!55!black, above=0.08cm of vtband] {vocal-tract refinements};
+  \node[note, orange!75!black, above=0.08cm of srcband] {excitation fixes};
+\end{tikzpicture}}
+\vspace{2pt}
+
+{\footnotesize v1$\rightarrow$v2：收紧 F/B 范围 \qquad
+v2$\rightarrow$v3：恢复 spectral tilt}
+\caption{ARIA-GOLF v1--v5 的概念谱系。v1--v3 应读作声道滤波器的逐步改进；
+v4 和 v5 是针对同一个高频 excitation artifact 的两种修复方案。v1 同时也是
+没有显式 formant supervision 的 baseline。}
+\label{fig:lineage-zh}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  >=Latex,
+  block/.style={draw=black, rounded corners=2pt, align=center,
+    minimum width=1.45cm, minimum height=0.72cm, inner sep=3pt, fill=white},
+  sum/.style={draw=black, circle, align=center, minimum size=0.65cm, inner sep=0pt, fill=white},
+  panel/.style={draw=black!45, rounded corners=3pt, inner sep=7pt},
+  flow/.style={->, line width=0.8pt},
+  lbl/.style={font=\sffamily\footnotesize, align=center}
+]
+  \begin{scope}[xshift=0cm]
+    \node[lbl] at (2.2,2.2) {\textbf{v1--v3: additive}\\只能加噪声，不能减谐波};
+    \node (h1) at (0,1.25) {$h$};
+    \node (n1) at (0,0) {$\eta$};
+    \node[block] (hn1) at (1.75,0) {$H_N^{\exp}$};
+    \node[sum] (sum1) at (3.35,0.65) {$+$};
+    \node (s1) at (4.45,0.65) {$s$};
+    \draw[flow] (h1) -- (sum1);
+    \draw[flow] (n1) -- (hn1);
+    \draw[flow] (hn1) -- (sum1);
+    \draw[flow] (sum1) -- (s1);
+    \node[lbl] at (2.2,-0.9) {$s=h+H_N\eta$};
+    \node[panel, fit=(h1)(n1)(hn1)(sum1)(s1)] {};
+  \end{scope}
+
+  \begin{scope}[xshift=5.5cm]
+    \node[lbl] at (2.4,2.2) {\textbf{v4: decoupled AP}\\噪声颜色与混合权重分离};
+    \node (h2) at (0,1.25) {$h$};
+    \node (n2) at (0,0) {$\eta$};
+    \node[block] (onea) at (1.55,1.25) {$1-A$};
+    \node[block] (hn2) at (1.55,0) {$H_N^{\exp}$};
+    \node[block] (a2) at (3.0,0) {$A$};
+    \node[sum] (sum2) at (4.25,0.65) {$+$};
+    \node (s2) at (5.25,0.65) {$s$};
+    \draw[flow] (h2) -- (onea);
+    \draw[flow] (onea) -- (sum2);
+    \draw[flow] (n2) -- (hn2);
+    \draw[flow] (hn2) -- (a2);
+    \draw[flow] (a2) -- (sum2);
+    \draw[flow] (sum2) -- (s2);
+    \draw[dashed, line width=0.6pt] (a2.north) -- (onea.south);
+    \node[lbl] at (2.65,-0.9) {$S=(1-A)Y+A\,H_NN$};
+    \node[panel, fit=(h2)(n2)(onea)(hn2)(a2)(sum2)(s2)] {};
+  \end{scope}
+
+  \begin{scope}[xshift=12.2cm]
+    \node[lbl] at (2.25,2.2) {\textbf{v5: bounded crossfade}\\一个滤波器承担两个职责};
+    \node (h3) at (0,1.25) {$h$};
+    \node (n3) at (0,0) {$\eta$};
+    \node[block] (oneq) at (1.65,1.25) {$1-q$};
+    \node[block] (q3) at (1.65,0) {$q=\sigma(r)$};
+    \node[sum] (sum3) at (3.35,0.65) {$+$};
+    \node (s3) at (4.45,0.65) {$s$};
+    \draw[flow] (h3) -- (oneq);
+    \draw[flow] (oneq) -- (sum3);
+    \draw[flow] (n3) -- (q3);
+    \draw[flow] (q3) -- (sum3);
+    \draw[flow] (sum3) -- (s3);
+    \draw[dashed, line width=0.6pt] (q3.north) -- (oneq.south);
+    \node[lbl] at (2.2,-0.9) {$S=(1-q)Y+qN$};
+    \node[panel, fit=(h3)(n3)(oneq)(q3)(sum3)(s3)] {};
+  \end{scope}
+\end{tikzpicture}}
+\caption{三种 excitation topology。Additive synthesis 可以增加噪声地板，但不能抑制已经存在的周期性谐波。
+v4 和 v5 引入 per-band harmonic/noise mixture，因此可以把一部分高频周期性能量转成 shaped noise。}
+\label{fig:excitation-zh}
+\end{figure}
+
+\section{共享的 Source-Filter 骨架}
+
+令 $x$ 表示输入波形，$F_{0,k}$ 表示观测到的 frame-rate 基频轨迹。编码器预测 frame-rate control streams：
+\begin{equation}
+  \mathbf{c}_k = E_\theta(x, F_{0,k}),
+\end{equation}
+其中最后一层 projection 的宽度由 decoder 声明的 control splits 决定。上采样之后，LF source 的相位由下式得到：
+\begin{equation}
+  \phi_n = \phi_{n-1} + 2\pi \frac{F_{0,n}}{\fs},
+\end{equation}
+deterministic harmonic source 为：
+\begin{equation}
+  \harm_n = v_n \, \lf(\phi_n; R_{d,n}),
+\end{equation}
+其中 $v_n=\mathbb{1}[F_{0,n}>0]$ 是 voicing gate，$R_d$ 控制 LF glottal-flow shape。
+每个版本都有一个白噪声激励 $\noise_n\sim\mathcal{N}(0,1)$。模型首先把 harmonic branch
+和 noise branch 合成为一个 source/excitation signal $\src^{(m)}$，然后最终波形总是：
+\begin{equation}
+  \hat{x} = \room * \bigl(\vt^{(m)} * \src^{(m)}\bigr),
+\end{equation}
+其中 $m\in\{1,\ldots,5\}$ 表示模型版本。因此，各版本只在 version-specific source
+$\src^{(m)}$ 和 vocal-tract filter $\vt^{(m)}$ 上不同。实现上，这是对合成后的 source
+做一次 vocal-tract filtering，也就是 $\mathrm{LPC}(\harm+\mathrm{noise})$，
+而不是先分别滤波再相加。由于 end filter 是线性的，两种写法在数学上等价；
+但从架构和代码顺序看，source-level 合成再过 vocal tract 是更清楚的读法。
+
+\section{Vocal-Tract Cascade}
+
+解析 vocal tract 包含一个 gain term、一个可选 spectral-tilt term、两个 deterministic
+all-pole formant sections，以及若干 learned biquad sections：
+\begin{equation}
+  {\vt}^{(m)}_n(z)
+  =
+  G_n
+  \, T_{\alpha,n}^{\delta_m}(z)
+  \prod_{j=1}^{2} \pole(z; F_{j,n}, B_{j,n})
+  \prod_{\ell=1}^{L_m} \biquad_{\ell,n}(z).
+  \label{eq:vt-general-zh}
+\end{equation}
+这里 $\delta_m=1$ 表示启用 spectral tilt，$\delta_m=0$ 表示不启用。Learned residual
+sections $\biquad_{\ell,n}$ 用来吸收显式 F1/F2 poles 没有覆盖到的 vocal-tract detail。
+下表报告的是 16 kHz F024 配置，也就是 v4/v5 所在的配置。
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+版本 & Tilt $\delta_m$ & Learned $L_m$ & F1 range & F2 range & B1/B2 range & LPC order \\
+\midrule
+v1 & 1 & 6 & 150--1300 & 600--3200 & 30--330 / 30--430 & 18 \\
+v2 & 0 & 7 & 200--1000 & 700--3000 & 50--200 / 50--250 & 18 \\
+v3 & 1 & 6 & 150--1300 & 600--3200 & 50--200 / 50--250 & 18 \\
+v4 & 1 & 6 & 150--1300 & 600--3200 & 50--200 / 50--250 & 18 \\
+v5 & 1 & 6 & 150--1300 & 600--3200 & 50--200 / 50--250 & 18 \\
+\bottomrule
+\end{tabular}
+\caption{16 kHz F024 配置下 v1--v5 的 vocal-tract 差异。v4 和 v5 继承 v3 的
+vocal-tract design，它们的变化发生在 excitation topology。}
+\end{table}
+
+这里的 nominal LPC order 按 biquad-like sections 的数量计算：
+\begin{equation}
+  O_m = 2\bigl(\delta_m + 2 + L_m\bigr).
+\end{equation}
+因此 16 kHz 下 v1/v3/v4/v5 的 vocal tract 是 $2(1+2+6)=18$，而 v2 是
+$2(0+2+7)=18$。Tilt section $T_{\alpha}(z)$ 是一个 degenerate biquad，
+只有一个 real pole，所以旧注释里可能会把 tilt-enabled 16 kHz model 写成 effective
+pole count 17。本文统一使用 nominal section-count convention。
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+采样率 / speaker & Nominal LPC order & v1 $L_m$ & v2 $L_m$ & v3 $L_m$ \\
+\midrule
+16 kHz / F024 & 18 & 6 & 7 & 6 \\
+22 kHz / LJSpeech & 22 & 8 & 9 & 8 \\
+24 kHz / CSMSC & 22 & 8 & 9 & 8 \\
+\bottomrule
+\end{tabular}
+\caption{Learned residual cascade 的采样率依赖性。解析 F1/F2 controls 和 spectral tilt
+在概念上保持不变；更高采样率使用更多 learned biquads 来覆盖额外的高频细节。}
+\end{table}
+
+\section{各版本公式}
+
+\subsection{v1：第一个 Analytic-Formant Baseline}
+
+v1 引入了带 spectral tilt 的可解释 F1/F2 vocal-tract cascade，bandwidth 约束较宽，
+并包含 6 个 learned residual biquads：
+\begin{align}
+  {\vt}^{(1)}_n(z)
+  &=
+  G_n T_{\alpha,n}(z)
+  \prod_{j=1}^{2}\pole(z;F_{j,n},B_{j,n})
+  \prod_{\ell=1}^{6}\biquad_{\ell,n}(z),\\
+  \src^{(1)}_n
+  &=
+  \harm_n + ({\nfilt}^{\exp}_n * \noise)_n.
+\end{align}
+Additive excitation 可以抬高噪声地板，但不能削弱 $\harm_n$ 中已经存在的 coherent
+high-frequency harmonics。需要特别注意的是，F024 训练 recipe 中 v1 的 F1/F2 control
+没有显式 formant supervision，它们只通过 reconstruction objective 间接形成，因此 v1
+是 formant control 最松的 baseline。
+
+\subsection{v2：无 Spectral Tilt 的更强 Formant Control}
+
+v2 去掉 tilt branch，收紧 F1/F2 和 B1/B2 的范围，并增加一个 learned biquad：
+\begin{align}
+  {\vt}^{(2)}_n(z)
+  &=
+  G_n
+  \prod_{j=1}^{2}\pole(z;F_{j,n},B_{j,n})
+  \prod_{\ell=1}^{7}\biquad_{\ell,n}(z),\\
+  \src^{(2)}_n
+  &=
+  \harm_n + ({\nfilt}^{\exp}_n * \noise)_n.
+\end{align}
+v2 的目的在于增强 formant manipulability；但去掉 tilt 后，broad spectral slope
+就必须更多地由 residual sections 去解释。
+
+\subsection{v3：当前 Vocal-Tract Base}
+
+v3 恢复 spectral tilt，同时保留 v2 中更紧的 bandwidth constraints，并回到 6 个
+learned biquads：
+\begin{align}
+  {\vt}^{(3)}_n(z)
+  &=
+  G_n T_{\alpha,n}(z)
+  \prod_{j=1}^{2}\pole(z;F_{j,n},B_{j,n})
+  \prod_{\ell=1}^{6}\biquad_{\ell,n}(z),\\
+  \src^{(3)}_n
+  &=
+  \harm_n + ({\nfilt}^{\exp}_n * \noise)_n.
+\end{align}
+这是最强的 analytic vocal-tract baseline：它同时包含 F1/F2 control、bounded
+bandwidths、spectral tilt 和 residual all-pole capacity。它的主要弱点仍然是
+additive-only excitation，因此在强 voiced region 里可能留下 high-frequency harmonic stripes。
+
+\subsection{v4：Decoupled Band-Aperiodicity Source}
+
+v4 保留 v3 的 vocal tract，但加入一个显式 aperiodicity filter
+$\ap_n(\omega)\in[0,1]$，并带有 rising high-frequency prior：
+\begin{align}
+  {\vt}^{(4)}_n(z) &= {\vt}^{(3)}_n(z),\\
+  \ap_n(\omega)
+  &=
+  \sigma\bigl(a_n(\omega)+b_{\mathrm{HF}}(\omega)\bigr),\\
+  S^{(4)}_n(\omega)
+  &=
+  \bigl(1-\ap_n(\omega)\bigr)Y_n(\omega)
+  +
+  \ap_n(\omega){\nfilt}^{\exp}_n(\omega)N_n(\omega).
+\end{align}
+这里 $Y_n(\omega)$ 和 $N_n(\omega)$ 分别是 harmonic source 和 white noise 的 short-time
+spectra。Noise-colour filter $\nfilt$ 保持 unbounded，而 $\ap$ 单独控制 harmonic/noise
+mixture。因此 v4 是修复 high-band harmonic-stripe artifact 最清晰、最原则化的版本。
+
+\subsection{v5：Minimal Bounded Crossfade}
+
+v5 也保留 v3 的 vocal tract，但把 noise filter 本身用作 bounded crossfade：
+\begin{align}
+  {\vt}^{(5)}_n(z) &= {\vt}^{(3)}_n(z),\\
+  q_n(\omega) &= \sigma(r_n(\omega)),\\
+  S^{(5)}_n(\omega)
+  &=
+  \bigl(1-q_n(\omega)\bigr)Y_n(\omega)
+  +
+  q_n(\omega)N_n(\omega).
+\end{align}
+等价地，用 operator form 可以写成：
+\begin{equation}
+  \src^{(5)}
+  =
+  (I-Q)\harm + Q\noise
+  =
+  \harm + Q\noise - Q\harm.
+\end{equation}
+这是最小结构改动：不增加额外 aperiodicity head，但同一个 bounded filter 必须同时承担
+noise colour 和 aperiodicity weight 两个职责。
+
+\section{作为 Ablation Sequence 的解释}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+版本 & Formant loss & Smoothness & Residual reg. & Batch $\times$ steps & Data passes \\
+\midrule
+v1 & 0 & -- & -- & $64\times40$k & $1\times$ \\
+v2 & 1.5 & -- & 0.02 & $64\times80$k & $2\times$ \\
+v3 & 2.0 & 0.05 & 0.02 & $128\times40$k & $2\times$ \\
+v4 & 2.0 & 0.05 & 0.02 & $128\times40$k & $2\times$ \\
+v5 & 2.0 & 0.05 & 0.02 & $128\times40$k & $2\times$ \\
+\bottomrule
+\end{tabular}
+\caption{F024 比较中的训练和 supervision 差异。关键修正是：v1 没有显式 formant supervision；
+不应再使用 ``light supervision'' 的说法。}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}L{0.09\linewidth}L{0.23\linewidth}L{0.34\linewidth}L{0.24\linewidth}@{}}
+\toprule
+版本 & 意图 & 主要变化 & 代价 / 风险 \\
+\midrule
+v1 & 第一个 analytic-formant ARIA & Tilt on，宽 bandwidth，无 formant supervision & 重建尚可，但 formant control 松散、约束较弱 \\
+v2 & 更强 formant control & Tilt off，收紧 bandwidth，七个 learned sections & Control 改善，但 spectral slope 不够显式 \\
+v3 & 当前 base & Tilt restored，紧 bandwidth，强 supervision & 操控较好，但 additive source artifact 仍在 \\
+v4 & 原则化 artifact fix & 加入 decoupled band-aperiodicity $\ap$ & 表达力最强，但多一个 control head \\
+v5 & 最小 artifact fix & Bounded noise filter 变成 crossfade $q$ & 不增加 head，但 noise level 与 aperiodicity 耦合 \\
+\bottomrule
+\end{tabular}
+\caption{v1--v5 的推荐叙事方式。}
+\end{table}
+
+\section{评估含义}
+
+v1--v3 的比较应主要关注 formant-control error、copy-synthesis quality，以及 spectral tilt
+是否能提升自然度而不削弱操控。v3--v5 的比较则应聚焦 high-frequency voiced regions，
+因为核心假设是：additive excitation 无法移除 coherent high-band harmonics，而 v4 和 v5
+可以把一部分 harmonic source 转换为 shaped noise。最有信息量的可视化包括：
+\begin{enumerate}
+  \item 一张 lineage diagram，把 v1--v3 显示为 vocal-tract refinements，
+        把 v4--v5 显示为 excitation fixes；
+  \item 一张 side-by-side excitation-flow figure，对比 additive、decoupled aperiodicity
+        和 bounded crossfade；
+  \item 一个 spectrogram strip，对比 v3、v4、v5 在 4--8 kHz 区间的表现；
+  \item 在 voiced frames 上展示 v4 的 $\ap_n(\omega)$ 和 v5 的 $q_n(\omega)$。
+\end{enumerate}
+
+\end{document}

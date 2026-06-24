@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 720" role="img" aria-labelledby="aria-conf-title aria-conf-desc" preserveAspectRatio="xMidYMid meet">
+  <title id="aria-conf-title">ARIA-GOLF conference-style source-filter autoencoder diagram</title>
+  <desc id="aria-conf-desc">Clean architecture diagram showing observed audio, encoder, explicit controls, deterministic glottal and vocal-tract synthesis, synthesized audio, and multi-scale spectrogram loss.</desc>
+  <defs>
+    <style>
+      text { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; fill: #121826; text-rendering: geometricPrecision; letter-spacing: 0; }
+      .title { font-size: 28px; font-weight: 700; fill: #101827; }
+      .sub { font-size: 14px; font-weight: 500; fill: #526071; }
+      .label { font-size: 18px; font-weight: 700; }
+      .mid { font-size: 14px; font-weight: 600; }
+      .small { font-size: 12px; font-weight: 500; fill: #526071; }
+      .tiny { font-size: 10.5px; font-weight: 600; fill: #5f6775; }
+      .micro { font-size: 9.5px; font-weight: 600; fill: #667085; }
+      .audio { fill: #dfe6ff; stroke: #6d76e8; }
+      .neural { fill: #ffd8dc; stroke: #f26f7f; }
+      .control { fill: #d7f9d8; stroke: #75b97b; }
+      .dsp { fill: #fff9c9; stroke: #b5b06e; }
+      .loss { fill: #ffe0e3; stroke: #ee6d7b; }
+      .plain { fill: #ffffff; stroke: #c9d0dc; }
+      .box { stroke-width: 4; rx: 7; }
+      .thinBox { stroke-width: 2.4; rx: 6; }
+      .dashBox { stroke-width: 4; rx: 7; stroke-dasharray: 10 8; }
+      .flow { stroke: #0d1117; stroke-width: 3.4; fill: none; marker-end: url(#arrow); stroke-linecap: square; stroke-linejoin: round; }
+      .ctrlFlow { stroke: #2b7440; stroke-width: 2.8; fill: none; marker-end: url(#arrowGreen); stroke-linecap: square; stroke-linejoin: round; }
+      .lossFlow { stroke: #0d1117; stroke-width: 3.2; fill: none; marker-end: url(#arrow); stroke-linecap: square; stroke-linejoin: round; }
+      .guide { stroke: #9aa3b2; stroke-width: 1.2; fill: none; stroke-dasharray: 5 6; }
+      .wave { stroke: #0d1117; stroke-width: 2.1; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .waveFine { stroke: #0d1117; stroke-width: 1.25; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .harm1 { stroke: #1b55ff; }
+      .harm2 { stroke: #e21933; }
+      .harm3 { stroke: #138f4c; }
+      .harm4 { stroke: #f0a400; }
+      .pulseFill { fill: #121826; opacity: .06; }
+      .sum { fill: #ffd8dc; stroke: #f26f7f; stroke-width: 4; }
+      .legendSwatch { stroke-width: 3; rx: 4; }
+    </style>
+    <marker id="arrow" markerWidth="13" markerHeight="10" refX="12" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#0d1117"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="13" markerHeight="10" refX="12" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L12,5 L0,10 Z" fill="#2b7440"/>
+    </marker>
+  </defs>
+
+  <rect width="1320" height="720" fill="#ffffff"/>
+  <text x="740" y="42" class="title" text-anchor="middle">F024 ARIA-GOLF Source-Filter Autoencoder</text>
+  <text x="740" y="68" class="sub" text-anchor="middle">Observed F0 and learned interpretable controls drive deterministic LF glottal and vocal-tract synthesis</text>
+
+  <g id="legend" transform="translate(104,92)">
+    <rect x="0" y="0" width="18" height="12" class="legendSwatch audio"/>
+    <text x="27" y="11" class="micro">audio</text>
+    <rect x="88" y="0" width="18" height="12" class="legendSwatch neural"/>
+    <text x="115" y="11" class="micro">neural</text>
+    <rect x="188" y="0" width="18" height="12" class="legendSwatch control"/>
+    <text x="215" y="11" class="micro">controls</text>
+    <rect x="300" y="0" width="18" height="12" class="legendSwatch dsp"/>
+    <text x="327" y="11" class="micro">deterministic DSP</text>
+  </g>
+
+  <g id="observed-audio">
+    <rect x="74" y="142" width="142" height="280" class="box audio"/>
+    <text x="145" y="238" class="label" text-anchor="middle">Observed</text>
+    <text x="145" y="262" class="label" text-anchor="middle">Audio</text>
+    <text x="145" y="286" class="small" text-anchor="middle">wav + .pv F0</text>
+    <g transform="translate(100,320)">
+      <path class="wave" d="M0 34 L2 34 L4 2 L7 65 L10 10 L13 57 L16 4 L19 62 L22 12 L25 55 L28 18 L31 50 L34 24 L37 47 L40 26 L43 45 L46 28 L49 44 L52 30 L55 42 L58 31 L62 41 L66 32 L70 40 L75 33 L80 39 L86 34 L92 38"/>
+      <path class="waveFine" d="M0 34 C18 28 30 38 42 34 C57 29 72 39 92 36"/>
+    </g>
+  </g>
+
+  <g id="encoder">
+    <rect x="258" y="184" width="118" height="154" class="box neural"/>
+    <text x="317" y="252" class="label" text-anchor="middle">Encoder</text>
+    <text x="317" y="278" class="small" text-anchor="middle">UNet + LSTM</text>
+    <text x="317" y="303" class="tiny" text-anchor="middle">STFT + log(1+F0)</text>
+  </g>
+  <path class="flow" d="M216 246 H256"/>
+
+  <g id="controls">
+    <rect x="420" y="132" width="116" height="72" class="box control"/>
+    <text x="478" y="172" class="label" text-anchor="middle">F0</text>
+    <text x="478" y="190" class="micro" text-anchor="middle">observed, fixed</text>
+
+    <rect x="420" y="232" width="116" height="72" class="box control"/>
+    <text x="478" y="272" class="label" text-anchor="middle">R_d</text>
+    <text x="478" y="290" class="micro" text-anchor="middle">glottal shape</text>
+
+    <rect x="420" y="332" width="116" height="72" class="box control"/>
+    <text x="478" y="372" class="mid" text-anchor="middle">Noise mag</text>
+    <text x="478" y="390" class="micro" text-anchor="middle">aperiodic energy</text>
+
+    <rect x="420" y="454" width="116" height="82" class="box control"/>
+    <text x="478" y="490" class="label" text-anchor="middle">VT ctrl</text>
+    <text x="478" y="510" class="micro" text-anchor="middle">F / B params</text>
+    <text x="478" y="525" class="micro" text-anchor="middle">n_learned = 8</text>
+  </g>
+
+  <path class="ctrlFlow" d="M376 230 C390 230 396 168 418 168"/>
+  <path class="ctrlFlow" d="M376 260 H418"/>
+  <path class="ctrlFlow" d="M376 290 C392 290 398 368 418 368"/>
+  <path class="ctrlFlow" d="M376 316 C400 316 394 495 418 495"/>
+
+  <g id="lf-source">
+    <rect x="606" y="128" width="196" height="126" class="box dsp"/>
+    <text x="704" y="168" class="label" text-anchor="middle">LF Glottal</text>
+    <text x="704" y="193" class="label" text-anchor="middle">Source</text>
+    <text x="704" y="216" class="small" text-anchor="middle">F0 phase + R_d</text>
+    <path class="pulseFill" d="M626 239 C634 236 642 214 650 190 C657 216 664 239 674 239 Z M690 239 C698 236 706 214 714 190 C721 216 728 239 738 239 Z M754 239 C762 236 770 214 778 190 C785 216 792 239 802 239 Z"/>
+    <path class="wave" d="M626 239 C634 236 642 214 650 190 C656 212 662 232 674 239 C682 239 686 239 690 239 C698 236 706 214 714 190 C720 212 726 232 738 239 C746 239 750 239 754 239 C762 236 770 214 778 190 C784 212 790 232 802 239"/>
+  </g>
+  <path class="ctrlFlow" d="M536 168 H604"/>
+  <path class="ctrlFlow" d="M536 268 C568 268 566 205 604 205"/>
+
+  <g id="noise-path">
+    <rect x="606" y="330" width="118" height="106" class="box dsp"/>
+    <text x="665" y="370" class="label" text-anchor="middle">White</text>
+    <text x="665" y="395" class="label" text-anchor="middle">Noise</text>
+    <path class="wave" d="M624 418 L630 399 L636 426 L642 407 L648 421 L654 392 L660 427 L666 407 L672 419 L678 396 L684 424 L690 402 L696 418 L702 398 L708 425"/>
+
+    <rect x="776" y="330" width="138" height="106" class="box dsp"/>
+    <text x="845" y="371" class="mid" text-anchor="middle">Time-varying</text>
+    <text x="845" y="394" class="label" text-anchor="middle">FIR</text>
+    <text x="845" y="416" class="small" text-anchor="middle">noise shaping</text>
+    <path class="waveFine" d="M794 424 C806 403 820 402 832 417 C846 434 860 428 872 410 C884 393 898 407 906 420"/>
+  </g>
+  <path class="ctrlFlow" d="M536 368 H604"/>
+  <path class="flow" d="M724 383 H774"/>
+
+  <g id="sum">
+    <circle cx="956" cy="282" r="25" class="sum"/>
+    <path d="M944 282 H968 M956 270 V294" stroke="#a23f4a" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+  <path class="flow" d="M802 191 H930 V270 H931"/>
+  <path class="flow" d="M914 383 H930 V294 H932"/>
+
+  <g id="vocal-tract">
+    <rect x="1014" y="186" width="212" height="194" class="box dsp"/>
+    <text x="1120" y="223" class="label" text-anchor="middle">Vocal-Tract</text>
+    <text x="1120" y="246" class="label" text-anchor="middle">Cascade</text>
+    <text x="1120" y="269" class="small" text-anchor="middle">deterministic all-pole filtering</text>
+
+    <rect x="1032" y="294" width="72" height="52" class="thinBox dsp"/>
+    <text x="1068" y="315" class="tiny" text-anchor="middle">F1 / B1</text>
+    <text x="1068" y="333" class="micro" text-anchor="middle">det.</text>
+
+    <rect x="1124" y="294" width="72" height="52" class="thinBox dsp"/>
+    <text x="1160" y="315" class="tiny" text-anchor="middle">F2 / B2</text>
+    <text x="1160" y="333" class="micro" text-anchor="middle">det.</text>
+
+    <path class="flow" d="M1104 320 H1122"/>
+    <path class="guide" d="M1202 320 H1210"/>
+    <text x="1120" y="365" class="micro" text-anchor="middle">+ 8 learned biquads, LPC order = 22</text>
+  </g>
+  <path class="flow" d="M981 282 H1012"/>
+  <path class="ctrlFlow" d="M536 495 H996 V270 H1012"/>
+
+  <g id="synthesized-audio">
+    <rect x="1308" y="128" width="118" height="280" class="box audio"/>
+    <text x="1367" y="239" class="label" text-anchor="middle">Synthesized</text>
+    <text x="1367" y="263" class="label" text-anchor="middle">Audio</text>
+    <g transform="translate(1334,320)">
+      <path class="wave" d="M0 34 L3 9 L6 63 L9 13 L12 58 L15 16 L18 55 L21 19 L24 52 L27 23 L30 50 L33 25 L36 48 L39 27 L42 45 L46 29 L50 43 L54 30 L58 42 L62 31 L67 40 L72 33 L78 39"/>
+      <path class="waveFine" d="M0 34 C16 28 28 38 40 34 C54 30 66 39 80 36"/>
+    </g>
+  </g>
+  <path class="flow" d="M1226 282 H1306"/>
+
+  <g id="loss">
+    <rect x="258" y="574" width="796" height="62" class="box loss"/>
+    <text x="656" y="612" class="label" text-anchor="middle">Multi-Scale Spectrogram Loss</text>
+    <text x="656" y="631" class="small" text-anchor="middle">n_ffts = 255 / 511 / 1023, alpha = 1.0</text>
+  </g>
+  <path class="lossFlow" d="M145 422 V604 H256"/>
+  <path class="lossFlow" d="M1367 408 V604 H1056"/>
+</svg>
