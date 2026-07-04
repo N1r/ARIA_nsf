@@ -1,7 +1,7 @@
 const ASSET = "assets/";
 const PLOT_BG = "#ffffff";
-const FONT = { family: "Inter, -apple-system, Segoe UI, sans-serif", color: "#6b6660", size: 12 };
-const GRID = "#e7e1d6", AXTITLE = "#1c1b19";   // = CSS --line
+const FONT = { family: "IBM Plex Sans, -apple-system, Segoe UI, sans-serif", color: "#5e6b76", size: 12 };
+const GRID = "#dbe2e6", AXTITLE = "#131e28";   // = CSS --line / --ink
 const EXC = ["#2f5d8c", "#9c4f3f", "#5a7d54"]; // steel-blue accent + muted terracotta/sage (paper palette)
 
 // every studio (main + each voice) and the source player registers a stop fn here, so starting
@@ -25,8 +25,12 @@ const GLOSS = {
 
 let M, state = { ci: 0, step: 3 };
 
-fetch(ASSET + "manifest.json")
-  .then(r => { if (!r.ok) throw new Error("manifest " + r.status); return r.json(); })
+const loadJSON = (globalName, path) =>
+  window[globalName]
+    ? Promise.resolve(window[globalName])
+    : fetch(path).then(r => { if (!r.ok) throw new Error(path + " " + r.status); return r.json(); });
+
+loadJSON("ARIS_MANIFEST", ASSET + "manifest.json")
   .then(m => { M = m; init(); })
   .catch(() => {
     const row = document.getElementById("stimRow");
@@ -46,7 +50,7 @@ function init() {
   renderPraat();
 }
 
-// natural-vs-ARIA resynthesis A/B (synthesis-quality section) — assets already built (manifest.recon)
+// natural-vs-ARIS resynthesis A/B (synthesis-quality section) — assets already built (manifest.recon)
 function renderRecon() {
   const host = document.getElementById("reconAB");
   if (!host || !M.recon) return;
@@ -57,21 +61,21 @@ function renderRecon() {
         <div class="recon-one"><span class="recon-tag">natural</span>
           <img src="${ASSET}spec/${r.id}_ref.png" alt="natural ${r.ipa} spectrogram" loading="lazy"/>
           <audio controls preload="none" src="${ASSET}audio/${r.id}_ref.wav"></audio></div>
-        <div class="recon-one"><span class="recon-tag">ARIA resynthesis</span>
-          <img src="${ASSET}spec/${r.id}_aria.png" alt="ARIA resynthesis of ${r.ipa}" loading="lazy"/>
-          <audio controls preload="none" src="${ASSET}audio/${r.id}_aria.wav"></audio></div>
+        <div class="recon-one"><span class="recon-tag">ARIS resynthesis</span>
+          <img src="${ASSET}spec/${r.id}_aris.png" alt="ARIS resynthesis of ${r.ipa}" loading="lazy"/>
+          <audio controls preload="none" src="${ASSET}audio/${r.id}_aris.wav"></audio></div>
       </div>
     </figure>`).join("");
 }
 
-// ARIA-vs-Praat comparison studio: F0/F1/F2 continua, swept per system, side by side.
+// ARIS-vs-Praat comparison studio: F0/F1/F2 continua, swept per system, side by side.
 let CONT = null, cst = { p: 0, u: 0, step: 3 }, cmpAudio = null;
 function cmpStop() { if (cmpAudio) { cmpAudio.pause(); cmpAudio = null; } }
 function renderPraat() {
   const host = document.getElementById("cmpRow");
   if (!host) return;
   STOPPERS.add(cmpStop);
-  fetch(ASSET + "praat_cont.json").then(r => r.ok ? r.json() : null).then(m => {
+  loadJSON("ARIS_PRAAT_CONT", ASSET + "praat_cont.json").then(m => {
     if (!m) { host.innerHTML = '<p class="muted">comparison audio unavailable.</p>'; return; }
     CONT = m;
     buildPills("cmpParam", m.params.map((p, i) => ({ k: i, label: p.label })), cst.p, k => { cmpStop(); cst.p = +k; cmpRender(); });
@@ -90,17 +94,18 @@ function cmpRender() {
   if (!CONT) return;
   const p = CONT.params[cst.p], u = CONT.utts[cst.u], st = CONT.steps[cst.step];
   const lab = document.getElementById("cmpStepLab"); if (lab) lab.textContent = "×" + st;
-  const card = (tag, wav, png, sweep, hi) => `<figure class="cmp-card${hi ? " cmp-aria" : ""}">
-      <figcaption class="cmp-sys">${tag}</figcaption>
+  const card = (tag, wav, png, sweep, hi) => `<figure class="cmp-card">
+      <figcaption class="cmp-sys${hi ? " cmp-ours" : ""}">${tag}${hi ? ' <span class="cmp-badge">ours</span>' : ''}</figcaption>
       <img class="cmp-spec" src="${png}" alt="${tag} spectrogram" loading="lazy"/>
       <audio controls preload="none" src="${wav}"></audio>
       ${sweep ? `<button class="cmp-sweep" data-u="${u.id}" data-p="${p.id}" data-s="${sweep}">▶ sweep ×0.7→×1.3</button>`
               : '<span class="cmp-ref">unmanipulated reference</span>'}</figure>`;
-  const sysTag = sys => sys === "praat" ? (p.id === "F0" ? "Praat · PSOLA" : "Praat · LPC")
-                                        : CONT.sysLabels[sys];
+  const sysTag = sys => sys === "praat"
+      ? (p.id === "F0" ? "Praat · PSOLA" : p.id === "FG" ? "Praat · Change Gender" : "Praat · LPC")
+      : CONT.sysLabels[sys];
   let html = card("natural", `${ASSET}cont/${u.id}__natural.wav`, `${ASSET}cont/${u.id}__natural.png`, null, false);
   html += p.systems.map(sys => card(sysTag(sys), cmpSrc(u.id, p.id, st, sys, "wav"),
-                                     cmpSrc(u.id, p.id, st, sys, "png"), sys, sys === "aria")).join("");
+                                     cmpSrc(u.id, p.id, st, sys, "png"), sys, sys === "aris")).join("");
   document.getElementById("cmpRow").innerHTML = html;
 }
 function cmpSweep(uid, pid, sys) {
@@ -283,8 +288,8 @@ function drawVowel() {
   const traces = [{
     x: M.vowel_space.map(v => v.f2), y: M.vowel_space.map(v => v.f1),
     text: M.vowel_space.map(v => v.ipa), mode: "markers+text", type: "scatter",
-    textposition: "top center", textfont: { color: "#9a9486", size: 13 },
-    marker: { size: 7, color: "#ddd6c8" }, hoverinfo: "skip", showlegend: false
+    textposition: "top center", textfont: { color: "#8b98a3", size: 13 },
+    marker: { size: 7, color: "#ccd6dd" }, hoverinfo: "skip", showlegend: false
   }];
   exs().forEach((ex, i) => {
     traces.push({
@@ -331,7 +336,7 @@ const VGLOSS = {
   breathy: "<b>R<sub>d</sub></b> — glottal source shape: modal → breathy (R<sub>d</sub> 0.5 → 2.5)."
 };
 
-fetch(ASSET + "voices.json").then(r => r.ok ? r.json() : null).then(v => {
+loadJSON("ARIS_VOICES", ASSET + "voices.json").then(v => {
   const host = document.getElementById("voiceList");
   if (v && v.voices && host) v.voices.forEach(voice => mountVoice(host, voice));
 }).catch(() => {});
@@ -342,7 +347,7 @@ function mountVoice(host, V) {
   sec.innerHTML =
     `<header class="voice-h">
        <h3>${V.name} <span class="voice-tag">${V.lang}</span></h3>
-       <span class="voice-meta mono">${V.sr / 1000} kHz · ARIA ${V.model}</span>
+       <span class="voice-meta mono">${V.sr / 1000} kHz · ARIS ${V.model}</span>
      </header>
      <div class="studio">
        <div class="chooser"><span class="field-label">Control</span>

@@ -1,14 +1,14 @@
-/* ARIA demo — "journal / lab": warm paper, serif display, one deep-blue accent,
-   white-panel narrowband spectrograms as paper figures. Sober, rigorous, phonetics-first. */
+/* ARIS demo — "cold lab paper": cool ink-on-paper, Gentium (the SIL linguistics face)
+   for display, IBM Plex as the instrument voice, ink-blue spectrograms as figures. */
 :root{
-  --paper:#faf8f4; --paper-2:#efeae1; --panel:#ffffff;
-  --ink:#1c1b19; --body:#3b3833; --muted:#6b6660; --dim:#7a746b;
-  --line:#e7e1d6; --line-2:#d8d1c3;
-  --accent:#2f5d8c;            /* steel blue — sparing */
-  --accent-2:#3a4a63;          /* quiet slate for interactive */
-  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
-  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --paper:#f4f6f7; --paper-2:#e7ebee; --panel:#ffffff;
+  --ink:#131e28; --body:#36434e; --muted:#5e6b76; --dim:#717d87;
+  --line:#dbe2e6; --line-2:#c8d2d8;
+  --accent:#2f5d8c;            /* steel blue — sparing, matches every figure */
+  --accent-2:#274a6e;
+  --serif:"Gentium Book Plus",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
   --maxw:1000px;
 }
 *{box-sizing:border-box}
@@ -37,17 +37,77 @@ a:hover{color:var(--accent)}
 .btn.sm{padding:6px 13px; font-size:13px; border-radius:6px}
 .btn[aria-disabled="true"]{opacity:.45; pointer-events:none}
 
+/* ---------- top nav ---------- */
+.topnav{position:sticky; top:0; z-index:50; background:rgba(250,248,244,.92);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--line)}
+.nav-in{display:flex; align-items:center; justify-content:space-between; height:52px}
+.brand{font-family:var(--serif); font-weight:700; font-size:19px; color:var(--ink);
+  text-decoration:none; letter-spacing:.01em}
+.nav-links{display:flex; gap:4px; overflow-x:auto}
+.nav-links a{font-size:13.5px; font-weight:500; color:var(--muted); text-decoration:none;
+  padding:6px 10px; border-radius:6px; white-space:nowrap}
+.nav-links a:hover{color:var(--accent); background:#fff}
+.nav-links .nav-cite{color:var(--accent); border:1px solid var(--line-2)}
+section[id],#cite{scroll-margin-top:64px}
+
 /* ---------- hero ---------- */
-.hero{padding:64px 0 52px; border-bottom:1px solid var(--line)}
+.hero{padding:56px 0 52px; border-bottom:1px solid var(--line)}
+.hero-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:48px; align-items:center;
+  margin-bottom:34px}
+/* signature figure: one formant sweeps, the others hold */
+.motif{margin:0}
+.motif svg{width:100%; height:auto; display:block; background:var(--panel);
+  border:1px solid var(--line); border-radius:12px}
+.motif-cap{display:block; text-align:center; font-size:11.5px; color:var(--dim); margin-top:8px;
+  letter-spacing:.04em}
+/* one 8s loop in two acts, everything locked to the same timeline.
+   Act A (0–50%): the slider drives F2 (×1.0 → ×0.7 → ×1.3 → ×1.0); F1 holds.
+   Act B (50–100%): the slider drives F1; F2 holds. Down = lower Hz = thumb left.
+   The thumb recolors to the active formant; the "control ·" label crossfades. */
+.m-f2{animation:f2-sweep 8s ease-in-out infinite}
+.m-f1{animation:f1-sweep 8s ease-in-out infinite}
+.m-thumb{animation:thumb-sweep 8s ease-in-out infinite}
+.m-thumb-dot{animation:thumb-color 8s linear infinite}
+.m-ctl-f2{animation:ctl-f2 8s linear infinite}
+.m-ctl-f1{opacity:0; animation:ctl-f1 8s linear infinite}
+@keyframes f2-sweep{
+  0%,5%{transform:translateY(0)}
+  13%,21%{transform:translateY(38px)}
+  31%,39%{transform:translateY(-30px)}
+  47%,100%{transform:translateY(0)}}
+@keyframes f1-sweep{
+  0%,55%{transform:translateY(0)}
+  63%,71%{transform:translateY(22px)}
+  81%,89%{transform:translateY(-26px)}
+  97%,100%{transform:translateY(0)}}
+@keyframes thumb-sweep{
+  0%,5%{transform:translateX(0)}
+  13%,21%{transform:translateX(-130px)}
+  31%,39%{transform:translateX(130px)}
+  47%,55%{transform:translateX(0)}
+  63%,71%{transform:translateX(-130px)}
+  81%,89%{transform:translateX(130px)}
+  97%,100%{transform:translateX(0)}}
+@keyframes thumb-color{
+  0%,48%{fill:#2f5d8c}
+  52%,96%{fill:#9c4f3f}
+  100%{fill:#2f5d8c}}
+@keyframes ctl-f2{0%,48%{opacity:1} 52%,96%{opacity:0} 100%{opacity:1}}
+@keyframes ctl-f1{0%,48%{opacity:0} 52%,96%{opacity:1} 100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .m-f2,.m-f1,.m-thumb,.m-thumb-dot,.m-ctl-f2,.m-ctl-f1{animation:none}}
+@media(max-width:860px){.hero-grid{grid-template-columns:1fr} .motif{max-width:460px}}
 .kicker{display:block; margin-bottom:20px}
 .hero h1{font-size:68px; font-weight:700; letter-spacing:-.015em; margin-bottom:14px}
 .tagline{font-family:var(--serif); font-size:22px; line-height:1.4; color:var(--ink);
   max-width:680px; margin:0 0 20px}
 .tagline em{font-style:italic; color:var(--accent)}
+.acro{font-family:var(--serif); font-size:17px; color:var(--accent); margin:-4px 0 16px; letter-spacing:.01em}
+.acro b{font-weight:700}
 .lede{max-width:660px; margin:0 0 30px; color:var(--body); font-size:17px}
 .lede b{color:var(--ink); font-weight:600}
-.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:26px; max-width:760px; margin:0 0 32px;
-  padding:22px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:26px; margin:0;
+  padding:22px 0 0; border-top:1px solid var(--line)}
 .stats div{min-width:0}
 .stats dt{font-family:var(--serif); font-size:30px; font-weight:600; color:var(--ink); line-height:1}
 .stats dd{margin:8px 0 0; font-size:13px; color:var(--muted); line-height:1.4}
@@ -94,7 +154,7 @@ input[type=range]::-moz-range-thumb{width:15px; height:15px; border-radius:50%; 
 /* ---------- spectrogram plates (the 3 syllables) ---------- */
 .plate-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-bottom:30px}
 .plate{margin:0; background:var(--panel); border:1px solid var(--line); border-radius:11px;
-  overflow:hidden; box-shadow:0 2px 10px rgba(60,55,45,.07); transition:box-shadow .15s, outline-color .15s;
+  overflow:hidden; box-shadow:0 2px 10px rgba(25,42,58,.07); transition:box-shadow .15s, outline-color .15s;
   outline:2px solid transparent}
 .plate-spec.img-missing{min-height:120px; background:var(--paper-2);
   display:flex; align-items:center; justify-content:center}
@@ -127,6 +187,8 @@ input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:
   *{transition-duration:.001ms !important; animation-duration:.001ms !important; scroll-behavior:auto !important}
 }
 .plate-fig img{width:100%; max-width:760px; display:block; border:1px solid var(--line); border-radius:10px; background:#fff}
+.arch-fig{margin-bottom:34px}
+.arch-fig img{max-width:100%; padding:14px 16px}
 
 /* ---------- method: table + cards ---------- */
 .tablewrap{overflow-x:auto; margin-bottom:8px}
@@ -161,6 +223,14 @@ input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:
 .dimtable th.num{text-align:right}
 .mos td:last-child,.mos th:last-child{border-left:1px solid var(--line-2)}
 
+/* ---------- cite ---------- */
+.bibtex{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:18px 20px; font-size:13px; line-height:1.7; color:var(--body); overflow-x:auto;
+  max-width:640px; margin:0 0 8px}
+
+/* native players/sliders pick up the accent */
+audio,input[type=range]{accent-color:var(--accent)}
+
 /* ---------- footer ---------- */
 footer{padding:30px 0; color:var(--muted); font-size:13px}
 footer .wrap{display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap; align-items:center}
@@ -172,16 +242,17 @@ footer .wrap{display:flex; justify-content:space-between; gap:18px; flex-wrap:wr
   .stats{grid-template-columns:1fr; gap:18px}
   .plate-row{grid-template-columns:1fr}
   .kbd-hint{display:none}
+  .nav-links a{padding:6px 7px; font-size:13px}
 }
 
-/* synthesis-quality: natural-vs-ARIA resynthesis A/B */
+/* synthesis-quality: natural-vs-ARIS resynthesis A/B */
 #reconAB{display:flex; flex-direction:column; gap:16px; margin:6px 0 34px}
 .recon{margin:0; background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:16px 18px}
 .recon-head{font-family:var(--serif); font-size:19px; font-weight:600; color:var(--ink); margin-bottom:10px}
 .recon-head .muted{font-size:14px; font-weight:400}
 .recon-pair{display:grid; grid-template-columns:1fr 1fr; gap:18px}
 
-/* ARIA-vs-Praat comparison studio */
+/* ARIS-vs-Praat comparison studio */
 .cmp-studio{margin-top:18px}
 .cmp-controls{display:flex; flex-wrap:wrap; gap:20px 34px; margin-bottom:14px}
 .cmp-group{display:flex; flex-direction:column; gap:8px}
@@ -192,8 +263,10 @@ footer .wrap{display:flex; justify-content:space-between; gap:18px; flex-wrap:wr
 .cmp-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px}
 .cmp-card{margin:0; background:var(--panel); border:1px solid var(--line); border-radius:11px;
   padding:14px 15px; display:flex; flex-direction:column; gap:10px}
-.cmp-card.cmp-aria{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
 .cmp-sys{font-family:var(--sans); font-weight:600; font-size:14px; color:var(--ink)}
+.cmp-sys.cmp-ours{color:var(--accent)}
+.cmp-badge{font:700 10px var(--sans); color:#fff; background:var(--accent); border-radius:4px;
+  padding:1px 6px; margin-left:7px; vertical-align:1.5px; letter-spacing:.03em; text-transform:uppercase}
 .cmp-spec{width:100%; display:block; border:1px solid var(--line); border-radius:7px; background:#fff}
 .cmp-card audio{width:100%; height:34px}
 .cmp-sweep{align-self:flex-start; font:600 12px var(--sans); color:var(--accent); background:none;

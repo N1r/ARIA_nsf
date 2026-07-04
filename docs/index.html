@@ -1,100 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="top">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ARIA — interpretable, controllable neural speech synthesis</title>
-<meta name="description" content="ARIA: an analytic source–filter neural vocoder with independent, near-exact control of F0, F1, F2, phonation, prominence and nasality. A controllable vocoder for phonetic research." />
-<meta name="theme-color" content="#faf8f4" />
+<title>ARIS — interpretable, controllable neural speech synthesis</title>
+<meta name="description" content="ARIS: an analytic source–filter neural vocoder with independent, near-exact control of F0, F1, F2, phonation, prominence and nasality. A controllable vocoder for phonetic research." />
+<meta name="theme-color" content="#f4f6f7" />
 <meta name="color-scheme" content="light" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="ARIA — interpretable, controllable neural speech synthesis" />
+<meta property="og:title" content="ARIS — interpretable, controllable neural speech synthesis" />
 <meta property="og:description" content="Move one phonetic control and the others hold. F0, F1, F2, phonation and prominence (plus an exploratory nasalisation control) over a source–filter neural vocoder for phonetic research. IEEE SLT 2026 demo." />
 <meta name="twitter:card" content="summary" />
 <!-- sober favicon: three muted spectrogram strokes on warm paper -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23faf8f4'/%3E%3Cg fill='none' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 23V12' stroke='%231c1b19'/%3E%3Cpath d='M16 25V8' stroke='%232f5d8c'/%3E%3Cpath d='M23 22V14' stroke='%236b6660'/%3E%3C/g%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f4f6f7'/%3E%3Cg fill='none' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 23V12' stroke='%23131e28'/%3E%3Cpath d='M16 25V8' stroke='%232f5d8c'/%3E%3Cpath d='M23 22V14' stroke='%235e6b76'/%3E%3C/g%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<header class="hero">
-  <div class="wrap">
-    <div class="kicker">IEEE SLT 2026 · interactive demo</div>
-    <h1>ARIA</h1>
-    <p class="tagline">An analytic source–filter neural vocoder with an
-      <em>interpretable, decoupled</em> control surface, built for phonetic research.</p>
-    <p class="lede">ARIA exposes the parameters phoneticians already reason with
-      (<b>F0, F1, F2, phonation and prominence</b>, plus an exploratory nasalisation control) as controls
-      over a neural vocoder. The network estimates them; <b>deterministic DSP places each
-      pole/source parameter directly</b>. Move the pitch or vowel control and the others hold: F0, F1
-      and F2 are cleanly independent (the source and prominence controls overlap by design).</p>
-    <dl class="stats">
-      <div><dt>6</dt><dd>phonetic dimensions <span class="muted">— F0/F1/F2 independent; 7 studio controls</span></dd></div>
-      <div><dt>≈ 40 Hz</dt><dd>median F2 manipulation error</dd></div>
-      <div><dt>from 1 h</dt><dd>single-speaker audio per voice</dd></div>
-    </dl>
-    <div class="cta">
-      <a class="btn primary" href="#studio">Open the control studio</a>
-      <a class="btn ghost" href="#method">How it works</a>
+<nav class="topnav" aria-label="Sections">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top">ARIS</a>
+    <div class="nav-links">
+      <a href="#studio">Studio</a>
+      <a href="#fidelity">Fidelity</a>
+      <a href="#praat">Baselines</a>
+      <a href="#quality">Quality</a>
+      <a href="#voices">Voices</a>
+      <a href="#method">Method</a>
+      <a class="nav-cite" href="#cite">Cite</a>
     </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker">IEEE SLT 2026 · interactive demo</div>
+      <h1>ARIS</h1>
+      <p class="acro"><b>A</b>nalytic <b>R</b>esonance for <b>I</b>nterpretable <b>S</b>ynthesis</p>
+      <p class="tagline">An analytic source–filter neural vocoder with an
+        <em>interpretable, decoupled</em> control surface, built for phonetic research.</p>
+      <p class="lede">ARIS exposes the parameters phoneticians already reason with —
+        <b>F0, F1, F2, phonation and prominence</b>, plus an exploratory nasalisation control — as
+        controls over a neural vocoder. The network estimates them; <b>deterministic DSP places each
+        pole and source parameter directly</b>. Move one control and the others hold.</p>
+      <div class="cta">
+        <a class="btn primary" href="#studio">Open the control studio</a>
+        <a class="btn ghost" href="#method">How it works</a>
+      </div>
+    </div>
+    <!-- signature figure: the paper's claim, drawn — drag one control, one formant follows, the others hold -->
+    <figure class="motif" aria-hidden="true">
+      <svg viewBox="0 0 520 262" role="img">
+        <defs>
+          <filter id="m-soft" x="-20%" y="-150%" width="140%" height="400%">
+            <feGaussianBlur stdDeviation="3.2"/>
+          </filter>
+        </defs>
+        <!-- faint harmonic striations, spectrogram-like -->
+        <g stroke="#eef2f4" stroke-width="1">
+          <line x1="0" y1="30"  x2="520" y2="30"/> <line x1="0" y1="52"  x2="520" y2="52"/>
+          <line x1="0" y1="76"  x2="520" y2="76"/> <line x1="0" y1="102" x2="520" y2="102"/>
+          <line x1="0" y1="130" x2="520" y2="130"/><line x1="0" y1="160" x2="520" y2="160"/>
+          <line x1="0" y1="192" x2="520" y2="192"/>
+        </g>
+        <!-- F2 (blue): sweeps in act one, holds in act two -->
+        <g class="m-f2">
+          <path d="M0,64 C70,58 130,70 200,62 S 340,68 440,61" fill="none" filter="url(#m-soft)"
+                stroke="#2f5d8c" stroke-width="9" stroke-linecap="round" opacity=".22"/>
+          <path d="M0,64 C70,58 130,70 200,62 S 340,68 440,61" fill="none"
+                stroke="#2f5d8c" stroke-width="3" stroke-linecap="round"/>
+          <text x="452" y="66" font-family="IBM Plex Mono, monospace" font-size="13" fill="#2f5d8c">F2</text>
+        </g>
+        <!-- F1 (terracotta): holds in act one, sweeps in act two -->
+        <g class="m-f1">
+          <path d="M0,148 C80,144 150,154 230,147 S 360,151 440,146" fill="none" filter="url(#m-soft)"
+                stroke="#9c4f3f" stroke-width="9" stroke-linecap="round" opacity=".16"/>
+          <path d="M0,148 C80,144 150,154 230,147 S 360,151 440,146" fill="none"
+                stroke="#9c4f3f" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+          <text x="452" y="152" font-family="IBM Plex Mono, monospace" font-size="13" fill="#9c4f3f">F1</text>
+        </g>
+        <!-- F0: always holds -->
+        <g>
+          <path d="M0,196 C90,192 160,200 250,195 S 370,199 440,194" fill="none" filter="url(#m-soft)"
+                stroke="#5e6b76" stroke-width="9" stroke-linecap="round" opacity=".14"/>
+          <path d="M0,196 C90,192 160,200 250,195 S 370,199 440,194" fill="none"
+                stroke="#5e6b76" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+          <text x="452" y="200" font-family="IBM Plex Mono, monospace" font-size="13" fill="#5e6b76">F0 —</text>
+        </g>
+        <!-- one slider, switching which control it drives; the thumb recolors to the active formant -->
+        <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#5e6b76">
+          <text x="40" y="240">control ·</text>
+          <text class="m-ctl-f2" x="60" y="240" dx="42" font-size="12" fill="#2f5d8c" font-weight="600">F2</text>
+          <text class="m-ctl-f1" x="60" y="240" dx="42" font-size="12" fill="#9c4f3f" font-weight="600">F1</text>
+          <line x1="150" y1="236" x2="410" y2="236" stroke="#c8d2d8" stroke-width="4" stroke-linecap="round"/>
+          <text x="150" y="256" text-anchor="middle">×0.7</text>
+          <text x="280" y="256" text-anchor="middle">×1.0</text>
+          <text x="410" y="256" text-anchor="middle">×1.3</text>
+          <g class="m-thumb">
+            <circle class="m-thumb-dot" cx="280" cy="236" r="9" fill="#2f5d8c" stroke="#fff" stroke-width="2.5"/>
+          </g>
+        </g>
+      </svg>
+      <figcaption class="motif-cap mono">one slider, two acts: F2 sweeps while F1 holds — then F1 sweeps while F2 holds</figcaption>
+    </figure>
+  </div>
+  <div class="wrap">
+    <dl class="stats">
+      <div><dt>38 Hz</dt><dd>median F2 manipulation error <span class="muted">— Praat 244 · WORLD 271 (same tracker, N = 300)</span></dd></div>
+      <div><dt>F0 · F1 · F2</dt><dd>cleanly independent controls <span class="muted">— 7 phonetic controls in the studio</span></dd></div>
+      <div><dt>1 h</dt><dd>single-speaker audio per voice <span class="muted">— no text, no phonetic labels</span></dd></div>
+    </dl>
   </div>
 </header>
 
 <main>
-  <!-- ===================== SYNTHESIS QUALITY ===================== -->
-  <section id="quality" class="section alt">
-    <div class="wrap">
-      <p class="eyebrow">Synthesis quality</p>
-      <h2>Faithful resynthesis</h2>
-      <p class="sub">Before any manipulation, how close is ARIA's analysis–resynthesis to the natural
-        recording? Three sustained Mandarin vowels are shown below, natural on the left and ARIA on the
-        right. The harmonic structure and formant pattern are reproduced.</p>
-
-      <div id="reconAB"></div>
-
-      <h3 class="block-h">Neural-MOS snapshot</h3>
-      <p class="sub">Predicted naturalness (UTMOS22), <b>mean ± std over N = 50 utterances</b>, for the
-        analysis–resynthesis against the natural recording (the reference). The studio voice <b>F024 is
-        v4 at 1 h</b>; for CSMSC and LJSpeech the table pairs a <b>1 h (v2)</b> row with a <b>5 h (v4)</b>
-        row, so the v4-vs-v2 gain there partly reflects the ≈ 5× training data.
-        Read the <b>resynth–natural gap within a voice</b>, not absolutes across voices: UTMOS is a
-        neural proxy (not a human MOS test) and is wideband-trained, so the 16 kHz F024 numbers sit low
-        for both synth and reference — their near-equal means (2.53 vs 2.70) indicate near-transparent
-        resynthesis — while 5 h markedly narrows the resynth–natural gap vs 1 h on CSMSC/LJ.</p>
-      <div class="tablewrap">
-      <table class="dimtable mos">
-        <caption>UTMOS22 predicted naturalness (mean ± per-utterance std, N = 50; SEM ≈ std/√50 ≈ 0.08); the reference column is the natural recording.</caption>
-        <thead><tr><th>Voice</th><th>Language</th><th class="num">Sample rate</th><th>Model</th><th class="num">Train data</th>
-          <th class="num">UTMOS · resynth</th><th class="num">UTMOS · natural (ref)</th></tr></thead>
-        <tbody>
-          <tr><td>F024</td><td>Mandarin</td><td class="num">16 kHz</td><td>v4</td><td class="num">1 h</td>
-            <td class="num">2.53 ± 0.63</td><td class="num">2.70 ± 0.68</td></tr>
-          <tr><td>CSMSC</td><td>Mandarin</td><td class="num">24 kHz</td><td>v2</td><td class="num">1 h</td>
-            <td class="num">2.99 ± 0.39</td><td class="num">3.90 ± 0.37</td></tr>
-          <tr><td>CSMSC</td><td>Mandarin</td><td class="num">24 kHz</td><td>v4</td><td class="num">5 h</td>
-            <td class="num">3.35 ± 0.44</td><td class="num">3.90 ± 0.37</td></tr>
-          <tr><td>LJSpeech</td><td>English</td><td class="num">22 kHz</td><td>v2</td><td class="num">1 h</td>
-            <td class="num">3.43 ± 0.31</td><td class="num">4.37 ± 0.09</td></tr>
-          <tr><td>LJSpeech</td><td>English</td><td class="num">22 kHz</td><td>v4</td><td class="num">5 h</td>
-            <td class="num">4.00 ± 0.23</td><td class="num">4.37 ± 0.09</td></tr>
-        </tbody>
-      </table>
-      </div>
-    </div>
-  </section>
-
   <!-- ===================== CONTROL STUDIO ===================== -->
   <section id="studio" class="section">
     <div class="wrap">
       <p class="eyebrow">Interactive</p>
       <h2>Control studio</h2>
       <p class="sub">Pick a phonetic control and drag the slider along its seven-step continuum.
-        Each control is shown live on <b>several Mandarin syllables at once</b> (varied onset, rime
-        and tone, including compound finals), so you can see it generalise. The demonstration is
+        Each control runs live on <b>several Mandarin syllables at once</b> (varied onset, rime
+        and tone, including compound finals), so you can hear it generalise. The demonstration is
         simple: <b>the targeted control sweeps while everything else holds</b>.</p>
 
       <div class="studio">
@@ -142,41 +174,57 @@
     <div class="wrap">
       <p class="eyebrow">Evidence</p>
       <h2>Near-exact, by construction</h2>
-      <p class="sub">Because each control is a physical DSP parameter (a pole frequency, a glottal
-        shape, a gain), not a latent fed to a black box, the synthesiser realises the requested
-        value closely and predictably. Over the full F024 test set (1517 utterances × six target scales),
-        the median residual |measured − target| is small: F0 ≈ 0.4 Hz, F1 ≈ 31 Hz, F2 ≈ <b>40 Hz</b>
-        (vs the ≈ 150 Hz F2 manipulation error reported for HiFi-Glot). F1 is the exception: the
-        measured value carries an upward offset (the all-pole tract over-reads low F1), so low-F1
-        targets undershoot and the slope falls below 1 at the extremes (R² ≈ 0.89) — the commanded
-        pole is exact, the acoustic F1 is biased high.</p>
+      <p class="sub">Each control is a physical DSP parameter — a pole frequency, a glottal shape,
+        a gain — not a latent fed to a black box, so the synthesiser realises the requested value
+        closely and predictably. Over all 1517 F024 utterances (the full single-speaker corpus,
+        in-domain) × six target scales, the median |measured − target| is
+        F0 ≈ 0.4 Hz, F1 ≈ 31 Hz, F2 ≈ 40 Hz — against the ≈ 150 Hz F2 manipulation error reported
+        for HiFi-Glot. F1 is the one exception: the all-pole tract reads low F1 slightly high, so its
+        slope sits just below 1 (over 120 syllables: slope 0.93, R² 0.96; F2: slope 0.96, R² 0.97).
+        The commanded pole is exact; the measured F1 carries a small upward bias.</p>
       <figure class="plate-fig">
         <img src="assets/manipulation_fidelity.png" alt="manipulation fidelity — |measured − target| per control across target scales" />
-        <figcaption>Manipulation fidelity over the full F024 test set (1517 utterances): the per-utterance
+        <figcaption>Manipulation fidelity over all 1517 F024 utterances (full corpus, in-domain): the per-utterance
           |measured − target| for each control across target scales 0.7–1.3.</figcaption>
       </figure>
     </div>
   </section>
 
-  <!-- ===================== VS PRAAT ===================== -->
+  <!-- ===================== VS PRAAT / WORLD ===================== -->
   <section id="praat" class="section">
     <div class="wrap">
-      <p class="eyebrow">Baseline</p>
-      <h2>Versus Praat, the phonetics standard</h2>
-      <p class="sub">Praat is the de-facto tool for building manipulated stimuli, so it is the comparison
-        that matters. It offers two formant-manipulation routes and <b>neither is accurate, independent,
-        and clean at once</b>: <b>Change Gender</b> resynthesises cleanly but scales all formants together
-        (command F2 and F1 follows) and under-shoots the target; <b>LPC source–filter</b> edits one formant
-        at a time but degrades the signal. ARIA is the only one with low manipulation error <i>and</i> low
-        cross-leakage. Same F024 utterances, same formant tracker (median Hz, N = 300).</p>
+      <p class="eyebrow">Baselines</p>
+      <h2>Versus the standard tools</h2>
+      <p class="sub">The tools a phonetician actually reaches for are <b>copy-synthesis</b>
+        (analysis–resynthesis, no manipulation), <b>Praat</b> (PSOLA + Change Gender) and <b>WORLD</b>.
+        On a <b>level field</b> — F0 scaling and <b>uniform</b> formant scaling, the only formant edit all
+        three share — all resynthesise cleanly and nail F0 (&lt; 1 Hz). But on uniform formant scaling
+        Praat and WORLD <b>under-shoot ~6–7×</b> (F2 error 244 / 271 Hz) while <b>ARIS lands it (38 Hz)</b>.
+        And only ARIS edits a <i>single</i> formant, carries a voice-quality control, and reads values
+        back in Hz. Same F024 utterances, same tracker, N = 300.</p>
       <figure class="plate-fig">
-        <img src="assets/aria_vs_praat.png" alt="ARIA vs Praat — manipulation error and cross-leakage bar charts" loading="lazy"/>
-        <figcaption>Manipulation error and cross-leakage, ARIA vs. the two Praat routes; F0 is comparable
-          for all (&lt; 1 Hz) — the gap is in the formants.</figcaption>
+        <img src="assets/baselines.png" alt="ARIS vs Praat and WORLD — copy-synth floor, F0 scaling, uniform formant scaling" loading="lazy"/>
+        <figcaption>Fair comparison on F024 (N = 300, same tracker): all resynthesise cleanly (left) and
+          scale F0 perfectly (middle); on uniform formant scaling (right) Praat and WORLD under-shoot
+          badly while ARIS is accurate.</figcaption>
       </figure>
-      <p class="sub">Sweep each system's continuum and compare. Pick a parameter and an utterance, drag
-        the slider through the seven-step continuum (×0.7–×1.3), or hit <b>▶ sweep</b> on a card to hear
-        that system glide through it — same utterance, same tracker.</p>
+      <div class="tablewrap">
+      <table class="dimtable">
+        <caption>Capability &amp; fidelity — median F2 Hz where numeric. △ = possible but poor/degraded.</caption>
+        <thead><tr><th>Tool</th><th class="num">copy-synth floor</th><th class="num">F0 scale</th>
+          <th class="num">uniform formant</th><th>indep. F1/F2</th><th>voice quality</th><th>Hz read-back</th></tr></thead>
+        <tbody>
+          <tr><td>Praat</td><td class="num">8</td><td class="num">&lt;1</td><td class="num">244</td><td>△ (LPC, degraded)</td><td>✗</td><td>✗</td></tr>
+          <tr><td>WORLD</td><td class="num">20</td><td class="num">&lt;1</td><td class="num">271</td><td>✗</td><td>△ (aperiodicity)</td><td>✗</td></tr>
+          <tr><td>ARIS</td><td class="num">23</td><td class="num">&lt;1</td><td class="num"><b>38</b></td><td>✓</td><td>✓ (R<sub>d</sub>)</td><td>✓</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="sub"><b>Listen</b> to each manipulation done every way it can be. Pick a parameter —
+        <b>F0</b>, <b>F1</b>, <b>F2</b>, or <b>F1+F2 together</b> (uniform) — and an utterance, then drag
+        the slider through the continuum (×0.7–×1.3) or hit <b>▶ sweep</b> on a card. F0 and F1+F2 show
+        <b>ARIS · Praat · WORLD</b>; the single-formant edits (F1, F2 alone) show only ARIS vs. Praat's
+        LPC route, since WORLD and Change Gender can't isolate one formant. Same utterance, same tracker.</p>
       <div class="cmp-studio">
         <div class="cmp-controls">
           <div class="cmp-group"><span class="cmp-lab">parameter</span><div id="cmpParam" class="pills"></div></div>
@@ -187,6 +235,56 @@
           <span id="cmpStepLab" class="cmp-steplab">×1.0</span>
         </div>
         <div id="cmpRow" class="cmp-row"></div>
+      </div>
+      <p class="sub muted"><b>What to listen for.</b> On the <b>F1+F2 · uniform</b> axis at moderate
+        scales, ARIS and WORLD sound <i>similar</i> — both are high-fidelity vocoders shifting the
+        formants the same direction; this is WORLD's best case. The gap opens (i) at the
+        <b>extremes</b>, where WORLD under-shoots badly (F2 lands ~1900 Hz for a 2500 Hz target), and
+        (ii) decisively on the <b>single-formant</b> axes: WORLD's spectral envelope is non-parametric,
+        so it <b>cannot isolate one formant</b> (no WORLD card there). The deeper reason: WORLD
+        <i>copies</i> the natural envelope — faithful, but not controllable; ARIS <i>generates</i> it
+        from interpretable poles — controllable and exact, at the cost of a slightly more model-like
+        high band.</p>
+    </div>
+  </section>
+
+  <!-- ===================== SYNTHESIS QUALITY ===================== -->
+  <section id="quality" class="section alt">
+    <div class="wrap">
+      <p class="eyebrow">Synthesis quality</p>
+      <h2>Faithful resynthesis</h2>
+      <p class="sub">Every manipulation above starts from analysis–resynthesis, so it is only
+        meaningful if that resynthesis is close to transparent. Three sustained Mandarin vowels,
+        natural on the left, ARIS on the right: the harmonic structure and formant pattern are
+        reproduced. Synthesis runs <b>≈ 28× faster than real time</b> on CPU (RTF 0.036, 4 threads).</p>
+
+      <div id="reconAB"></div>
+
+      <h3 class="block-h">Neural-MOS snapshot</h3>
+      <p class="sub">Predicted naturalness (UTMOS22) for the resynthesis against the natural
+        recording. Read the <b>resynth–natural gap within a voice</b>, not absolutes across voices:
+        UTMOS is a wideband-trained neural proxy, so the 16 kHz F024 voice scores low for synthesis
+        and reference alike — its near-equal means (2.53 vs 2.70) indicate near-transparent
+        resynthesis. For CSMSC and LJSpeech the 1 h (v2) and 5 h (v4) rows share a reference; the
+        v4 gain partly reflects the ≈ 5× training data.</p>
+      <div class="tablewrap">
+      <table class="dimtable mos">
+        <caption>UTMOS22 predicted naturalness, mean ± per-utterance std, N = 50 (SEM ≈ 0.08); the reference column is the natural recording. Not a human MOS test.</caption>
+        <thead><tr><th>Voice</th><th>Language</th><th class="num">Sample rate</th><th>Model</th><th class="num">Train data</th>
+          <th class="num">UTMOS · resynth</th><th class="num">UTMOS · natural (ref)</th></tr></thead>
+        <tbody>
+          <tr><td>F024</td><td>Mandarin</td><td class="num">16 kHz</td><td>v4</td><td class="num">1 h</td>
+            <td class="num">2.53 ± 0.63</td><td class="num">2.70 ± 0.68</td></tr>
+          <tr><td>CSMSC</td><td>Mandarin</td><td class="num">24 kHz</td><td>v2</td><td class="num">1 h</td>
+            <td class="num">2.99 ± 0.39</td><td class="num">3.90 ± 0.37</td></tr>
+          <tr><td>CSMSC</td><td>Mandarin</td><td class="num">24 kHz</td><td>v4</td><td class="num">5 h</td>
+            <td class="num">3.35 ± 0.44</td><td class="num">3.90 ± 0.37</td></tr>
+          <tr><td>LJSpeech</td><td>English</td><td class="num">22 kHz</td><td>v2</td><td class="num">1 h</td>
+            <td class="num">3.43 ± 0.31</td><td class="num">4.37 ± 0.09</td></tr>
+          <tr><td>LJSpeech</td><td>English</td><td class="num">22 kHz</td><td>v4</td><td class="num">5 h</td>
+            <td class="num">4.00 ± 0.23</td><td class="num">4.37 ± 0.09</td></tr>
+        </tbody>
+      </table>
       </div>
     </div>
   </section>
@@ -206,68 +304,8 @@
     </div>
   </section>
 
-  <!-- ===================== ROBUSTNESS / EFFICIENCY ===================== -->
-  <section id="budget" class="section alt">
-    <div class="wrap">
-      <p class="eyebrow">Ablations</p>
-      <h2>Robustness to data, training &amp; model size</h2>
-      <p class="sub">F024, 16 kHz, single speaker. Control fidelity = median |measured − target| (Hz)
-        over voiced frames (N ≈ 15 utterances × 5 scales); quality = MCD vs. the natural reference
-        (lower = better, mean ± std, N = 50). Control fidelity is realised by the analytic DSP, not
-        learned, so it shows no systematic trend with budget or model size — the residual spread
-        (F1 ≈ 29–43 Hz, F2 ≈ 23–31 Hz) is formant-tracker scatter, not a data effect. MCD carries the
-        quality-vs-budget trend and degrades gracefully (4.16 → 3.78 dB from 5 min to 1 h). UTMOS
-        naturalness is reported once, in the snapshot above; we omit it per-budget because at N = 50 it
-        cannot resolve the sub-0.05 differences between these configs (its SEM ≈ 0.08 swamps them).</p>
-
-      <h3 class="block-h">Training data &nbsp;<span class="muted">(model fixed: v4, 5.6 M)</span></h3>
-      <div class="tablewrap">
-      <table class="dimtable">
-        <caption>Control fidelity (median |measured − target|, Hz; lower = better) and quality (MCD, mean ± std, N = 50) vs. training-set size.</caption>
-        <thead><tr><th>Data</th><th class="num">F0 (Hz)</th><th class="num">F1 (Hz)</th><th class="num">F2 (Hz)</th><th class="num">MCD ↓ (dB)</th></tr></thead>
-        <tbody>
-          <tr><td>5 min</td><td class="num">0.3</td><td class="num">30.0</td><td class="num">29.4</td><td class="num">4.16 ± 0.21</td></tr>
-          <tr><td>10 min</td><td class="num">0.5</td><td class="num">33.2</td><td class="num">22.9</td><td class="num">3.95 ± 0.19</td></tr>
-          <tr><td>20 min</td><td class="num">0.3</td><td class="num">42.8</td><td class="num">31.2</td><td class="num">3.84 ± 0.14</td></tr>
-          <tr><td>1 h</td><td class="num">0.5</td><td class="num">28.9</td><td class="num">25.7</td><td class="num">3.78 ± 0.12</td></tr>
-        </tbody>
-      </table>
-      </div>
-
-      <h3 class="block-h">Encoder size &nbsp;<span class="muted">(data fixed: 1 h)</span></h3>
-      <div class="tablewrap">
-      <table class="dimtable">
-        <caption>The same metrics vs. encoder capacity (training data fixed at 1 h; MCD = mean ± std, N = 50).</caption>
-        <thead><tr><th>Encoder</th><th class="num">Params</th><th class="num">F0 (Hz)</th><th class="num">F1 (Hz)</th><th class="num">F2 (Hz)</th><th class="num">MCD ↓ (dB)</th></tr></thead>
-        <tbody>
-          <tr><td>small</td><td class="num">1.0 M</td><td class="num">0.4</td><td class="num">33.7</td><td class="num">24.0</td><td class="num">3.88 ± 0.13</td></tr>
-          <tr><td>base</td><td class="num">5.6 M</td><td class="num">0.5</td><td class="num">28.9</td><td class="num">25.7</td><td class="num">3.78 ± 0.12</td></tr>
-          <tr><td>large</td><td class="num">14.8 M</td><td class="num">0.4</td><td class="num">39.9</td><td class="num">26.5</td><td class="num">3.75 ± 0.11</td></tr>
-        </tbody>
-      </table>
-      </div>
-
-      <h3 class="block-h">Training steps &nbsp;<span class="muted">(control fidelity flat from 5 k: F0 &lt; 0.5 Hz, F1/F2 ≈ 25–35 Hz throughout)</span></h3>
-      <div class="tablewrap">
-      <table class="dimtable">
-        <caption>Quality (MCD, dB) over training steps; control fidelity is flat from 5 k (see heading).</caption>
-        <thead><tr><th>Steps</th><th class="num">5 k</th><th class="num">10 k</th><th class="num">20 k</th><th class="num">40 k</th></tr></thead>
-        <tbody>
-          <tr><td>MCD&nbsp;↓ (dB)</td><td class="num">4.24</td><td class="num">4.06</td><td class="num">3.99</td><td class="num">3.82</td></tr>
-        </tbody>
-      </table>
-      </div>
-
-      <p class="sub muted">F0/F1/F2 in Hz, over an N ≈ 15 subsample (the authoritative full-test-set
-        residuals — F2 ≈ 40 Hz — are in <a href="#fidelity">Evidence</a> above); F1/F2 vary within that
-        measurement noise (no systematic trend; the signal is the absence of degradation). MCD spread is
-        near the ≈ 0.3 dB just-noticeable difference (JND). Inference ≈ 28× real time on CPU
-        (RTF 0.036, 4 threads), 16× on an L4 GPU.</p>
-    </div>
-  </section>
-
   <!-- ===================== METHOD ===================== -->
-  <section id="method" class="section">
+  <section id="method" class="section alt">
     <div class="wrap">
       <p class="eyebrow">Method</p>
       <h2>How it works</h2>
@@ -291,6 +329,13 @@
       </div>
 
       <h3 class="block-h">Architecture</h3>
+      <figure class="plate-fig arch-fig">
+        <img src="assets/aris_fig1.png" alt="ARIS architecture: encoder (U-Net+BiLSTM) predicts source controls (F0/voicing, Rd, aperiodicity) and filter controls (F1/F2, bandwidth, tilt) plus a learned residual; an LF glottal source and FIR-filtered noise excite the analytic all-pole filter; trained with multi-scale STFT loss and formant supervision" loading="lazy"/>
+        <figcaption>The ARIS pipeline. The encoder runs at frame rate and only <i>estimates</i> parameters;
+          every starred control (F0, R<sub>d</sub>, aperiodicity, F1/F2, tilt) is then realised by
+          deterministic DSP at sample rate — an LF glottal source plus filtered noise driving the
+          analytic all-pole filter. Training uses multi-scale STFT loss with formant supervision.</figcaption>
+      </figure>
       <div class="cards">
         <article class="card">
           <h4>Analytic source–filter core</h4>
@@ -326,7 +371,22 @@
           </ul>
         </article>
       </div>
+    </div>
+  </section>
 
+  <!-- ===================== CITE ===================== -->
+  <section id="cite" class="section">
+    <div class="wrap">
+      <p class="eyebrow">Paper</p>
+      <h2>Cite</h2>
+      <p class="sub">The paper is under review for IEEE SLT 2026; the citation below is a placeholder
+        until the proceedings entry is final.</p>
+      <pre class="bibtex mono">@inproceedings{aris2026,
+  title     = {ARIS: Analytic Resonance for Interpretable Synthesis},
+  booktitle = {Proc. IEEE Spoken Language Technology Workshop (SLT)},
+  year      = {2026},
+  note      = {to appear}
+}</pre>
       <div class="links">
         <a class="btn ghost sm" href="https://attend.ieee.org/slt-2026/" target="_blank" rel="noopener">SLT 2026</a>
         <span class="btn ghost sm" id="paperLink" aria-disabled="true">Paper (coming soon)</span>
@@ -338,11 +398,12 @@
 
 <footer>
   <div class="wrap">
-    <span>ARIA · analytic controllable neural vocoder</span>
+    <span>ARIS · analytic controllable neural vocoder</span>
     <span class="muted">IEEE SLT 2026 demo · all audio is model output; every manipulation is synthesised live</span>
   </div>
 </footer>
 
+<script src="data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

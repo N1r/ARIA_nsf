@@ -35,15 +35,16 @@
       "id": "F0",
       "label": "F0 \u00b7 pitch",
       "systems": [
-        "aria",
-        "praat"
+        "aris",
+        "praat",
+        "world"
       ]
     },
     {
       "id": "F1",
       "label": "F1 \u00b7 openness (height)",
       "systems": [
-        "aria",
+        "aris",
         "praat"
       ]
     },
@@ -51,15 +52,23 @@
       "id": "F2",
       "label": "F2 \u00b7 backness",
       "systems": [
-        "aria",
+        "aris",
+        "praat"
+      ]
+    },
+    {
+      "id": "FG",
+      "label": "F1+F2 \u00b7 uniform",
+      "systems": [
+        "aris",
         "praat",
-        "praatcg"
+        "world"
       ]
     }
   ],
   "sysLabels": {
-    "aria": "ARIA",
-    "praat": "Praat \u00b7 LPC",
-    "praatcg": "Praat \u00b7 Change Gender"
+    "aris": "ARIS",
+    "praat": "Praat",
+    "world": "WORLD"
   }
 }
