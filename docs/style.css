@@ -47,8 +47,7 @@ a:hover{color:var(--accent)}
 .nav-links a{font-size:13.5px; font-weight:500; color:var(--muted); text-decoration:none;
   padding:6px 10px; border-radius:6px; white-space:nowrap}
 .nav-links a:hover{color:var(--accent); background:#fff}
-.nav-links .nav-cite{color:var(--accent); border:1px solid var(--line-2)}
-section[id],#cite{scroll-margin-top:64px}
+section[id]{scroll-margin-top:64px}
 
 /* ---------- hero ---------- */
 .hero{padding:56px 0 52px; border-bottom:1px solid var(--line)}
@@ -222,11 +221,6 @@ input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:
 .dimtable .num{font-family:var(--mono); font-size:13.5px; color:var(--ink); font-weight:400; font-variant-numeric:tabular-nums; text-align:right}
 .dimtable th.num{text-align:right}
 .mos td:last-child,.mos th:last-child{border-left:1px solid var(--line-2)}
-
-/* ---------- cite ---------- */
-.bibtex{background:var(--panel); border:1px solid var(--line); border-radius:10px;
-  padding:18px 20px; font-size:13px; line-height:1.7; color:var(--body); overflow-x:auto;
-  max-width:640px; margin:0 0 8px}
 
 /* native players/sliders pick up the accent */
 audio,input[type=range]{accent-color:var(--accent)}

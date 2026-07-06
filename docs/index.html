@@ -9,7 +9,7 @@
 <meta name="color-scheme" content="light" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="ARIS — interpretable, controllable neural speech synthesis" />
-<meta property="og:description" content="Move one phonetic control and the others hold. F0, F1, F2, phonation and prominence (plus an exploratory nasalisation control) over a source–filter neural vocoder for phonetic research. IEEE SLT 2026 demo." />
+<meta property="og:description" content="Move one phonetic control and the others hold. F0, F1, F2, phonation and prominence (plus an exploratory nasalisation control) over a source–filter neural vocoder for phonetic research. Interactive demo." />
 <meta name="twitter:card" content="summary" />
 <!-- sober favicon: three muted spectrogram strokes on warm paper -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23f4f6f7'/%3E%3Cg fill='none' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 23V12' stroke='%23131e28'/%3E%3Cpath d='M16 25V8' stroke='%232f5d8c'/%3E%3Cpath d='M23 22V14' stroke='%235e6b76'/%3E%3C/g%3E%3C/svg%3E" />
@@ -31,7 +31,6 @@
       <a href="#quality">Quality</a>
       <a href="#voices">Voices</a>
       <a href="#method">Method</a>
-      <a class="nav-cite" href="#cite">Cite</a>
     </div>
   </div>
 </nav>
@@ -39,7 +38,7 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="kicker">IEEE SLT 2026 · interactive demo</div>
+      <div class="kicker">Interactive demo</div>
       <h1>ARIS</h1>
       <p class="acro"><b>A</b>nalytic <b>R</b>esonance for <b>I</b>nterpretable <b>S</b>ynthesis</p>
       <p class="tagline">An analytic source–filter neural vocoder with an
@@ -53,7 +52,7 @@
         <a class="btn ghost" href="#method">How it works</a>
       </div>
     </div>
-    <!-- signature figure: the paper's claim, drawn — drag one control, one formant follows, the others hold -->
+    <!-- signature figure: drag one control, one formant follows, the others hold -->
     <figure class="motif" aria-hidden="true">
       <svg viewBox="0 0 520 262" role="img">
         <defs>
@@ -374,32 +373,12 @@
     </div>
   </section>
 
-  <!-- ===================== CITE ===================== -->
-  <section id="cite" class="section">
-    <div class="wrap">
-      <p class="eyebrow">Paper</p>
-      <h2>Cite</h2>
-      <p class="sub">The paper is under review for IEEE SLT 2026; the citation below is a placeholder
-        until the proceedings entry is final.</p>
-      <pre class="bibtex mono">@inproceedings{aris2026,
-  title     = {ARIS: Analytic Resonance for Interpretable Synthesis},
-  booktitle = {Proc. IEEE Spoken Language Technology Workshop (SLT)},
-  year      = {2026},
-  note      = {to appear}
-}</pre>
-      <div class="links">
-        <a class="btn ghost sm" href="https://attend.ieee.org/slt-2026/" target="_blank" rel="noopener">SLT 2026</a>
-        <span class="btn ghost sm" id="paperLink" aria-disabled="true">Paper (coming soon)</span>
-        <span class="btn ghost sm" id="codeLink" aria-disabled="true">Code (coming soon)</span>
-      </div>
-    </div>
-  </section>
 </main>
 
 <footer>
   <div class="wrap">
     <span>ARIS · analytic controllable neural vocoder</span>
-    <span class="muted">IEEE SLT 2026 demo · all audio is model output; every manipulation is synthesised live</span>
+    <span class="muted">Interactive demo · all audio is model output; every manipulation is synthesised live</span>
   </div>
 </footer>
 

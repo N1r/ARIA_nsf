@@ -1,4 +1,4 @@
-# ARIS — interactive demo (IEEE SLT 2026)
+# ARIS — interactive demo
 
 A lightweight, static demo page for **ARIS** (Analytic Resonance for Interpretable Synthesis),
 an interpretable analytic source–filter neural vocoder with independent control of the parameters
@@ -26,7 +26,7 @@ No build step — plain HTML/CSS/JS + Plotly (CDN). Deployable as-is to **GitHub
   plus a listening studio sweeping F0 / F1 / F2 / F1+F2 for each system.
 - **Reconstruction A/B** — natural vs ARIS with a UTMOS table (within-voice gap).
 - **Other voices** — CSMSC + LJSpeech, same pipeline, full sentences.
-- **Method + Cite** — control-surface table, architecture cards, limitations, BibTeX placeholder.
+- **Method** — control-surface table, architecture cards, and limitations.
 
 Audio is 16 kHz (F024) plus 24/22 kHz cross-lingual voices (CSMSC, LJSpeech). Manipulations are real
 syntheses, not pitch/formant edits.
