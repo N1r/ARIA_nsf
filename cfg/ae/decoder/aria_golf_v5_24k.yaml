@@ -1,0 +1,55 @@
+# ARIA-GOLF v5 decoder (v3 + bounded-H harmonic/noise crossfade) @ 24kHz — tilt restored, tighter BW/F ranges, for supervised training.
+#
+# v3 design rationale:
+#   use_tilt=True   — restore 1st-order tilt pole (back to v1 structure)
+#   n_learned=8     — same as v1; LPC order=2*(1+2+8)=22
+#   b1_range=[50,200], b2_range=[50,250]  — keep v2 tight BW (blocks BW→amplitude coupling)
+#   f1_range=[200,900], f2_range=[700,2800]  — keep v2 tighter priors
+#   Hypothesis: strong formant supervision (weight=2.0) + smoothness reg tames the tilt coupling
+#
+# n_ctrl: [log_gain, alpha, f1, b1, f2, b2] + 8×2 learned = 6+16 = 22
+# LPC order: 2*(1_tilt + 2_formants + 8_learned) = 22
+decoder:
+  class_path: models.sf.SourceFilterSynth
+  init_args:
+    harm_oscillator:
+      class_path: models.synth.DownsampledIndexedGlottalFlowTable
+      init_args:
+        hop_rate: 10
+        in_channels: 64
+        oversampling: 4
+        equal_energy: true
+        table_type: derivative
+        normalize_method: constant_power
+        align_peak: true
+        trainable: false
+        min_R_d: 0.3
+        max_R_d: 2.7
+        lf_v2: true
+        points: 2048
+    noise_generator:
+      class_path: models.noise.StandardNormalNoise
+    noise_filter:
+      class_path: models.filters.LTVZeroPhaseFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 256
+        mag_activation: sigmoid   # bound H to [0,1] for the (I-H) crossfade
+    end_filter:
+      class_path: models.analytic_filter.VocalTractCascade
+      init_args:
+        sr: 24000
+        n_learned: 8
+        use_tilt: true
+        # F ranges back to v1: must cover 1.3x max data F1 (~1000Hz Mandarin /a/),
+        # else manipulation targets clip at sigmoid bound (v2's CSMSC F1 slope=0.85 artifact)
+        f1_range: [150, 1300]
+        f2_range: [600, 3200]
+        b1_range: [50, 200]
+        b2_range: [50, 250]
+    room_filter:
+      class_path: models.filters.LTIAcousticFilter
+      init_args:
+        length: 128
+        conv_method: fft
+    subtract_harmonics: true

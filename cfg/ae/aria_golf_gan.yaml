@@ -1,0 +1,79 @@
+# ARIA-GOLF adversarial fine-tune.
+# Use:  --config cfg/ae/aria_golf_gan.yaml  --model cfg/ae/decoder/aria_golf_16k.yaml
+#       --model.generator_ckpt <aria_golf best .ckpt>
+# decoder is supplied by the --model aria_golf_16k.yaml overlay.
+seed_everything: 42
+trainer:
+  max_steps: 30000
+  num_sanity_val_steps: 0
+  check_val_every_n_epoch: 10
+  gradient_clip_val: null        # manual optimization → clip inside the model
+  strategy: ddp_find_unused_parameters_true  # GAN G/D alternation → unused params per step
+  accelerator: gpu
+  devices: 1
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        save_last: true
+        monitor: train_loss
+        save_on_train_epoch_end: true
+        filename: "{epoch}-{step}-{train_loss:.3f}"
+        save_top_k: 3
+model:
+  class_path: ltng.ae_gan.VoiceAutoEncoderGAN
+  init_args:
+    encoder_class_path: models.enc.VocoderParameterEncoderInterface
+    encoder_init_args:
+      f0_min: 100.0
+      f0_max: 500.0
+      backbone_type: models.unet.UNetEncoder
+      n_fft: 512
+      hop_length: 160
+      channels: [32, 64, 128, 256]
+      strides: [4, 4, 4, 4]
+      lstm_hidden_size: 256
+      num_layers: 3
+      dropout: 0.1
+      learn_voicing: false
+      learn_f0: false
+    decoder: null                # 由 --model cfg/ae/decoder/aria_golf_16k.yaml 覆盖
+    criterion:
+      class_path: loss.spec.MSSLoss
+      init_args:
+        n_ffts: [255, 511, 1023]
+        alpha: 1.0
+        window: hanning
+        center: true
+    sample_rate: 16000
+    train_with_true_f0: true
+    detach_voicing: true
+    detach_f0: true
+    formant_loss_weight: 0.5
+    residual_reg_weight: 0.005
+    # ---- GAN ----
+    discriminator:
+      class_path: models.discriminator.MultiScaleSpectrogramDiscriminator
+      init_args:
+        nscales: 6
+        features: [32, 64, 128, 256]
+    adv_weight: 1.0
+    fm_weight: 2.0
+    gen_lr: 0.0002
+    disc_lr: 0.0002
+    gan_start_step: 0            # warm-started generator → adversarial from step 0
+    grad_clip: 0.5
+    real_label_min: 0.9
+    real_label_max: 1.0
+    generator_ckpt: null         # CLI: --model.generator_ckpt <aria_golf best>
+ckpt_path: null
+data:
+  class_path: ltng.data.SingleSpeaker
+  init_args:
+    batch_size: 16               # GAN: discriminator + 6-scale specs use more VRAM
+    wav_dir: /zfsstore/user/dingyr/data1/speech_synthesis/F024
+    duration: 1.5
+    overlap: 1.0
+    val_ratio: 0.05
+    sample_rate: 16000
+    augment: false
+    load_formants: true

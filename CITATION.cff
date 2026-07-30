@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "Please cite PhonLab-DDSP and the underlying GOLF papers when using this software."
+title: "PhonLab-DDSP"
+type: software
+version: 0.1.0
+license: MIT
+authors:
+  - name: "PhonLab-DDSP contributors"
+references:
+  - type: conference-paper
+    title: "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis"
+    authors:
+      - family-names: Yu
+        given-names: Chin-Yun
+      - family-names: Fazekas
+        given-names: György
+    year: 2024
+    doi: 10.21437/Interspeech.2024-1187

@@ -1,0 +1,59 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  HF_HOME: ${{ github.workspace }}/.cache/huggingface
+  MPLCONFIGDIR: ${{ github.workspace }}/.cache/matplotlib
+  NUMBA_CACHE_DIR: ${{ github.workspace }}/.cache/numba
+  PIP_CACHE_DIR: ${{ github.workspace }}/.cache/pip
+  PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+  PYTHONPYCACHEPREFIX: ${{ github.workspace }}/.cache/pycache
+  TORCH_EXTENSIONS_DIR: ${{ github.workspace }}/.cache/torch_extensions
+  TORCH_HOME: ${{ github.workspace }}/.cache/torch
+  UV_CACHE_DIR: ${{ github.workspace }}/.cache/uv
+  UV_PROJECT_ENVIRONMENT: ${{ github.workspace }}/.venv
+  UV_PYTHON_INSTALL_DIR: ${{ github.workspace }}/.cache/uv/python
+  XDG_CACHE_HOME: ${{ github.workspace }}/.cache/xdg
+
+jobs:
+  lightweight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: false
+          version: "0.10.9"
+
+      - name: Sync lightweight dependencies
+        run: uv sync --locked --python 3.11 --extra audio --extra dev --no-install-project
+
+      - name: Audit repository layout
+        run: uv run --no-sync python tools/repo_audit.py --strict
+
+      - name: Verify frozen engine checksums
+        run: uv run --no-sync python tools/engine_checksums.py
+
+      - name: Run complete lightweight test suite
+        run: >-
+          uv run --no-sync pytest
+          --ignore=tests/test_glottal.py
+          --ignore=tests/test_prediction_writer.py
+          --ignore=tests/test_time_tensor.py
+
+      - name: Lint
+        run: uv run --no-sync ruff check src tests tools
+
+      - name: Check formatting
+        run: uv run --no-sync ruff format --check src tests tools
+
+      - name: Build wheel and source archive
+        run: uv build --out-dir .cache/dist

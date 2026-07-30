@@ -1,0 +1,49 @@
+# ARIA-GOLF v5 decoder @ 16kHz — v3 + re-enabled harmonic/noise crossfade (minimal).
+# vs v3: subtract_harmonics=true AND noise_filter magnitude bounded to [0,1] (sigmoid).
+#        This turns the single noise filter H into a proper band-aperiodicity weight:
+#        src = harm + H(noise) - H(harm) = (I-H)*harm + H*noise.
+# One filter does double duty (noise spectral shape == aperiodicity). No new params,
+# warm-start-clean. Limitation vs v4: noise level coupled to harmonic level per band.
+# LPC order: 2*(1+2+6) = 18  (same as v1/v3 16k)
+decoder:
+  class_path: models.sf.SourceFilterSynth
+  init_args:
+    harm_oscillator:
+      class_path: models.synth.DownsampledIndexedGlottalFlowTable
+      init_args:
+        hop_rate: 10
+        in_channels: 64
+        oversampling: 4
+        equal_energy: true
+        table_type: derivative
+        normalize_method: constant_power
+        align_peak: true
+        trainable: false
+        min_R_d: 0.3
+        max_R_d: 2.7
+        lf_v2: true
+        points: 2048
+    noise_generator:
+      class_path: models.noise.StandardNormalNoise
+    noise_filter:
+      class_path: models.filters.LTVZeroPhaseFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 128
+        mag_activation: sigmoid   # bound H to [0,1] so (I-H) crossfade stays well-posed
+    end_filter:
+      class_path: models.analytic_filter.VocalTractCascade
+      init_args:
+        sr: 16000
+        n_learned: 6
+        use_tilt: true
+        f1_range: [150, 1300]
+        f2_range: [600, 3200]
+        b1_range: [50, 200]
+        b2_range: [50, 250]
+    room_filter:
+      class_path: models.filters.LTIAcousticFilter
+      init_args:
+        length: 128
+        conv_method: fft
+    subtract_harmonics: true

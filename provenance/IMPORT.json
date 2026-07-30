@@ -1,0 +1,34 @@
+{
+  "source": "../golf_frozen_slt2026_20260708",
+  "source_freeze_date": "2026-07-08",
+  "import_date": "2026-07-29",
+  "imported": [
+    "models/",
+    "ltng/",
+    "loss/",
+    "datasets/",
+    "cfg/",
+    "configs/",
+    "scripts/",
+    "tests/",
+    "autoencode.py",
+    "main.py",
+    "biquads.py",
+    "harm_and_noise.py",
+    "LICENSE"
+  ],
+  "excluded": [
+    "runs/",
+    "checkpoints/",
+    "ckpts/",
+    "paper/",
+    "papers/",
+    "demo/",
+    "eval/",
+    "notebooks/",
+    "swanlab-integration-pytorch-lightning/",
+    ".codegraph/",
+    ".git/"
+  ],
+  "rationale": "Keep executable research source and configs in version control; keep large generated artifacts in the immutable frozen snapshot."
+}

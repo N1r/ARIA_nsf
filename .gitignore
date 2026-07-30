@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.cache/
+.uv-cache/
+artifacts/
+autoresearch/
+*.log
+dist/
+build/
+
+# User data and reproducible-but-large experiment artifacts.
+data/
+datasets_local/
+experiments/
+runs/
+checkpoints/
+lightning_logs/
+wandb/
+swanlog/
+*.ckpt
+*.pt
+
+# Generated reports may contain absolute provenance.
+report.html

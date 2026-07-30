@@ -1,0 +1,102 @@
+# ARIA-GOLF v2 + GAN v3 finetune @ 22.05kHz (LJSpeech).
+# warm-start from ljspeech_aria_v2 checkpoint.
+# Use with: --model cfg/ae/decoder/aria_golf_v2_22k.yaml
+seed_everything: 42
+trainer:
+  max_steps: 30000
+  num_sanity_val_steps: 0
+  check_val_every_n_epoch: 10
+  gradient_clip_val: null
+  strategy: ddp_find_unused_parameters_true
+  accelerator: gpu
+  devices: 1
+  callbacks:
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        save_last: true
+        every_n_train_steps: 5000
+        save_top_k: -1
+        filename: "{epoch}-{step}"
+model:
+  class_path: ltng.ae_gan.VoiceAutoEncoderGAN
+  init_args:
+    encoder_class_path: models.enc.VocoderParameterEncoderInterface
+    encoder_init_args:
+      f0_min: 80.0
+      f0_max: 600.0
+      backbone_type: models.unet.UNetEncoder
+      n_fft: 1024
+      hop_length: 220
+      channels: [32, 64, 128, 256]
+      strides: [4, 4, 4, 4]
+      lstm_hidden_size: 256
+      num_layers: 3
+      dropout: 0.1
+      learn_voicing: false
+      learn_f0: false
+    decoder: null
+    criterion:
+      class_path: loss.spec.MSSLoss
+      init_args:
+        n_ffts: [509, 1021, 2053]
+        alpha: 1.0
+        window: hanning
+        center: true
+    sample_rate: 22050
+    detach_voicing: true
+    detach_f0: true
+    train_with_true_f0: true
+    formant_loss_weight: 1.5
+    residual_reg_weight: 0.02
+    discriminator:
+      class_path: models.discriminator.MultiScaleSpectrogramDiscriminator
+      init_args:
+        nscales: 6
+        features: [32, 64, 128, 256]
+    wave_discriminators:
+      - class_path: models.discriminator.MultiPeriodDiscriminator
+        init_args:
+          periods: [2, 3, 5, 7, 11]
+          channels: [32, 128, 256, 512]
+      - class_path: models.discriminator.MultiScaleSTFTDiscriminator
+        init_args:
+          configs:
+            - [1024, 256]
+            - [2048, 512]
+            - [512,  128]
+            - [256,   64]
+          features: [32, 64, 128, 256]
+      - class_path: models.discriminator.MultiScaleCQTDiscriminator
+        init_args:
+          sr: 22050
+          n_bins: 84
+          fmin: 32.7
+          bins_per_octave: 12
+          hop_lengths: [220, 440, 880]
+          n_bands: 7
+          features: [32, 64, 128]
+    adv_weight: 1.0
+    fm_weight: 2.0
+    mel_weight: 8.0
+    mel_n_fft: 1024
+    mel_hop: 256
+    mel_n_mels: 80
+    gen_lr: 0.0002
+    disc_lr: 0.0002
+    gan_start_step: 0
+    grad_clip: 0.5
+    real_label_min: 0.9
+    real_label_max: 1.0
+    generator_ckpt: null
+ckpt_path: null
+data:
+  class_path: ltng.data.SingleSpeaker
+  init_args:
+    batch_size: 12
+    wav_dir: /zfsstore/user/dingyr/data1/speech_synthesis/ljspeech_1h
+    duration: 1.5
+    overlap: 1.0
+    val_ratio: 0.05
+    sample_rate: 22050
+    augment: false
+    load_formants: true

@@ -1,0 +1,54 @@
+# ARIA-GOLF v7b decoder @ 16kHz — v7 (pole-zero ARMA) with a NASALITY-MATCHED zero range.
+# Change vs v7: nasal_fz_range lowered to [180,3000] so a zero can sit near F1 (the strongest
+# nasalised-vowel anti-formant, ~300-700 Hz) and reach velar /ŋ/ (>2500 Hz); n_zeros 2->3 to
+# cover near-F1 + /m,n/ murmur + /ŋ| spare. Grounded in nasality acoustics (Styler 2017, Chen
+# 1997; see docs/klatt_vs_aria_v7.md §7). Zeros applied as a two-stage FIR after all-pole 1/A.
+# NOTE: this is a CAPACITY/CONTROL-RANGE fix — without anti-formant supervision the learned
+# zeros may stay shallow in plain resynthesis (probe showed dormant zeros); the benefit is a
+# phonetically-complete CONTROLLABLE nasalisation range (set/scale_nasalization). Waking the
+# zeros during analysis needs a targeted anti-formant loss (v7c, future).
+decoder:
+  class_path: models.sf.SourceFilterSynth
+  init_args:
+    harm_oscillator:
+      class_path: models.synth.DownsampledIndexedGlottalFlowTable
+      init_args:
+        hop_rate: 10
+        in_channels: 64
+        oversampling: 4
+        equal_energy: true
+        table_type: derivative
+        normalize_method: constant_power
+        align_peak: true
+        trainable: false
+        min_R_d: 0.3
+        max_R_d: 2.7
+        lf_v2: true
+        points: 2048
+    noise_generator:
+      class_path: models.noise.StandardNormalNoise
+    noise_filter:
+      class_path: models.filters.LTVZeroPhaseFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 128
+    end_filter:
+      class_path: models.analytic_filter.VocalTractCascadeARMA
+      init_args:
+        sr: 16000
+        n_learned: 6
+        use_tilt: true
+        # F ranges = v1; must cover 1.3x max data F1 to avoid manipulation clipping
+        f1_range: [150, 1300]
+        f2_range: [600, 3200]
+        b1_range: [50, 200]
+        b2_range: [50, 250]
+        n_zeros: 3
+        nasal_fz_range: [180, 3000]   # anti-formant centre (Hz) — reaches near-F1 & velar
+        nasal_bz_range: [40, 600]     # anti-formant bandwidth → notch depth
+    room_filter:
+      class_path: models.filters.LTIAcousticFilter
+      init_args:
+        length: 128
+        conv_method: fft
+    subtract_harmonics: false

@@ -1,0 +1,52 @@
+# ARIA-GOLF v4 decoder @ 16kHz, LEARNED pole placement — analytic-vs-learned ablation.
+# Identical to aria_golf_v4_16k.yaml except end_filter.learned_placement=true:
+# the analytic r=exp(-pi*B/sr), theta=2pi*F/sr formula is replaced by a small MLP
+# (F,B,id)->(r,theta), keeping the same Hz control handle. Isolates the contribution of
+# the *analytic* placement (vs a learned map) to control fidelity.
+decoder:
+  class_path: models.sf.SourceFilterSynthAP
+  init_args:
+    harm_oscillator:
+      class_path: models.synth.DownsampledIndexedGlottalFlowTable
+      init_args:
+        hop_rate: 10
+        in_channels: 64
+        oversampling: 4
+        equal_energy: true
+        table_type: derivative
+        normalize_method: constant_power
+        align_peak: true
+        trainable: false
+        min_R_d: 0.3
+        max_R_d: 2.7
+        lf_v2: true
+        points: 2048
+    noise_generator:
+      class_path: models.noise.StandardNormalNoise
+    noise_filter:
+      class_path: models.filters.LTVZeroPhaseFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 128
+    aperiodicity_filter:
+      class_path: models.filters.AperiodicityFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 128
+        hf_bias: 2.0
+    end_filter:
+      class_path: models.analytic_filter.VocalTractCascade
+      init_args:
+        sr: 16000
+        n_learned: 6
+        use_tilt: true
+        f1_range: [150, 1300]
+        f2_range: [600, 3200]
+        b1_range: [50, 200]
+        b2_range: [50, 250]
+        learned_placement: true
+    room_filter:
+      class_path: models.filters.LTIAcousticFilter
+      init_args:
+        length: 128
+        conv_method: fft

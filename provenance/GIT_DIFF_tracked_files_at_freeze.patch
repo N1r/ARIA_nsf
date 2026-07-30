@@ -1,0 +1,367 @@
+diff --git a/ltng/ae.py b/ltng/ae.py
+index c60c990..fa24859 100644
+--- a/ltng/ae.py
++++ b/ltng/ae.py
+@@ -34,6 +34,10 @@ class VoiceAutoEncoder(pl.LightningModule):
+         train_with_true_f0: bool = True,
+         f0_loss_weight: float = 1.0,
+         voicing_loss_weight: float = 1.0,
++        formant_loss_weight: float = 0.0,
++        residual_reg_weight: float = 0.0,
++        formant_smooth_weight: float = 0.0,
++        aperiodicity_loss_weight: float = 0.0,
+     ):
+         super().__init__()
+ 
+@@ -53,9 +57,64 @@ class VoiceAutoEncoder(pl.LightningModule):
+         self.sample_rate = sample_rate
+         self.f0_loss_weight = f0_loss_weight
+         self.voicing_loss_weight = voicing_loss_weight
++        self.formant_loss_weight = formant_loss_weight
++        self.residual_reg_weight = residual_reg_weight
++        self.formant_smooth_weight = formant_smooth_weight
++        self.aperiodicity_loss_weight = aperiodicity_loss_weight
+         self.detach_f0 = detach_f0
+         self.detach_voicing = detach_voicing
+         self.train_with_true_f0 = train_with_true_f0
++        # locate the formant-controllable decoder component (ARIA), if any
++        self._formant_key, self._formant_mod = self._find_formant_module()
++
++    def _find_formant_module(self):
++        for name in ("harm_oscillator", "end_filter", "harm_filter"):
++            mod = getattr(self.decoder, name, None)
++            if mod is not None and hasattr(mod, "get_formant_params") \
++                    and hasattr(mod, "n_formant_ctrl"):
++                return name + "_params", mod
++        return None, None
++
++    def _formant_loss(self, params, f1_tgt, f2_tgt, vmask):
++        """L1(F1,F2) on voiced frames (kHz) + L2 residual reg. Returns (floss, rreg)."""
++        ctrl = params[self._formant_key][0]            # AudioTensor (B,T,n_ctrl)
++        ctrl_t = ctrl.as_tensor()
++        p = self._formant_mod.get_formant_params(ctrl_t)
++        f1p, f2p = p["f1"], p["f2"]                     # (B, T_frame)
++        T = min(f1p.shape[1], f1_tgt.shape[1])
++        f1p, f2p = f1p[:, :T], f2p[:, :T]
++        f1t, f2t = f1_tgt[:, :T], f2_tgt[:, :T]
++        m = vmask[:, :T] > 0
++        if m.any():
++            floss = (F.l1_loss(f1p[m] / 1000.0, f1t[m] / 1000.0)
++                     + F.l1_loss(f2p[m] / 1000.0, f2t[m] / 1000.0))
++        else:
++            floss = ctrl_t.new_zeros(())
++        residual = ctrl_t[..., self._formant_mod.n_formant_ctrl:]
++        rreg = residual.pow(2).mean() if residual.numel() > 0 else ctrl_t.new_zeros(())
++        # temporal smoothness: penalise abrupt frame-to-frame formant jumps
++        if self.formant_smooth_weight > 0 and f1p.shape[1] > 1:
++            sfloss = (F.l1_loss(f1p[:, 1:] / 1000.0, f1p[:, :-1].detach() / 1000.0)
++                      + F.l1_loss(f2p[:, 1:] / 1000.0, f2p[:, :-1].detach() / 1000.0))
++            floss = floss + self.formant_smooth_weight * sfloss
++        return floss, rreg
++
++    def _aperiodicity_loss(self, params, ap_tgt, vmask):
++        """L1(A_pred, WORLD-D4C aperiodicity) on voiced frames. A_pred = the v4
++        AperiodicityFIRFilter's bounded magnitude sigmoid(logits+freq_bias), [B,T,n_mag].
++        Supervises the band-aperiodicity head so the high band dissolves harmonics into
++        noise (MSS is texture-blind, so without this the head is unconstrained)."""
++        ap_filt = getattr(self.decoder, "aperiodicity_filter", None)
++        if ap_filt is None or "aperiodicity_filter_params" not in params:
++            return None
++        logits = params["aperiodicity_filter_params"][0].as_tensor()   # [B,T,n_mag]
++        A_pred = ap_filt._mag(logits)                                   # sigmoid(logits+bias)
++        T = min(A_pred.shape[1], ap_tgt.shape[1])
++        A_pred, ap_t = A_pred[:, :T], ap_tgt[:, :T]
++        m = vmask[:, :T] > 0
++        if not m.any():
++            return A_pred.new_zeros(())
++        return F.l1_loss(A_pred[m], ap_t[m])
+ 
+     def forward(
+         self,
+@@ -76,6 +135,8 @@ class VoiceAutoEncoder(pl.LightningModule):
+             voicing_logits = params.pop("voicing_logits", None)
+             if voicing_logits is not None:
+                 params["voicing"] = torch.sigmoid(voicing_logits)
++            elif f0 is not None and "voicing" not in params:
++                params["voicing"] = (f0 > 0).float()   # voiced gate from true F0
+ 
+         y = self.decoder(**params)
+         return y, None if x is None else enc_params
+@@ -84,7 +145,16 @@ class VoiceAutoEncoder(pl.LightningModule):
+         return F.l1_loss(torch.log(f0_hat + 1e-3), torch.log(f0 + 1e-3))
+ 
+     def training_step(self, batch, batch_idx):
+-        x, f0_in_hz = batch
++        formant_tgt = None
++        ap_tgt = None
++        if len(batch) == 6:
++            x, f0_in_hz, f1_tgt, f2_tgt, vmask, ap_tgt = batch
++            formant_tgt = (f1_tgt, f2_tgt, vmask)
++        elif len(batch) == 5:
++            x, f0_in_hz, f1_tgt, f2_tgt, vmask = batch
++            formant_tgt = (f1_tgt, f2_tgt, vmask)
++        else:
++            x, f0_in_hz = batch
+ 
+         # convert to AudioTensor
+         x = AudioTensor(x)
+@@ -111,6 +181,8 @@ class VoiceAutoEncoder(pl.LightningModule):
+             if self.detach_voicing:
+                 voicing = voicing.detach()
+             params["voicing"] = voicing
++        elif "voicing" not in params:
++            params["voicing"] = (f0_in_hz > 0).float()   # voiced gate from true F0
+ 
+         x_hat = self.decoder(**params)
+         loss = self.criterion(
+@@ -139,6 +211,22 @@ class VoiceAutoEncoder(pl.LightningModule):
+             loss = loss + voicing_loss * self.voicing_loss_weight
+             self.log("train_voicing_loss", voicing_loss, prog_bar=True, sync_dist=True)
+ 
++        # formant supervision (ARIA): anchor F1/F2 to Praat targets + residual reg
++        if (formant_tgt is not None and self.formant_loss_weight > 0
++                and self._formant_mod is not None):
++            floss, rreg = self._formant_loss(params, *formant_tgt)
++            loss = loss + self.formant_loss_weight * floss \
++                        + self.residual_reg_weight * rreg
++            self.log("train_formant_loss", floss, prog_bar=True, sync_dist=True)
++            self.log("train_residual_reg", rreg, sync_dist=True)
++
++        # band-aperiodicity supervision (v6): anchor A(f) to WORLD D4C targets
++        if ap_tgt is not None and self.aperiodicity_loss_weight > 0:
++            ap_loss = self._aperiodicity_loss(params, ap_tgt, vmask)
++            if ap_loss is not None:
++                loss = loss + self.aperiodicity_loss_weight * ap_loss
++                self.log("train_ap_loss", ap_loss, prog_bar=True, sync_dist=True)
++
+         self.log("train_loss", loss, prog_bar=True, sync_dist=True)
+         return loss
+ 
+@@ -146,7 +234,10 @@ class VoiceAutoEncoder(pl.LightningModule):
+         self.tmp_val_outputs = []
+ 
+     def validation_step(self, batch, batch_idx):
+-        x, f0_in_hz = batch
++        if len(batch) >= 5:
++            x, f0_in_hz = batch[0], batch[1]
++        else:
++            x, f0_in_hz = batch
+ 
+         # convert to AudioTensor
+         x = AudioTensor(x)
+diff --git a/ltng/data.py b/ltng/data.py
+index 070bd75..6ad4a73 100644
+--- a/ltng/data.py
++++ b/ltng/data.py
+@@ -557,3 +557,211 @@ class VCTK(M4Singer):
+             shuffle=False,
+             drop_last=False,
+         )
++
++
++# ──────────────────────────────────────────────────────────────────
++# Single-speaker flat directory dataset (e.g. Mandarin tone corpus)
++# ──────────────────────────────────────────────────────────────────
++
++class SingleSpeakerDataset(Dataset):
++    """Flat directory of wav files for single-speaker experiments."""
++
++    def __init__(
++        self,
++        wav_dir: str,
++        split: str = "train",
++        duration: float = 1.5,
++        overlap: float = 1.0,
++        f0_suffix: str = ".pv",
++        val_ratio: float = 0.05,
++        seed: int = 42,
++        augment=None,
++        load_formants: bool = False,
++        load_aperiodicity: bool = False,
++    ):
++        super().__init__()
++        import random
++        wav_dir = pathlib.Path(wav_dir)
++        all_files = sorted(wav_dir.glob("*.wav"))
++
++        rng = random.Random(seed)
++        files_shuffled = list(all_files)
++        rng.shuffle(files_shuffled)
++
++        n_val = max(1, int(len(files_shuffled) * val_ratio))
++        val_files   = files_shuffled[:n_val]
++        train_files = files_shuffled[n_val:]
++
++        self.files = train_files if split == "train" else val_files
++        self.augment = augment
++        self.load_formants = load_formants
++        self.load_aperiodicity = load_aperiodicity
++
++        self.sample_rate = None
++        self.samples, self.f0s, self.feats, self.aps = [], [], [], []
++        file_lengths = []
++
++        print(f"[SingleSpeakerDataset] Loading {len(self.files)} files ({split}) "
++              f"{'(+formants)' if load_formants else ''}...")
++        for filename in tqdm(self.files):
++            x, sr = sf.read(str(filename), dtype="float32")
++            if self.sample_rate is None:
++                self.sample_rate = sr
++                self.segment_frames = int(duration * sr)
++                self.hop_frames     = int((duration - overlap) * sr)
++                self.f0_hop_frames  = 0.005 * sr
++                self.feat_hop       = int(sr * 0.01)   # .feat.npz is at 10ms
++            f0 = np.loadtxt(str(filename.with_suffix(f0_suffix)))
++            self.samples.append(x)
++            self.f0s.append(f0)
++            if load_formants:
++                d = np.load(str(filename.with_suffix(".feat.npz")))
++                self.feats.append({"f1": d["f1"].astype(np.float32),
++                                   "f2": d["f2"].astype(np.float32)})
++            if load_aperiodicity:
++                # band aperiodicity A(f) target, [n_frames, n_mag], 10ms (WORLD D4C)
++                self.aps.append(np.load(str(filename.with_suffix(".ap.npy"))
++                                        ).astype(np.float32))
++            file_lengths.append(
++                max(0, len(x) - self.segment_frames) // self.hop_frames + 1
++            )
++
++        self.boundaries = np.cumsum([0] + file_lengths)
++
++    def __len__(self):
++        return int(self.boundaries[-1])
++
++    def __getitem__(self, index):
++        bin_pos = int(np.digitize(index, self.boundaries[1:], right=False))
++        x  = self.samples[bin_pos]
++        f0 = self.f0s[bin_pos]
++        offset = int((index - self.boundaries[bin_pos]) * self.hop_frames)
++
++        tp = np.arange(len(f0)) * self.f0_hop_frames
++        t  = np.arange(offset, offset + self.segment_frames)
++        mask      = np.interp(t, tp, (f0 == 0).astype(float), right=1) > 0
++        interp_f0 = np.where(mask, 0.0, np.interp(t, tp, f0))
++
++        seg = x[offset:offset + self.segment_frames]
++        if len(seg) < self.segment_frames:
++            seg = np.pad(seg, (0, self.segment_frames - len(seg)))
++
++        seg = seg.astype(np.float32)
++        interp_f0 = interp_f0.astype(np.float32)
++
++        if self.augment is not None:
++            seg, interp_f0 = self.augment(seg, interp_f0)
++
++        if self.load_formants:
++            feat = self.feats[bin_pos]
++            foff = offset // self.feat_hop
++            nfr  = self.segment_frames // self.feat_hop
++            def _sl(arr):
++                s = arr[foff:foff + nfr]
++                if len(s) < nfr:
++                    s = np.pad(s, (0, nfr - len(s)))
++                return s[:nfr].astype(np.float32)
++            f1 = _sl(feat["f1"]); f2 = _sl(feat["f2"])
++            vmask = ((f1 > 0) & (f2 > 0)).astype(np.float32)
++            if self.load_aperiodicity:
++                ap = self.aps[bin_pos]                       # [n_frames, n_mag]
++                s = ap[foff:foff + nfr]
++                if len(s) < nfr:
++                    s = np.pad(s, ((0, nfr - len(s)), (0, 0)))
++                ap_seg = s[:nfr].astype(np.float32)
++                return seg, interp_f0, f1, f2, vmask, ap_seg
++            return seg, interp_f0, f1, f2, vmask
++
++        return seg, interp_f0
++
++
++class SingleSpeaker(LightningDataModule):
++    """LightningDataModule for single-speaker flat wav directory."""
++
++    def __init__(
++        self,
++        batch_size: int,
++        wav_dir: str,
++        duration: float = 1.5,
++        overlap: float = 1.0,
++        f0_suffix: str = ".pv",
++        val_ratio: float = 0.05,
++        sample_rate: int = 16000,
++        augment: bool = True,
++        f0_scale_range: list = None,
++        tilt_alpha_range: list = None,
++        load_formants: bool = False,
++        load_aperiodicity: bool = False,
++    ):
++        super().__init__()
++        self.save_hyperparameters()
++
++    def _make_augmenter(self):
++        from models.augment import SpeechAugment
++        f0_range   = tuple(self.hparams.f0_scale_range   or [0.7, 1.3])
++        tilt_range = tuple(self.hparams.tilt_alpha_range or [-0.12, 0.12])
++        return SpeechAugment(f0_scale_range=f0_range, tilt_alpha_range=tilt_range)
++
++    def setup(self, stage=None):
++        from functools import partial
++        factory = partial(
++            SingleSpeakerDataset,
++            wav_dir=self.hparams.wav_dir,
++            duration=self.hparams.duration,
++            overlap=self.hparams.overlap,
++            f0_suffix=self.hparams.f0_suffix,
++            val_ratio=self.hparams.val_ratio,
++            load_formants=self.hparams.load_formants,
++            load_aperiodicity=self.hparams.load_aperiodicity,
++        )
++        if stage in ("fit", None):
++            aug = self._make_augmenter() if self.hparams.augment else None
++            self.train_dataset = factory(split="train", augment=aug)
++            self.valid_dataset = factory(split="valid", augment=None)
++        if stage == "validate":
++            self.valid_dataset = factory(split="valid", augment=None)
++        if stage == "predict":
++            self.predict_dataset = SingleSpeakerInferenceDataset(
++                wav_dir=self.hparams.wav_dir,
++                f0_suffix=self.hparams.f0_suffix,
++            )
++
++    def train_dataloader(self):
++        return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size,
++                          num_workers=4, shuffle=True, drop_last=True,
++                          persistent_workers=True, pin_memory=True)
++
++    def val_dataloader(self):
++        return DataLoader(self.valid_dataset, batch_size=self.hparams.batch_size,
++                          num_workers=4, shuffle=False, drop_last=False,
++                          persistent_workers=True, pin_memory=True)
++
++    def predict_dataloader(self):
++        return DataLoader(self.predict_dataset, batch_size=1,
++                          num_workers=2, shuffle=False, drop_last=False)
++
++
++class SingleSpeakerInferenceDataset(Dataset):
++    """Returns full-length files (no segmentation) with rel_path for saving."""
++
++    def __init__(self, wav_dir: str, f0_suffix: str = ".pv"):
++        super().__init__()
++        self.wav_dir = pathlib.Path(wav_dir)
++        self.files = sorted(self.wav_dir.glob("*.wav"))
++        self.f0_suffix = f0_suffix
++
++    def __len__(self):
++        return len(self.files)
++
++    def __getitem__(self, index):
++        f = self.files[index]
++        x, sr = sf.read(str(f), dtype="float32")
++        f0 = np.loadtxt(str(f.with_suffix(self.f0_suffix)))
++
++        f0_hop = int(0.005 * sr)
++        tp = np.arange(len(f0)) * f0_hop
++        t  = np.arange(len(x))
++        f0_interp = np.interp(t, tp, f0).astype(np.float32)
++
++        rel_path = str(f.relative_to(self.wav_dir))
++        return x.astype(np.float32), f0_interp, rel_path
