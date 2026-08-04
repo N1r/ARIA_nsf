@@ -14,7 +14,9 @@ test-lightweight:
 	$(PYTHON) -m pytest \
 		--ignore=tests/test_glottal.py \
 		--ignore=tests/test_prediction_writer.py \
-		--ignore=tests/test_time_tensor.py
+		--ignore=tests/test_time_tensor.py \
+		--ignore=tests/test_controls.py \
+		--ignore=tests/test_control_writer.py
 
 lint:
 	$(PYTHON) -m ruff check src tests tools
