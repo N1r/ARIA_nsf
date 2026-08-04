@@ -1,6 +1,6 @@
 # 面向语音学家的参数 Manipulation 指南
 
-PhonLab-DDSP 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命名控制条件，再生成可审计音频”。它适合构造试听材料、检查模型可控性和形成后续实验假设；它本身不证明某个控制等同于独立的生理或构音操作。
+ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命名控制条件，再生成可审计音频”。它适合构造试听材料、检查模型可控性和形成后续实验假设。整体流程与安装方法见仓库 [README](../README.md)。
 
 ## Capability-driven：先问模型能做什么
 
@@ -12,8 +12,8 @@ PhonLab-DDSP 的 manipulation 是“给同一 checkpoint 和同一测试材料�
 未知参数、越界值、模型不支持的参数，或 checkpoint 缺少真实执行路径时都会报错，不会静默忽略。先查看实验声明的能力：
 
 ```bash
-.venv/bin/phonlab controls EXP
-.venv/bin/phonlab controls EXP --json
+.venv/bin/aris controls EXP
+.venv/bin/aris controls EXP --json
 ```
 
 这里的 `EXP` 是包含 `experiment.json` 的实验目录。第一条适合人读，第二条适合脚本记录。`CHECKPOINT` 通常是
@@ -49,19 +49,14 @@ PhonLab-DDSP 的 manipulation 是“给同一 checkpoint 和同一测试材料�
 只有 `aria-golf` 的解析声道级联明确暴露 F1/F2 轨迹和 `scale_formants` 执行路径，因此 `f1_scale`、`f2_scale` 与 `tilt_alpha_delta` 只对它开放。如果研究问题要求显式 formant 操控，应选择 ARIA-GOLF，并在输出上用独立声学方法复测 formant。
 
 自动化测试已经验证真实 `VocalTractCascade` 的 F1、F2 和 tilt 轨迹按请求
-变化。ARIA-GOLF 的 Slurm Job `4600588` 在 F024 上训练 400 steps；最佳
-checkpoint 随后由 Job `4600593` 渲染 F1、F2 和 tilt 各一组成对条件，全部
-4/4 held-out WAV 发生变化且 clipping 为 0。`make verify-aria` 会重新核对
-checkpoint 哈希、dataset fingerprint、运行时 capability、decoder 调用、
-成对音频差异和削波。这个工程闭环仍不能替代独立 formant 估计或感知实验；
-正式研究需要另外复测实际声学变化的方向和幅度。
+变化。
 
 ## CLI：生成一个或多个命名条件
 
 最小示例：
 
 ```bash
-.venv/bin/phonlab manipulate EXP CHECKPOINT OUTPUT \
+.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'less_noise:noise_gain_db=-6'
 ```
 
@@ -74,7 +69,7 @@ checkpoint 哈希、dataset fingerprint、运行时 capability、decoder 调用�
 条件名同时成为输出子目录名：必须以 ASCII 字母或数字开头，只使用字母、数字、`_`、`-`，并且在一次运行中唯一。可以重复 `--variant`，也可以在一个条件内组合多个参数：
 
 ```bash
-.venv/bin/phonlab manipulate EXP CHECKPOINT OUTPUT \
+.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
   --semitones -4 4 \
   --variant 'less_noise:noise_gain_db=-6' \
   --variant 'raised_clean:pitch_semitones=3,noise_gain_db=-6,output_gain_db=-3' \
@@ -84,17 +79,17 @@ checkpoint 哈希、dataset fingerprint、运行时 capability、decoder 调用�
 对 ARIA-GOLF：
 
 ```bash
-.venv/bin/phonlab manipulate EXP CHECKPOINT OUTPUT \
+.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'vowel_shift:f1_scale=1.05,f2_scale=0.95' \
   --variant 'vowel_tilt:f1_scale=1.05,f2_scale=0.95,tilt_alpha_delta=0.05'
 ```
 
 `--semitones -4 4` 是兼容旧流程的音高 sweep，会产生 `pitch_minus_4st` 和 `pitch_plus_4st`。把 pitch 写进 `--variant` 则可与其他参数组成一个联合条件。联合条件回答的是“这组操作的总效应”；如果要估计单个因素，仍需分别生成只改一个参数的条件和未改 baseline。
 
-先检查参数和底层命令而不运行 GPU 推理：
+先检查参数和底层命令而不运行推理：
 
 ```bash
-.venv/bin/phonlab manipulate EXP CHECKPOINT OUTPUT \
+.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'less_noise:noise_gain_db=-6' \
   --dry-run
 ```
@@ -104,7 +99,7 @@ dry-run 能检查命名、范围和实验模型声明，但不会载入 checkpoi
 已有 baseline 重建时，可以同时生成试听页面：
 
 ```bash
-.venv/bin/phonlab manipulate EXP CHECKPOINT OUTPUT/manipulations \
+.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT/manipulations \
   --semitones -4 4 \
   --variant 'less_noise:noise_gain_db=-6' \
   --baseline OUTPUT/reconstruction \
@@ -116,7 +111,7 @@ dry-run 能检查命名、范围和实验模型声明，但不会载入 checkpoi
 单次重建也可重复使用 `--control` 组合非音高参数：
 
 ```bash
-.venv/bin/phonlab synthesize EXP CHECKPOINT OUTPUT \
+.venv/bin/aris synthesize EXP CHECKPOINT OUTPUT \
   --semitones 3 \
   --control noise_gain_db=-6 \
   --control output_gain_db=-3
@@ -124,60 +119,7 @@ dry-run 能检查命名、范围和实验模型声明，但不会载入 checkpoi
 
 批量条件优先使用 `manipulate`，因为它会额外生成条件级 provenance。
 
-## Slurm：用 `init-postprocess` 生成 GPU 作业包
-
-checkpoint 推理应在 GPU 计算节点执行。登录节点只生成作业包：
-
-```bash
-.venv/bin/phonlab init-postprocess EXP CHECKPOINT OUTPUT \
-  --semitones -4 4 \
-  --variant 'less_noise:noise_gain_db=-6' \
-  --variant 'source_shift:glottal_rd_scale=1.2'
-```
-
-`init-postprocess` 若不指定 `--semitones`，默认仍包括 `-4` 和 `+4` 半音。它只创建作业目录，不会自动提交。命令会打印作业包路径；确认路径和其中的 `job.json`、`train.slurm` 后再提交：
-
-```bash
-.venv/bin/phonlab submit-job PRINTED_JOB_BUNDLE_PATH --confirm
-```
-
-只生成非 F0 条件时，显式加入 `--no-pitch`，并至少提供一个 `--variant`。
-提交命令返回数字 `JOB_ID` 后可查询状态和受限长度日志：
-
-```bash
-.venv/bin/phonlab job-status JOB_ID --json
-.venv/bin/phonlab job-log PRINTED_JOB_BUNDLE_PATH JOB_ID --tail-lines 200
-```
-
-还可用 `--partition`、`--gres`、`--time`、`--cpus`、`--memory` 和 `--exclude` 设置集群资源。生成的作业按顺序执行：
-
-1. baseline checkpoint reconstruction；
-2. 原音与 reconstruction 对照页；
-3. 所有 pitch/命名 manipulation 条件及试听页；
-4. 训练 metrics 报告。
-
-输出目录和作业包都要求是新目录。同一输出路径不能用来“追加条件”；改变参数后应使用新的、可辨识的输出路径。
-成功后主要页面位于 `OUTPUT/reconstruction.html`、`OUTPUT/manipulation.html`
-和 `OUTPUT/metrics.html`，条件级记录位于
-`OUTPUT/manipulations/manipulation.json`。
-
-## GUI：不用拼接命令
-
-启动本地工作台：
-
-```bash
-.venv/bin/phonlab gui
-```
-
-在“7 · 推理与 Manipulation”卡片中：
-
-1. 输入实验目录并点击“查看实验模型声明的参数”；
-2. 填写 checkpoint、新输出目录和半音条件；
-3. 在“其他参数条件”中每行写一个 `名称:参数=值,...`；
-4. 生成 GPU 后处理作业；
-5. 到“6 · Slurm 作业中心”选择返回的作业包，显式确认后提交。
-
-GUI 和 CLI 使用同一套参数解析、范围验证和作业生成函数。GUI 只绑定 `127.0.0.1`；远程集群上应通过 SSH 端口转发访问，不要把具有本地文件权限的工作台公开到网络。
+输出目录要求是新目录。同一输出路径不能用来“追加条件”；改变参数后应使用新的、可辨识的输出路径。
 
 ## 输出、元数据与 clipping
 
@@ -219,20 +161,7 @@ pitch 是通过数据侧的 F0 scale 应用的，因此完整 pitch 条件以 `m
 
 正式比较中最好要求所有条件的 `clipped_samples == 0`。若出现 clipping，应降低 `output_gain_db` 或重新设计条件并完整重渲染；不要事后只对有问题的 WAV 单独归一化。还要注意，prepared dataset 中的 `clipped_fraction` 描述输入数据质量，不等同于 `_render.json` 的推理输出 clipping。
 
-Slurm 作业包的 `job.json` 另外记录数据 fingerprint、checkpoint SHA-256、全部条件和资源参数。归档研究结果时，应同时保存 `experiment.json`、`job.json`、`manipulation.json`、各 `_render.json`、checkpoint 哈希和分析脚本，而不是只保留 WAV。
-
-渲染结束后可用独立验收器检查 schema、每条 WAV 是否实际变化、hook 次数、
-clipping、−/+ 对称噪声条件和纯输出增益条件，并保存 JSON：
-
-```bash
-.venv/bin/python tools/check_control_manipulation.py \
-  OUTPUT/reconstruction \
-  OUTPUT/manipulations \
-  --output OUTPUT/control-acceptance.json
-```
-
-成功时只打印 `PHONLAB_CONTROL_MANIPULATION_OK`。失败时报告逐项问题并返回非零
-状态；不要只看试听页就宣称参数已生效。
+归档研究结果时，应同时保存 `experiment.json`、`manipulation.json`、各 `_render.json`、checkpoint 哈希和分析脚本，而不是只保留 WAV。
 
 ## 科学使用建议
 

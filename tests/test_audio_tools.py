@@ -4,18 +4,13 @@ import math
 import subprocess
 import sys
 import tempfile
-import threading
 import unittest
-import urllib.request
 import wave
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 
 import numpy as np
 
-from phonlab_ddsp.cli import parser
-from phonlab_ddsp.gui import GUI_HTML, Workbench, _handler, serve_gui
-from phonlab_ddsp.segment import split_audio
+from aris.segment import split_audio
 
 
 def _write(path: Path, audio: np.ndarray, sample_rate: int = 8000):
@@ -107,7 +102,7 @@ class AudioSplitTest(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "phonlab_ddsp.cli",
+                    "aris.cli",
                     "split",
                     str(root / "source.wav"),
                     str(root / "output"),
@@ -121,83 +116,6 @@ class AudioSplitTest(unittest.TestCase):
                 text=True,
             )
             self.assertEqual(json.loads(completed.stdout)["segments"], 3)
-
-
-class GuiTest(unittest.TestCase):
-    def test_html_exposes_complete_workflow(self):
-        self.assertIn("音频切分", GUI_HTML)
-        self.assertIn("准备数据集", GUI_HTML)
-        self.assertIn("质检与试听", GUI_HTML)
-        self.assertIn("建立训练实验", GUI_HTML)
-        self.assertIn("查看实验模型声明的参数", GUI_HTML)
-        self.assertIn("noise_gain_db", GUI_HTML)
-        self.assertIn("glottal_rd_scale", GUI_HTML)
-        self.assertIn("f1_scale", GUI_HTML)
-        self.assertIn("命名 condition builder", GUI_HTML)
-        self.assertIn("结果试听与 WAV 保存", GUI_HTML)
-        self.assertIn("浏览器下载当前 WAV", GUI_HTML)
-        self.assertIn("服务端另存目录", GUI_HTML)
-        self.assertIn("生成下载 ZIP", GUI_HTML)
-        self.assertIn('api("workspace-scan"', GUI_HTML)
-        self.assertIn('api("results-load"', GUI_HTML)
-
-    def test_gui_rejects_non_loopback_binding(self):
-        with self.assertRaisesRegex(ValueError, "loopback"):
-            serve_gui("0.0.0.0", 0, open_browser=False)
-
-    def test_webui_cli_alias_uses_the_same_local_server_options(self):
-        args = parser().parse_args(["webui", "--port", "9001", "--no-browser"])
-
-        self.assertEqual(args.command, "webui")
-        self.assertEqual(args.host, "127.0.0.1")
-        self.assertEqual(args.port, 9001)
-        self.assertTrue(args.no_browser)
-
-    def test_local_http_api_and_report_mount(self):
-        workbench = Workbench()
-        with tempfile.TemporaryDirectory() as temporary:
-            report = Path(temporary) / "report.html"
-            report.write_text("mounted report", encoding="utf-8")
-            url = workbench.mount(report.parent, report.name)
-            server = ThreadingHTTPServer(("127.0.0.1", 0), _handler(workbench))
-            thread = threading.Thread(target=server.serve_forever, daemon=True)
-            thread.start()
-            base = f"http://127.0.0.1:{server.server_address[1]}"
-            try:
-                with urllib.request.urlopen(base + "/", timeout=2) as response:
-                    self.assertIn("PhonLab-DDSP", response.read().decode())
-                with urllib.request.urlopen(base + "/favicon.svg", timeout=2) as response:
-                    self.assertEqual(response.headers.get_content_type(), "image/svg+xml")
-                    self.assertIn(b"<svg", response.read())
-                request = urllib.request.Request(
-                    base + "/api/doctor",
-                    data=b"{}",
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(request, timeout=5) as response:
-                    self.assertTrue(json.loads(response.read())["ok"])
-                with urllib.request.urlopen(base + url, timeout=2) as response:
-                    self.assertEqual(response.read(), b"mounted report")
-
-                ranged = urllib.request.Request(
-                    base + url,
-                    headers={"Range": "bytes=2-8"},
-                )
-                with urllib.request.urlopen(ranged, timeout=2) as response:
-                    self.assertEqual(response.status, 206)
-                    self.assertEqual(response.headers["Accept-Ranges"], "bytes")
-                    self.assertEqual(response.headers["Content-Range"], "bytes 2-8/14")
-                    self.assertEqual(response.read(), b"unted r")
-
-                download = urllib.request.Request(base + url + "?download=1", method="HEAD")
-                with urllib.request.urlopen(download, timeout=2) as response:
-                    self.assertIn("attachment", response.headers["Content-Disposition"])
-                    self.assertEqual(response.headers["Content-Length"], "14")
-            finally:
-                server.shutdown()
-                server.server_close()
-                thread.join(timeout=2)
 
 
 if __name__ == "__main__":

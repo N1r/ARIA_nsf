@@ -44,3 +44,6 @@ report.html
 *.fls
 *.out
 *.synctex.gz
+
+# Local session files
+CLAUDE.md

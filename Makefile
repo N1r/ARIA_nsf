@@ -1,8 +1,8 @@
 UV ?= uv
 PYTHON := .venv/bin/python
-PHONLAB := .venv/bin/phonlab
+ARIS := .venv/bin/aris
 
-.PHONY: install test test-lightweight lint format doctor verify-engine verify-webui verify-aria audit verify build
+.PHONY: install test test-lightweight lint format doctor verify
 
 install:
 	./scripts/setup_project_env.sh
@@ -19,36 +19,12 @@ test-lightweight:
 		--ignore=tests/test_control_writer.py
 
 lint:
-	$(PYTHON) -m ruff check src tests tools
+	$(PYTHON) -m ruff check src tests
 
 format:
-	$(PYTHON) -m ruff format src tests tools
+	$(PYTHON) -m ruff format src tests
 
 doctor:
-	$(PHONLAB) doctor
+	$(ARIS) doctor
 
-verify-engine:
-	$(PYTHON) tools/engine_checksums.py
-
-verify-webui:
-	$(PYTHON) tools/check_webui.py \
-		--check-export \
-		--output .cache/webui-acceptance.json
-
-verify-aria:
-	$(PYTHON) tools/check_aria_manipulation.py \
-		artifacts/f024_aria_validated/postprocess-best/reconstruction \
-		artifacts/f024_aria_validated/postprocess-best/manipulations \
-		--output .cache/f024-aria-validated-acceptance.json
-
-audit:
-	$(PYTHON) tools/repo_audit.py --strict
-
-verify: test lint verify-engine audit
-
-# Build outputs stay below .cache. setuptools may temporarily create ignored
-# root build metadata; run `make audit` before build in CI/release workflows.
-build:
-	UV_CACHE_DIR=$(CURDIR)/.cache/uv \
-	UV_PROJECT_ENVIRONMENT=$(CURDIR)/.venv \
-	$(UV) build --out-dir .cache/dist
+verify: test lint

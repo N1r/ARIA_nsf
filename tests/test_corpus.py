@@ -7,7 +7,7 @@ import unittest
 import wave
 from pathlib import Path
 
-from phonlab_ddsp.corpus import (
+from aris.corpus import (
     CORPUS_METADATA,
     acquire_cmu_arctic,
     corpus_wavs_in_order,

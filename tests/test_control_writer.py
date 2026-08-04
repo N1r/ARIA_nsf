@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from models.audiotensor import AudioTensor
-from phonlab_ddsp.controls.lightning import ControlledPredictionWriter
+from aris.controls.lightning import ControlledPredictionWriter
+from aris.models.audiotensor import AudioTensor
 
 
 def test_controlled_writer_accepts_cli_mapping_and_records_render_audit(tmp_path, monkeypatch):
@@ -17,7 +17,7 @@ def test_controlled_writer_accepts_cli_mapping_and_records_render_audit(tmp_path
         saved["kwargs"] = kwargs
 
     monkeypatch.setattr(
-        "phonlab_ddsp.controls.lightning.torchaudio.save",
+        "aris.controls.lightning.torchaudio.save",
         fake_save,
     )
     writer = ControlledPredictionWriter(

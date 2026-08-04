@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-message: "Please cite PhonLab-DDSP and the underlying GOLF papers when using this software."
-title: "PhonLab-DDSP"
+message: "Please cite ARIS and the underlying GOLF papers when using this software."
+title: "ARIS"
 type: software
 version: 0.1.0
 license: MIT
 authors:
-  - name: "PhonLab-DDSP contributors"
+  - name: "ARIS contributors"
 references:
   - type: conference-paper
     title: "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis"

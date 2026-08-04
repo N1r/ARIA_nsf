@@ -1,6 +1,6 @@
 import torch
 
-from models.audiotensor import AudioTensor
+from aris.models.audiotensor import AudioTensor
 
 
 def test_basic():

@@ -2,8 +2,8 @@ import wave
 
 import torch
 
-from ltng.cli import MyPredictionWriter
-from models.audiotensor import AudioTensor
+from aris.models.audiotensor import AudioTensor
+from aris.training.callbacks import MyPredictionWriter
 
 
 def test_prediction_writer_emits_interoperable_pcm16(tmp_path):

@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from models.audiotensor import AudioTensor
-from models.synth import (
+from aris.models.audiotensor import AudioTensor
+from aris.models.synth import (
     GlottalFlowTable,
     IndexedGlottalFlowTable,
     WeightedGlottalFlowTable,

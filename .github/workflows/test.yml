@@ -12,7 +12,7 @@ env:
   MPLCONFIGDIR: ${{ github.workspace }}/.cache/matplotlib
   NUMBA_CACHE_DIR: ${{ github.workspace }}/.cache/numba
   PIP_CACHE_DIR: ${{ github.workspace }}/.cache/pip
-  PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}
+  PYTHONPATH: ${{ github.workspace }}/src
   PYTHONPYCACHEPREFIX: ${{ github.workspace }}/.cache/pycache
   TORCH_EXTENSIONS_DIR: ${{ github.workspace }}/.cache/torch_extensions
   TORCH_HOME: ${{ github.workspace }}/.cache/torch
@@ -36,12 +36,6 @@ jobs:
       - name: Sync lightweight dependencies
         run: uv sync --locked --python 3.11 --extra audio --extra dev --no-install-project
 
-      - name: Audit repository layout
-        run: uv run --no-sync python tools/repo_audit.py --strict
-
-      - name: Verify frozen engine checksums
-        run: uv run --no-sync python tools/engine_checksums.py
-
       - name: Run complete lightweight test suite
         run: >-
           uv run --no-sync pytest
@@ -52,10 +46,7 @@ jobs:
           --ignore=tests/test_control_writer.py
 
       - name: Lint
-        run: uv run --no-sync ruff check src tests tools
+        run: uv run --no-sync ruff check src tests
 
       - name: Check formatting
-        run: uv run --no-sync ruff format --check src tests tools
-
-      - name: Build wheel and source archive
-        run: uv build --out-dir .cache/dist
+        run: uv run --no-sync ruff format --check src tests

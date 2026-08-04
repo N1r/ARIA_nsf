@@ -4,17 +4,17 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from models.audiotensor import AudioTensor
-from phonlab_ddsp.controls.runtime import (
+from aris.controls.runtime import (
     DecoderControlHook,
     runtime_capabilities,
 )
-from phonlab_ddsp.controls.specs import (
+from aris.controls.specs import (
     CONTROL_SPECS,
     controls_for_model,
     parse_variant,
     validate_controls,
 )
+from aris.models.audiotensor import AudioTensor
 
 EXPECTED_CONTROLS = {
     "golf": (
@@ -251,7 +251,7 @@ def test_aria_formant_controls_delegate_to_end_filter_and_preserve_audio_tensor(
 
 
 def test_real_aria_filter_changes_interpretable_tracks_by_requested_amount():
-    from models.analytic_filter import VocalTractCascade
+    from aris.models.analytic_filter import VocalTractCascade
 
     end_filter = VocalTractCascade(sr=16000, n_learned=0)
     decoder = _CaptureDecoder(end_filter=end_filter)

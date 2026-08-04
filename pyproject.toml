@@ -3,14 +3,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "phonlab-ddsp"
+name = "aris"
 version = "0.1.0"
 description = "Reproducible DDSP experiments and acoustic visualisation for phoneticians"
 readme = "README_EN.md"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{name = "PhonLab-DDSP contributors"}]
+authors = [{name = "ARIS contributors"}]
 keywords = ["audio", "ddsp", "phonetics", "speech", "voice-synthesis"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -55,26 +55,16 @@ train = [
 dev = ["pytest>=7", "ruff>=0.5", "build>=1"]
 
 [project.scripts]
-phonlab-ddsp = "phonlab_ddsp.cli:main"
-phonlab = "phonlab_ddsp.cli:main"
+aris = "aris.cli:main"
 
 [tool.setuptools]
-packages = [
-  "phonlab_ddsp",
-  "phonlab_ddsp.controls",
-  "phonlab_ddsp.presets",
-  "models",
-  "models.audiotensor",
-  "models.lru",
-  "ltng",
-  "loss",
-]
-py-modules = ["autoencode"]
-package-dir = {phonlab_ddsp = "src/phonlab_ddsp"}
 include-package-data = true
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.setuptools.package-data]
-phonlab_ddsp = ["presets/*.yaml"]
+aris = ["presets/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -83,6 +73,8 @@ addopts = "-ra"
 [tool.ruff]
 target-version = "py39"
 line-length = 100
+# Vendored GOLF engine code (kept checkpoint-compatible, not linted historically).
+extend-exclude = ["src/aris/models", "src/aris/training", "src/aris/losses"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]

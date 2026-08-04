@@ -1,0 +1,23 @@
+# DDSP original H+N, adapted for 16kHz
+# num_harmonics: 80 (was 155 for 24kHz; Nyquist=8kHz, F0_min=100Hz → max 80 harmonics)
+decoder:
+  class_path: aris.models.hpn.HarmonicPlusNoiseSynth
+  init_args:
+    harm_oscillator:
+      class_path: aris.models.synth.AdditiveSynthesizer
+      init_args:
+        num_harmonics: 80
+    noise_generator:
+      class_path: aris.models.noise.StandardNormalNoise
+    harm_filter:
+      class_path: aris.models.ctrl.PassThrough
+    noise_filter:
+      class_path: aris.models.filters.LTVZeroPhaseFIRFilter
+      init_args:
+        window: hanning
+        n_mag: 128          # 16kHz: 128 bins covers 0-8kHz
+    end_filter:
+      class_path: aris.models.filters.LTIAcousticFilter
+      init_args:
+        length: 128
+        conv_method: fft

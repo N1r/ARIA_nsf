@@ -10,9 +10,9 @@ from pathlib import Path
 
 import numpy as np
 
-from phonlab_ddsp.experiment import create_experiment, synthesize, train
-from phonlab_ddsp.manifest import DatasetManifest, prepare_dataset, validate_manifest
-from phonlab_ddsp.report import build_report, build_synthesis_report
+from aris.experiment import create_experiment, synthesize, train
+from aris.manifest import DatasetManifest, prepare_dataset, validate_manifest
+from aris.report import build_report, build_synthesis_report
 
 
 def _tone(path: Path, frequency: float, seconds: float = 0.30, sample_rate: int = 8000):
@@ -61,7 +61,7 @@ class WorkflowTest(unittest.TestCase):
             self.assertEqual(metadata["dataset_fingerprint"], first.fingerprint)
             self.assertEqual(metadata["slurm"]["gres"], "gpu:l4:1")
             command = train(experiment, dry_run=True)
-            self.assertEqual(command[1:4], ["-m", "autoencode", "fit"])
+            self.assertEqual(command[1:4], ["-m", "aris.engine", "fit"])
             self.assertTrue((experiment / "train.slurm").is_file())
             self.assertIn(".venv/bin/python", (experiment / "train.sh").read_text())
             slurm_script = (experiment / "train.slurm").read_text()
@@ -71,7 +71,7 @@ class WorkflowTest(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "phonlab_ddsp.cli",
+                    "aris.cli",
                     "train",
                     str(experiment),
                     "--dry-run",
@@ -80,7 +80,7 @@ class WorkflowTest(unittest.TestCase):
                 text=True,
                 capture_output=True,
             )
-            self.assertIn("-m autoencode fit", cli_result.stdout)
+            self.assertIn("-m aris.engine fit", cli_result.stdout)
 
             checkpoint = experiment / "fake.ckpt"
             checkpoint.touch()
@@ -96,7 +96,7 @@ class WorkflowTest(unittest.TestCase):
 
     def test_cli_doctor_json(self):
         result = subprocess.run(
-            [sys.executable, "-m", "phonlab_ddsp.cli", "doctor", "--json"],
+            [sys.executable, "-m", "aris.cli", "doctor", "--json"],
             check=True,
             text=True,
             capture_output=True,

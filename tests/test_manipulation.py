@@ -6,10 +6,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from phonlab_ddsp.controls import parse_variant
-from phonlab_ddsp.experiment import create_experiment, synthesize
-from phonlab_ddsp.manifest import prepare_dataset
-from phonlab_ddsp.manipulation import (
+from aris.controls import parse_variant
+from aris.experiment import create_experiment, synthesize
+from aris.manifest import prepare_dataset
+from aris.manipulation import (
     build_manipulation_report,
     manipulate_controls,
     manipulate_pitch,
@@ -166,7 +166,7 @@ class ManipulationTest(unittest.TestCase):
                 return ["predict"]
 
             with patch(
-                "phonlab_ddsp.manipulation.synthesize",
+                "aris.manipulation.synthesize",
                 side_effect=fake_synthesize,
             ):
                 with self.assertRaisesRegex(RuntimeError, "Checkpoint changed"):
@@ -181,7 +181,7 @@ class ManipulationTest(unittest.TestCase):
 
     def test_inference_scales_voiced_f0_and_preserves_zeros(self):
         try:
-            from phonlab_ddsp.lightning import ManifestInferenceDataset
+            from aris.lightning import ManifestInferenceDataset
         except ImportError:
             self.skipTest("training extras are not installed")
         with tempfile.TemporaryDirectory() as temporary:
