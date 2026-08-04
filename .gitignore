@@ -34,3 +34,13 @@ swanlog/
 
 # Generated reports may contain absolute provenance.
 report.html
+
+# Demo site / LaTeX
+.DS_Store
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.synctex.gz
