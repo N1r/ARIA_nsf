@@ -12,7 +12,11 @@ from typing import Sequence
 
 NAVIGATION_FILES = (
     ("README.md", "project overview"),
+    ("README_EN.md", "English project overview"),
     ("LICENSE", "license"),
+    ("CITATION.cff", "machine-readable citation"),
+    ("CONTRIBUTING.md", "contribution guide"),
+    ("SECURITY.md", "security policy"),
     ("pyproject.toml", "Python project metadata"),
 )
 PACKAGE_FILES = (("src/phonlab_ddsp/__init__.py", "public Python package"),)
@@ -20,6 +24,10 @@ DOCUMENTATION_FILES = (
     ("docs/ARCHITECTURE.md", "architecture guide"),
     ("docs/QUICKSTART_ZH.md", "quick-start guide"),
     ("docs/DATA_AND_REPRODUCIBILITY.md", "data and reproducibility guide"),
+    ("docs/MANIPULATION_ZH.md", "parameter-manipulation guide"),
+    ("docs/WEBUI_ZH.md", "WebUI guide"),
+    ("docs/REPOSITORY_MAP_ZH.md", "repository map"),
+    ("docs/GITHUB_RELEASE_ZH.md", "GitHub release checklist"),
 )
 CI_FILES = ((".github/workflows/test.yml", "continuous-integration workflow"),)
 

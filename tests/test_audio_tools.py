@@ -13,6 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
+from phonlab_ddsp.cli import parser
 from phonlab_ddsp.gui import GUI_HTML, Workbench, _handler, serve_gui
 from phonlab_ddsp.segment import split_audio
 
@@ -128,10 +129,29 @@ class GuiTest(unittest.TestCase):
         self.assertIn("准备数据集", GUI_HTML)
         self.assertIn("质检与试听", GUI_HTML)
         self.assertIn("建立训练实验", GUI_HTML)
+        self.assertIn("查看实验模型声明的参数", GUI_HTML)
+        self.assertIn("noise_gain_db", GUI_HTML)
+        self.assertIn("glottal_rd_scale", GUI_HTML)
+        self.assertIn("f1_scale", GUI_HTML)
+        self.assertIn("命名 condition builder", GUI_HTML)
+        self.assertIn("结果试听与 WAV 保存", GUI_HTML)
+        self.assertIn("浏览器下载当前 WAV", GUI_HTML)
+        self.assertIn("服务端另存目录", GUI_HTML)
+        self.assertIn("生成下载 ZIP", GUI_HTML)
+        self.assertIn('api("workspace-scan"', GUI_HTML)
+        self.assertIn('api("results-load"', GUI_HTML)
 
     def test_gui_rejects_non_loopback_binding(self):
         with self.assertRaisesRegex(ValueError, "loopback"):
             serve_gui("0.0.0.0", 0, open_browser=False)
+
+    def test_webui_cli_alias_uses_the_same_local_server_options(self):
+        args = parser().parse_args(["webui", "--port", "9001", "--no-browser"])
+
+        self.assertEqual(args.command, "webui")
+        self.assertEqual(args.host, "127.0.0.1")
+        self.assertEqual(args.port, 9001)
+        self.assertTrue(args.no_browser)
 
     def test_local_http_api_and_report_mount(self):
         workbench = Workbench()
@@ -146,6 +166,9 @@ class GuiTest(unittest.TestCase):
             try:
                 with urllib.request.urlopen(base + "/", timeout=2) as response:
                     self.assertIn("PhonLab-DDSP", response.read().decode())
+                with urllib.request.urlopen(base + "/favicon.svg", timeout=2) as response:
+                    self.assertEqual(response.headers.get_content_type(), "image/svg+xml")
+                    self.assertIn(b"<svg", response.read())
                 request = urllib.request.Request(
                     base + "/api/doctor",
                     data=b"{}",
@@ -156,6 +179,21 @@ class GuiTest(unittest.TestCase):
                     self.assertTrue(json.loads(response.read())["ok"])
                 with urllib.request.urlopen(base + url, timeout=2) as response:
                     self.assertEqual(response.read(), b"mounted report")
+
+                ranged = urllib.request.Request(
+                    base + url,
+                    headers={"Range": "bytes=2-8"},
+                )
+                with urllib.request.urlopen(ranged, timeout=2) as response:
+                    self.assertEqual(response.status, 206)
+                    self.assertEqual(response.headers["Accept-Ranges"], "bytes")
+                    self.assertEqual(response.headers["Content-Range"], "bytes 2-8/14")
+                    self.assertEqual(response.read(), b"unted r")
+
+                download = urllib.request.Request(base + url + "?download=1", method="HEAD")
+                with urllib.request.urlopen(download, timeout=2) as response:
+                    self.assertIn("attachment", response.headers["Content-Disposition"])
+                    self.assertEqual(response.headers["Content-Length"], "14")
             finally:
                 server.shutdown()
                 server.server_close()

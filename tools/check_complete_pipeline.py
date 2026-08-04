@@ -536,32 +536,43 @@ def _check_outputs(
         if not isinstance(outputs_value, list):
             issues.append("manipulation: outputs must be a list")
         else:
-            nonzero_outputs: List[Tuple[float, Path]] = []
+            checked_outputs: List[Tuple[str, Path]] = []
             seen_shifts: Set[float] = set()
             for index, raw in enumerate(outputs_value):
                 label = "manipulation output[{0}]".format(index)
                 if not isinstance(raw, dict):
                     issues.append(label + ": entry is not an object")
                     continue
-                shift = _finite_number(raw.get("semitones"))
-                if shift is None or shift == 0.0:
-                    issues.append(label + ": semitone shift must be finite and non-zero")
-                    continue
-                if shift in seen_shifts:
-                    issues.append(label + ": duplicate semitone shift")
-                seen_shifts.add(shift)
                 directory = _resolve_relative(
                     manipulation_root,
                     raw.get("directory"),
                     label + " directory",
                     issues,
                 )
+                if "semitones" in raw:
+                    shift = _finite_number(raw.get("semitones"))
+                    if shift is None or shift == 0.0:
+                        issues.append(label + ": semitone shift must be finite and non-zero")
+                        continue
+                    if shift in seen_shifts:
+                        issues.append(label + ": duplicate semitone shift")
+                    seen_shifts.add(shift)
+                    output_label = "manipulation {0:+g} st".format(shift)
+                else:
+                    controls = raw.get("controls")
+                    if not isinstance(controls, dict) or not controls:
+                        issues.append(
+                            label + ": non-pitch output must declare a non-empty controls object"
+                        )
+                        continue
+                    output_label = "manipulation " + str(
+                        raw.get("name", raw.get("directory", index))
+                    )
                 if directory is not None:
-                    nonzero_outputs.append((shift, directory))
-            if len(nonzero_outputs) < 2 or len(seen_shifts) < 2:
+                    checked_outputs.append((output_label, directory))
+            if len(seen_shifts) < 2:
                 issues.append("manipulation: at least two distinct non-zero shifts are required")
-            for shift, directory in nonzero_outputs:
-                label = "manipulation {0:+g} st".format(shift)
+            for label, directory in checked_outputs:
                 if not directory.is_dir() or directory.is_symlink():
                     issues.append(label + ": output directory is missing or unsafe")
                     continue

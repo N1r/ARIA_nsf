@@ -265,6 +265,25 @@ def test_complete_fixture_passes_and_prints_exact_token(tmp_path, monkeypatch, c
     assert captured.err == ""
 
 
+def test_complete_fixture_accepts_additional_non_pitch_controls(tmp_path, monkeypatch):
+    root = _complete_fixture(tmp_path / "demo")
+    _patch_corpus_hashes(monkeypatch)
+    metadata_path = root / "manipulations" / "manipulation.json"
+    metadata = json.loads(metadata_path.read_text())
+    metadata["outputs"].append(
+        {
+            "name": "less_noise",
+            "directory": "less_noise",
+            "controls": {"noise_gain_db": -6.0},
+        }
+    )
+    _write_json(metadata_path, metadata)
+    for reconstruction in (root / "reconstruction").glob("*.wav"):
+        _write_wav(root / "manipulations" / "less_noise" / reconstruction.name)
+
+    assert checker.collect_issues(root) == []
+
+
 def test_failures_are_itemized_and_return_nonzero(tmp_path, monkeypatch, capsys):
     root = _complete_fixture(tmp_path / "demo")
     _patch_corpus_hashes(monkeypatch)

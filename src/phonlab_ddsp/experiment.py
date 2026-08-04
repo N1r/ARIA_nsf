@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shlex
 import shutil
 import subprocess
 import sys
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from .controls.specs import validate_controls
 from .manifest import DatasetManifest, validate_manifest
 
 MODELS = {
@@ -135,6 +138,7 @@ def synthesize(
     *,
     dry_run: bool = False,
     f0_scale: float = 1.0,
+    controls: Optional[Mapping[str, float]] = None,
 ) -> list[str]:
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
@@ -142,6 +146,15 @@ def synthesize(
     if not 0 < f0_scale < 16:
         raise ValueError("f0_scale must be in (0, 16)")
     metadata = json.loads((experiment / "experiment.json").read_text())
+    control_values = validate_controls(metadata["model"], {} if controls is None else controls)
+    pitch_semitones = control_values.pop("pitch_semitones", None)
+    if pitch_semitones is not None:
+        pitch_scale = 2 ** (pitch_semitones / 12)
+        if not math.isclose(f0_scale, 1.0) and not math.isclose(
+            f0_scale, pitch_scale, rel_tol=1e-12
+        ):
+            raise ValueError("Conflicting pitch controls: f0_scale does not match pitch_semitones")
+        f0_scale = pitch_scale
     manifest = DatasetManifest.load(metadata["dataset"])
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
@@ -164,9 +177,11 @@ def synthesize(
         str(checkpoint),
         "--trainer.logger",
         "false",
-        "--trainer.callbacks+=ltng.cli.MyPredictionWriter",
+        "--trainer.callbacks+=phonlab_ddsp.controls.lightning.ControlledPredictionWriter",
         "--trainer.callbacks.output_dir",
         str(output),
+        "--trainer.callbacks.controls_json",
+        json.dumps(control_values, sort_keys=True, separators=(",", ":")),
         "--data.init_args.predict_f0_scale",
         str(f0_scale),
     ]

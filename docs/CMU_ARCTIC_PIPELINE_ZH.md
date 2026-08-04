@@ -314,6 +314,32 @@ CHECKPOINT="$PIPELINE_ROOT/experiment/runs/checkpoints/last.ckpt"
 `manipulations/manipulation.json` 记录 checkpoint SHA-256、数据指纹、半音值、
 F0 比例和输出目录。输出目录已存在时工具会停止，以防混合两次运行。
 
+### 6.4 非 F0 参数条件
+
+先查询当前实验声明的控制能力：
+
+```bash
+.venv/bin/phonlab controls "$PIPELINE_ROOT/experiment"
+```
+
+本场景的普通 GOLF checkpoint 还可操控输出电平、噪声分支和 LF/GOLF
+声门 `R_d`。例如：
+
+```bash
+.venv/bin/phonlab manipulate \
+  "$PIPELINE_ROOT/experiment" \
+  "$CHECKPOINT" \
+  "$PIPELINE_ROOT/control_manipulations" \
+  --variant 'quieter:output_gain_db=-6' \
+  --variant 'less_noise:noise_gain_db=-6' \
+  --variant 'source_shift:glottal_rd_scale=1.2'
+```
+
+每个条件目录的 `_render.json` 记录运行时能力、decoder hook 次数和削波。
+普通 GOLF 的 LPC 不是显式 F1/F2 控制；只有 ARIA-GOLF 开放 F1/F2 和谱倾斜。
+完整范围、组合条件、GUI 与科研解释边界见
+[Manipulation 指南](MANIPULATION_ZH.md)。
+
 若只想在登录节点准备一个独立的 GPU 后处理作业包，而不直接推理：
 
 ```bash

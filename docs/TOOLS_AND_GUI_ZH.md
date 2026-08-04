@@ -1,4 +1,4 @@
-# 音频切分工具与本地 GUI
+# 音频切分工具与本地 WebUI
 
 ## 切分 CLI
 
@@ -73,10 +73,12 @@ SHA-256、精确秒数、采样率和样本数；JSON 保存全部算法参数�
 
 ```bash
 source scripts/project_env.sh
-.venv/bin/phonlab gui
+.venv/bin/phonlab webui --workspace "$PWD"
 ```
 
-默认地址为 `http://127.0.0.1:8765/`。页面按顺序提供：
+`webui` 与 `gui` 是同一入口。默认地址为 `http://127.0.0.1:8765/`。主页先
+提供模型感知的 manipulation builder、Slurm 作业中心、baseline/variant
+并排试听和 WAV/ZIP 保存；“高级工作流”中继续按顺序提供：
 
 0. 官方 CMU ARCTIC 示例语料的固定下载、校验和 30–60 分钟子集；
 1. 固定窗口或静音边界切分，包括 `.pv` 同步切分；
@@ -87,17 +89,18 @@ source scripts/project_env.sh
 6. 需要显式确认的 Slurm 提交、状态、日志和取消；
 7. checkpoint 重建、F0 manipulation 和试听报告的 GPU 作业包。
 
-GUI 和 CLI 调用同一组 Python 函数，所以输出格式、校验和 provenance 相同。
+WebUI 和 CLI 调用同一组 Python 函数，所以输出格式、校验和 provenance 相同。
 完成一步后，工作台会把路径自动填入下一步的空字段。网页请求本身不在登录
 节点运行神经网络；卡片 6 只有在使用者勾选确认后才调用 `sbatch`，并可用
 Job ID 查询终态和有界日志。取消作业必须输入 `CANCEL`。
 
 完整的可复现示例及每张卡片的对应 CLI 见
-[CMU ARCTIC 完整流程](CMU_ARCTIC_PIPELINE_ZH.md)。
+[CMU ARCTIC 完整流程](CMU_ARCTIC_PIPELINE_ZH.md)；manipulation、试听和
+导出的逐步图形界面说明见 [WebUI 使用指南](WEBUI_ZH.md)。
 
 ### 远程集群
 
-GUI 有本地文件读写能力，因此拒绝绑定公网地址。在工作站建立 SSH 隧道：
+WebUI 有本地文件读写能力，因此拒绝绑定公网地址。在工作站建立 SSH 隧道：
 
 ```bash
 ssh -L 8765:127.0.0.1:8765 USER@CLUSTER
@@ -107,8 +110,8 @@ ssh -L 8765:127.0.0.1:8765 USER@CLUSTER
 
 ```bash
 source scripts/project_env.sh
-.venv/bin/phonlab gui --no-browser
+.venv/bin/phonlab webui --workspace "$PWD" --no-browser
 ```
 
-工作站浏览器打开 `http://127.0.0.1:8765/`。关闭终端中的 GUI 使用
+工作站浏览器打开 `http://127.0.0.1:8765/`。关闭终端中的 WebUI 使用
 `Ctrl+C`。

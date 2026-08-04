@@ -5,13 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import mimetypes
+import os
 import threading
 import webbrowser
+from dataclasses import asdict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from typing import Optional
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
+from .controls.specs import controls_for_model, parse_variant
 from .corpus import acquire_cmu_arctic
 from .doctor import checks
 from .experiment import create_experiment
@@ -22,6 +26,14 @@ from .metrics import build_metrics_dashboard, load_metrics, summarize_metrics
 from .parameters import export_parameters, parameter_summary
 from .report import build_report
 from .segment import split_audio, split_summary
+from .webui_assets import FAVICON_SVG, GUI_HTML
+from .webui_results import (
+    create_export_zip,
+    export_condition,
+    export_wav,
+    load_result_catalog,
+)
+from .webui_workspace import scan_workspace
 
 MAX_REQUEST_BYTES = 64 * 1024
 
@@ -29,11 +41,33 @@ MAX_REQUEST_BYTES = 64 * 1024
 class Workbench:
     """Execute GUI actions without shell interpolation and serve generated reports."""
 
-    def __init__(self):
+    def __init__(self, workspace_root: Optional[Path] = None):
+        workspace = Path.cwd() if workspace_root is None else Path(workspace_root).expanduser()
+        self.workspace_root = Path(os.path.abspath(os.fspath(workspace)))
+        if self.workspace_root.parent == self.workspace_root:
+            raise ValueError("WebUI workspace may not be a filesystem root")
+        current = Path(self.workspace_root.anchor)
+        parts = (
+            self.workspace_root.parts[1:]
+            if self.workspace_root.anchor
+            else self.workspace_root.parts
+        )
+        for part in parts:
+            current = current / part
+            if current.is_symlink():
+                raise ValueError(f"WebUI workspace contains a symbolic link: {current}")
+        if not self.workspace_root.is_dir():
+            raise FileNotFoundError(f"WebUI workspace does not exist: {self.workspace_root}")
         self.mounts: dict[str, Path] = {}
         self.lock = threading.Lock()
 
     def run(self, action: str, values: dict) -> dict:
+        if action == "workspace-scan":
+            result = scan_workspace(self.workspace_root)
+            return {
+                "message": f"已发现 {result['entry_count']} 个仓库内工作流路径",
+                **result,
+            }
         if action == "doctor":
             items = [
                 {
@@ -218,13 +252,27 @@ class Workbench:
             job_id = _text(values, "job_id", "")
             cancel_job(job_id)
             return {"message": f"已请求取消 Slurm 作业 {job_id}", "job_id": job_id}
+        if action == "control-list":
+            experiment = _path(values, "experiment")
+            metadata = json.loads((experiment / "experiment.json").read_text())
+            controls = controls_for_model(metadata["model"])
+            return {
+                "message": (
+                    f"{metadata['model']} 声明支持 {len(controls)} 个控制参数；"
+                    "checkpoint 将在 GPU 推理时再次检查"
+                ),
+                "model": metadata["model"],
+                "controls": [asdict(item) for item in controls],
+            }
         if action == "postprocess":
             shifts = _float_list(values, "semitones")
+            variants = _variant_list(values, "variants")
             bundle = create_postprocess_job(
                 _path(values, "experiment"),
                 _path(values, "checkpoint"),
                 _path(values, "output"),
                 shifts,
+                control_variants=variants,
                 partition=_text(values, "partition", "gpu-short"),
                 gres=_text(values, "gres", "gpu:1"),
                 time_limit=_text(values, "time_limit", "00:30:00"),
@@ -237,6 +285,79 @@ class Workbench:
                 "job_bundle": str(bundle),
                 "submit_hint": "在 Slurm 作业中心选择此目录并确认提交",
             }
+        if action == "results-load":
+            catalog = load_result_catalog(self.workspace_root, _path(values, "output"))
+            result = catalog.to_dict()
+            for report_name, relative in list(result["reports"].items()):
+                file_url = self.mount(catalog.result_root, relative)
+                result["reports"][report_name] = {
+                    "name": report_name,
+                    "path": relative,
+                    "file_url": file_url,
+                    "url": file_url,
+                }
+            for item in result["items"]:
+                for audio in item["audio"]:
+                    file_url = self.mount(catalog.result_root, audio["path"])
+                    audio["name"] = Path(audio["path"]).name
+                    audio["file_url"] = file_url
+                    audio["download_url"] = f"{file_url}?download=1"
+            summaries = [result["baseline"]["clipping"]]
+            summaries.extend(condition["clipping"] for condition in result["conditions"])
+            clipped_samples = sum(item["clipped_samples"] for item in summaries)
+            samples = sum(item["samples"] for item in summaries)
+            result["clipping"] = {
+                "clipped_samples": clipped_samples,
+                "samples": samples,
+                "clipped_fraction": clipped_samples / samples if samples else 0.0,
+                "files_with_clipping": sum(item["files_with_clipping"] for item in summaries),
+            }
+            result["wav_count"] = len(result["items"]) * (1 + len(result["conditions"]))
+            return {
+                "message": (
+                    f"已加载 {len(result['items'])} 条语料、"
+                    f"{len(result['conditions'])} 个 manipulation 条件"
+                ),
+                **result,
+            }
+        if action == "results-export":
+            catalog = load_result_catalog(self.workspace_root, _path(values, "output"))
+            condition = _text(values, "condition", "")
+            if not condition:
+                raise ValueError("condition is required")
+            scope = _text(values, "scope", "wav")
+            destination = _path(values, "destination")
+            if scope == "wav":
+                item_id = _text(values, "item", "") or _text(values, "item_id", "")
+                if not item_id:
+                    raise ValueError("item is required for a single-WAV export")
+                receipt = export_wav(catalog, condition, item_id, destination)
+            elif scope == "condition":
+                receipt = export_condition(catalog, condition, destination)
+            else:
+                raise ValueError("scope must be 'wav' or 'condition'")
+            return {"message": "WAV 与 provenance 已另存", **receipt.to_dict()}
+        if action == "results-zip":
+            catalog = load_result_catalog(self.workspace_root, _path(values, "output"))
+            condition = _text(values, "condition", "")
+            if not condition:
+                raise ValueError("condition is required")
+            scope = _text(values, "scope", "condition")
+            if scope not in {"wav", "condition"}:
+                raise ValueError("scope must be 'wav' or 'condition'")
+            item_id = None
+            if scope == "wav":
+                item_id = _text(values, "item", "") or _text(values, "item_id", "")
+                if not item_id:
+                    raise ValueError("item is required for a single-WAV ZIP")
+            archive = create_export_zip(catalog, condition, item_id=item_id)
+            file_url = self.mount(archive.parent, archive.name)
+            return {
+                "message": "包含 WAV 与 provenance 的 ZIP 已生成",
+                "archive": str(archive),
+                "file_url": file_url,
+                "download_url": f"{file_url}?download=1",
+            }
         raise ValueError(f"Unknown GUI action: {action}")
 
     def mount(self, root: Path, relative: str) -> str:
@@ -244,33 +365,47 @@ class Workbench:
         token = hashlib.sha256(str(root).encode()).hexdigest()[:16]
         with self.lock:
             self.mounts[token] = root
-        return f"/files/{token}/{relative}"
+        return f"/files/{token}/{quote(relative, safe='/')}"
 
     def resolve_file(self, token: str, relative: str) -> Path:
         with self.lock:
             root = self.mounts.get(token)
         if root is None:
             raise FileNotFoundError("Unknown report mount")
-        target = (root / unquote(relative)).resolve()
+        decoded = unquote(relative)
+        lexical_target = root / decoded
+        current = root
+        for part in Path(decoded).parts:
+            current = current / part
+            if current.is_symlink():
+                raise PermissionError("Symbolic links are not served by the WebUI")
+        target = lexical_target.resolve()
         if target != root and root not in target.parents:
             raise PermissionError("Path escapes the report directory")
-        if not target.is_file():
+        if target.is_symlink() or not target.is_file():
             raise FileNotFoundError(target)
         return target
 
 
-def serve_gui(host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool = True) -> None:
+def serve_gui(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    *,
+    open_browser: bool = True,
+    workspace_root: Optional[Path] = None,
+) -> None:
     if host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError(
             "The GUI can read and write local paths, so it only binds to loopback. "
             "Use an SSH tunnel for remote access."
         )
-    workbench = Workbench()
+    workbench = Workbench(workspace_root)
     server = ThreadingHTTPServer((host, port), _handler(workbench))
     actual_port = server.server_address[1]
     display_host = f"[{host}]" if ":" in host else host
     url = f"http://{display_host}:{actual_port}/"
     print(f"PhonLab-DDSP GUI: {url}")
+    print(f"Workspace: {workbench.workspace_root}")
     print("Press Ctrl+C to stop.")
     if open_browser:
         threading.Timer(0.3, webbrowser.open, args=(url,)).start()
@@ -284,12 +419,31 @@ def serve_gui(host: str = "127.0.0.1", port: int = 8765, *, open_browser: bool =
 
 def _handler(workbench: Workbench):
     class Handler(BaseHTTPRequestHandler):
-        server_version = "PhonLabWorkbench/0.1"
+        server_version = "PhonLabWorkbench/0.2"
 
         def do_GET(self):
+            self._serve_get(head_only=False)
+
+        def do_HEAD(self):
+            self._serve_get(head_only=True)
+
+        def _serve_get(self, *, head_only: bool):
             parsed = urlparse(self.path)
             if parsed.path == "/":
-                self._bytes(HTTPStatus.OK, GUI_HTML.encode(), "text/html; charset=utf-8")
+                self._bytes(
+                    HTTPStatus.OK,
+                    GUI_HTML.encode(),
+                    "text/html; charset=utf-8",
+                    head_only=head_only,
+                )
+                return
+            if parsed.path == "/favicon.svg":
+                self._bytes(
+                    HTTPStatus.OK,
+                    FAVICON_SVG.encode(),
+                    "image/svg+xml; charset=utf-8",
+                    head_only=head_only,
+                )
                 return
             if parsed.path.startswith("/files/"):
                 parts = parsed.path.split("/", 3)
@@ -299,7 +453,13 @@ def _handler(workbench: Workbench):
                 try:
                     path = workbench.resolve_file(parts[2], parts[3])
                     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-                    self._bytes(HTTPStatus.OK, path.read_bytes(), content_type)
+                    download = parse_qs(parsed.query).get("download", [""])[-1].lower()
+                    self._file(
+                        path,
+                        content_type,
+                        download=download in {"1", "true", "yes"},
+                        head_only=head_only,
+                    )
                 except (FileNotFoundError, PermissionError):
                     self.send_error(HTTPStatus.NOT_FOUND)
                 return
@@ -343,20 +503,127 @@ def _handler(workbench: Workbench):
                 "application/json; charset=utf-8",
             )
 
-        def _bytes(self, status: HTTPStatus, content: bytes, content_type: str):
+        def _bytes(
+            self,
+            status: HTTPStatus,
+            content: bytes,
+            content_type: str,
+            *,
+            head_only: bool = False,
+        ):
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(content)))
+            self._security_headers()
+            self.end_headers()
+            if not head_only:
+                self.wfile.write(content)
+
+        def _file(
+            self,
+            path: Path,
+            content_type: str,
+            *,
+            download: bool,
+            head_only: bool,
+        ):
+            size = path.stat().st_size
+            try:
+                byte_range = _parse_byte_range(self.headers.get("Range"), size)
+            except ValueError:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header("Content-Range", f"bytes */{size}")
+                self.send_header("Content-Length", "0")
+                self.send_header("Accept-Ranges", "bytes")
+                self._security_headers()
+                self.end_headers()
+                return
+
+            if byte_range is None:
+                start, end = 0, max(size - 1, 0)
+                status = HTTPStatus.OK
+            else:
+                start, end = byte_range
+                status = HTTPStatus.PARTIAL_CONTENT
+            length = 0 if size == 0 else end - start + 1
+
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(length))
+            self.send_header("Accept-Ranges", "bytes")
+            if byte_range is not None:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            if download:
+                ascii_name = "".join(
+                    character
+                    if 32 <= ord(character) < 127 and character not in {'"', "\\"}
+                    else "_"
+                    for character in path.name
+                )
+                encoded_name = quote(path.name, safe="")
+                self.send_header(
+                    "Content-Disposition",
+                    f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}",
+                )
+            self._security_headers()
+            self.end_headers()
+            if head_only or length == 0:
+                return
+
+            remaining = length
+            with path.open("rb") as stream:
+                stream.seek(start)
+                while remaining:
+                    chunk = stream.read(min(64 * 1024, remaining))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
+
+        def _security_headers(self):
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Cache-Control", "no-store")
             self.send_header(
                 "Content-Security-Policy",
                 "default-src 'self'; style-src 'self' 'unsafe-inline'; "
                 "script-src 'self' 'unsafe-inline'; media-src 'self'; connect-src 'self'",
             )
-            self.end_headers()
-            self.wfile.write(content)
 
     return Handler
+
+
+def _parse_byte_range(header: Optional[str], size: int) -> Optional[tuple[int, int]]:
+    """Parse one RFC 7233 byte range for local audio seeking."""
+
+    if not header:
+        return None
+    if size <= 0 or not header.startswith("bytes=") or "," in header:
+        raise ValueError("Unsupported byte range")
+    value = header.removeprefix("bytes=").strip()
+    if value.count("-") != 1:
+        raise ValueError("Invalid byte range")
+    raw_start, raw_end = (part.strip() for part in value.split("-", 1))
+    if not raw_start:
+        if not raw_end.isdigit() or int(raw_end) <= 0:
+            raise ValueError("Invalid suffix byte range")
+        suffix = min(int(raw_end), size)
+        return size - suffix, size - 1
+    if not raw_start.isdigit():
+        raise ValueError("Invalid byte range start")
+    start = int(raw_start)
+    if start >= size:
+        raise ValueError("Byte range starts after the file")
+    if raw_end:
+        if not raw_end.isdigit():
+            raise ValueError("Invalid byte range end")
+        end = min(int(raw_end), size - 1)
+        if end < start:
+            raise ValueError("Byte range end precedes start")
+    else:
+        end = size - 1
+    return start, end
 
 
 def _text(values: dict, name: str, default: str) -> str:
@@ -401,225 +668,14 @@ def _bool(values: dict, name: str, default: bool) -> bool:
 def _float_list(values: dict, name: str) -> list[float]:
     raw = _text(values, name, "")
     if not raw:
-        raise ValueError(f"{name} is required")
+        return []
     parts = raw.replace(",", " ").split()
     return [float(value) for value in parts]
 
 
-GUI_HTML = r"""<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhonLab-DDSP 工作台</title>
-<style>
-:root{--ink:#172129;--muted:#66727a;--paper:#f6f3ed;--card:#fffdfa;--line:#d9d3c8;
---accent:#176b5b;--accent2:#d66b35;--good:#e1f2eb;--bad:#fff0ec}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
-font:15px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Noto Sans SC",sans-serif}
-header{background:#163b36;color:white;padding:2.6rem max(1.2rem,calc((100% - 1120px)/2))}
-header h1{font:700 clamp(2rem,5vw,3.8rem)/1.05 Georgia,serif;margin:0 0 .6rem}
-header p{max-width:760px;margin:0;color:#d8e9e4;font-size:1.05rem}
-main{max-width:1120px;margin:2rem auto;padding:0 1.2rem 4rem}
-.toolbar{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;margin-bottom:1.2rem}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.3rem;
-box-shadow:0 4px 18px #4d463b0b}.card h2{margin:0 0 .2rem;font:700 1.4rem Georgia,serif}
-.card>p{color:var(--muted);margin:.2rem 0 1rem}.fields{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-label{display:flex;flex-direction:column;gap:.28rem;font-size:.82rem;color:#4b565c}
-label.wide{grid-column:1/-1}input,select{width:100%;border:1px solid #c9c2b7;border-radius:8px;
-background:white;color:var(--ink);padding:.62rem .68rem;font:inherit}
-input:focus,select:focus{outline:2px solid #78b5aa;outline-offset:1px}
-.check{flex-direction:row;align-items:center;margin-top:.45rem}.check input{width:auto}
-button{border:0;border-radius:9px;padding:.67rem 1rem;background:var(--accent);color:white;
-font-weight:650;cursor:pointer}button:hover{filter:brightness(1.08)}button.secondary{background:#42525a}
-.submit{margin-top:1rem}.result{display:none;margin-top:1rem;padding:.8rem;border-radius:9px;
-white-space:pre-wrap;overflow-wrap:anywhere;background:var(--good)}.result.error{background:var(--bad);color:#8a291b}
-.status{color:var(--muted)}code{background:#ebe7df;padding:.12rem .32rem;border-radius:4px}
-details{margin-top:.8rem}summary{cursor:pointer;color:var(--accent)}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.fields{grid-template-columns:1fr}
-label.wide{grid-column:auto}header{padding:2rem 1.2rem}}
-</style>
-</head>
-<body>
-<header><h1>PhonLab-DDSP 工作台</h1>
-<p>从示例语料或自己的录音出发，完成切分、参数提取、质检、Slurm 训练、loss 检查、checkpoint 推理和可试听的音高操控。</p></header>
-<main>
-<div class="toolbar">
-  <button class="secondary" onclick="doctor()">检查环境</button>
-  <span class="status" id="global-status">服务仅在本机运行；训练只会在勾选确认后提交至 Slurm。</span>
-</div>
-<div class="grid">
-<section class="card">
-<h2>0 · 获取可复现示例语料</h2>
-<p>下载许可清楚的 CMU ARCTIC 单说话人英语语料，并按官方顺序固定 30–60 分钟子集。</p>
-<form data-action="corpus"><div class="fields">
-<label class="wide">新输出目录<input name="output" required placeholder="/path/to/cmu-arctic-slt"></label>
-<label class="wide">已有官方压缩包（可选）<input name="archive" placeholder="/path/to/cmu_us_slt_arctic-0.95-release.tar.bz2"></label>
-<label>目标时长（分钟）<input name="target_minutes" type="number" step=".5" value="30"></label>
-<label>最长时长（分钟）<input name="max_minutes" type="number" step=".5" value="60"></label>
-<label>话语间静音（秒）<input name="silence_gap" type="number" step=".05" value=".35"></label>
-</div><button class="submit">获取并校验语料</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>1 · 音频切分</h2><p>静音边界适合话语切分；固定窗口适合等长训练样本。</p>
-<form data-action="split"><div class="fields">
-<label class="wide">源音频文件或目录<input name="source" required placeholder="/path/to/recordings"></label>
-<label class="wide">新输出目录<input name="output" required placeholder="/path/to/segments"></label>
-<label>切分模式<select name="mode"><option value="silence">静音边界</option><option value="fixed">固定时长</option></select></label>
-<label>输出采样率（留空则保留）<input name="sample_rate" type="number" placeholder="16000"></label>
-<label>固定片段秒数<input name="segment_seconds" type="number" step=".05" value="2"></label>
-<label>重叠秒数<input name="overlap_seconds" type="number" step=".05" value="0"></label>
-<label>静音阈值 dBFS<input name="silence_threshold_db" type="number" step="1" value="-40"></label>
-<label>最短静音秒数<input name="min_silence_seconds" type="number" step=".05" value=".30"></label>
-<label>边界留白秒数<input name="padding_seconds" type="number" step=".01" value=".05"></label>
-<label>最短片段秒数<input name="min_duration_seconds" type="number" step=".05" value=".25"></label>
-<label>最长片段秒数<input name="max_duration_seconds" type="number" step=".5" value="15"></label>
-<label class="check"><input name="keep_tail" type="checkbox" checked>保留固定模式末尾片段</label>
-<label class="check"><input name="split_f0_sidecars" type="checkbox">同步切分同名 .pv F0</label>
-<label>F0 帧移秒数<input name="f0_hop_seconds" type="number" step=".001" value=".005"></label>
-</div><button class="submit">开始切分</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>2 · 准备数据集</h2><p>统一音频、提取或复用 F0，并生成确定性数据划分和哈希。</p>
-<form data-action="prepare"><div class="fields">
-<label class="wide">录音目录<input name="source" required placeholder="/path/to/segments/audio"></label>
-<label class="wide">新数据集目录<input name="output" required placeholder="/path/to/dataset"></label>
-<label>F0 方法<select name="f0_method"><option value="autocorr">自动相关（易安装）</option><option value="sidecar">同名 .pv</option><option value="auto">自动选择</option><option value="pyworld">pyworld</option></select></label>
-<label>采样率<input name="sample_rate" type="number" value="16000"></label>
-<label>F0 下限 Hz<input name="f0_floor" type="number" value="60"></label>
-<label>F0 上限 Hz<input name="f0_ceiling" type="number" value="500"></label>
-<label>验证集比例<input name="validation_ratio" type="number" step=".01" value=".1"></label>
-<label>测试集比例<input name="test_ratio" type="number" step=".01" value=".1"></label>
-<label>随机种子<input name="seed" type="number" value="42"></label>
-<label>最短录音秒数<input name="min_duration" type="number" step=".05" value=".25"></label>
-<label>峰值归一化（默认关闭）<input name="normalize_peak" type="number" step=".05" placeholder="0.95"></label>
-</div><button class="submit">准备数据</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>3 · 质检与试听</h2><p>生成包含时长、F0、削波、数据来源和逐条试听的离线报告。</p>
-<form data-action="inspect"><div class="fields">
-<label class="wide">已准备的数据集<input name="dataset" required placeholder="/path/to/dataset"></label>
-<label class="wide">报告路径（留空使用 dataset/report.html）<input name="output" placeholder="/path/to/report.html"></label>
-</div><button class="submit">生成报告</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>4 · 建立训练实验</h2><p>生成配置、provenance 和 Slurm 启动器；GPU 训练需在终端提交。</p>
-<form data-action="experiment"><div class="fields">
-<label class="wide">已准备的数据集<input name="dataset" required placeholder="/path/to/dataset"></label>
-<label class="wide">新实验目录<input name="output" required placeholder="/path/to/experiment"></label>
-<label>模型<select name="model"><option value="golf">GOLF</option><option value="ddsp">DDSP</option><option value="aria-golf">ARIA-GOLF</option></select></label>
-<label>Batch size<input name="batch_size" type="number" value="32"></label>
-<label>训练步数<input name="max_steps" type="number" value="40000"></label>
-<label>Data workers<input name="workers" type="number" value="4"></label>
-<label>F0 下限 Hz<input name="f0_min" type="number" value="60"></label>
-<label>F0 上限 Hz<input name="f0_max" type="number" value="500"></label>
-<label>随机种子<input name="seed" type="number" value="42"></label>
-<label>Slurm partition<input name="partition" value="gpu-short"></label>
-<label>GPU GRES<input name="gres" value="gpu:l4:1"></label>
-<label>时间上限<input name="time_limit" value="04:00:00"></label>
-<label>CPU<input name="cpus" type="number" value="8"></label>
-<label>内存<input name="memory" value="32G"></label>
-<label>排除节点（可留空）<input name="exclude" value="node857"></label>
-</div><button class="submit">生成实验</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>5 · Loss 与训练指标</h2><p>读取 Lightning CSV，绘制 train/validation loss、学习率并标出 NaN/Inf。</p>
-<form data-action="metrics"><div class="fields">
-<label class="wide">实验目录<input name="experiment" required placeholder="/path/to/experiment"></label>
-<label class="wide">报告路径（留空使用 experiment/metrics.html）<input name="output" placeholder="/path/to/experiment/metrics.html"></label>
-<label>日志版本（留空取最新）<input name="version" placeholder="latest"></label>
-</div><button class="submit">生成指标报告</button><div class="result"></div></form>
-</section>
-
-<section class="card">
-<h2>6 · Slurm 作业中心</h2><p>所有调度命令均使用参数数组；提交和取消需要显式确认。</p>
-<form data-action="job-submit"><div class="fields">
-<label class="wide">训练实验或作业包目录<input name="experiment" required placeholder="/path/to/job-bundle"></label>
-<label class="check wide"><input name="confirm" type="checkbox">确认向 Slurm 提交该作业</label>
-</div><button class="submit">提交作业</button><div class="result"></div></form>
-<details><summary>查询状态与末尾200行日志</summary>
-<form data-action="job-status"><div class="fields">
-<label>Job ID<input name="job_id" required placeholder="4553909"></label>
-<label>实验/作业包目录（可选）<input name="experiment" placeholder="/path/to/job-bundle"></label>
-</div><button class="submit">刷新状态</button><div class="result"></div></form></details>
-<details><summary>取消作业</summary>
-<form data-action="job-cancel"><div class="fields">
-<label>Job ID<input name="job_id" required></label>
-<label>输入 CANCEL 确认<input name="confirmation" required></label>
-</div><button class="submit secondary">取消作业</button><div class="result"></div></form></details>
-</section>
-
-<section class="card">
-<h2>7 · 推理与 Manipulation</h2><p>生成GPU后处理作业：重建测试集、±半音F0操控、试听页和指标报告。</p>
-<form data-action="postprocess"><div class="fields">
-<label class="wide">实验目录<input name="experiment" required placeholder="/path/to/experiment"></label>
-<label class="wide">Checkpoint<input name="checkpoint" required placeholder="/path/to/last.ckpt"></label>
-<label class="wide">新输出目录<input name="output" required placeholder="/path/to/postprocess-output"></label>
-<label>半音偏移（空格或逗号）<input name="semitones" value="-4, 4"></label>
-<label>Partition<input name="partition" value="gpu-short"></label>
-<label>GRES<input name="gres" value="gpu:l4:1"></label>
-<label>时间<input name="time_limit" value="00:30:00"></label>
-<label>CPU<input name="cpus" type="number" value="4"></label>
-<label>内存<input name="memory" value="24G"></label>
-<label>排除节点（可选）<input name="exclude" placeholder="node857"></label>
-</div><button class="submit">生成后处理作业</button><div class="result"></div></form>
-</section>
-</div>
-</main>
-<script>
-function values(form){
-  const out={}; new FormData(form).forEach((v,k)=>out[k]=v);
-  form.querySelectorAll('input[type=checkbox]').forEach(x=>out[x.name]=x.checked);
-  return out;
-}
-function fill(action,name,value){
-  if(!value)return;
-  document.querySelectorAll('form[data-action="'+action+'"] [name="'+name+'"]').forEach(x=>{
-    if(!x.value)x.value=value;
-  });
-}
-function cascade(data){
-  fill('split','source',data.continuous_audio);
-  fill('split','output',data.suggested_segments);
-  fill('prepare','source',data.segments_audio);
-  fill('prepare','output',data.suggested_dataset);
-  ['inspect','experiment'].forEach(a=>fill(a,'dataset',data.dataset));
-  fill('experiment','output',data.suggested_experiment);
-  ['metrics','job-submit','postprocess'].forEach(a=>fill(a,'experiment',data.experiment));
-  fill('postprocess','output',data.suggested_postprocess);
-  fill('job-submit','experiment',data.job_bundle);
-  ['job-status','job-cancel'].forEach(a=>fill(a,'job_id',data.job_id));
-}
-function render(box,data){
-  box.classList.toggle('error',!data.ok); box.style.display='block';
-  if(!data.ok){box.textContent='错误：'+data.error;return}
-  cascade(data);
-  const copy={...data}; delete copy.ok; const url=copy.report_url; delete copy.report_url;
-  box.textContent=JSON.stringify(copy,null,2);
-  if(url){const a=document.createElement('a');a.href=url;a.target='_blank';a.textContent='\n打开质检报告 ↗';box.appendChild(a)}
-}
-document.querySelectorAll('form[data-action]').forEach(form=>form.addEventListener('submit',async e=>{
-  e.preventDefault(); const button=form.querySelector('button'); const box=form.querySelector('.result');
-  const label=button.textContent;
-  button.disabled=true; button.textContent='处理中…'; box.style.display='none';
-  try{
-    const response=await fetch('/api/'+form.dataset.action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values(form))});
-    render(box,await response.json());
-  }catch(error){render(box,{ok:false,error:String(error)})}
-  finally{button.disabled=false;button.textContent=label}
-}));
-async function doctor(){
-  const status=document.getElementById('global-status');status.textContent='检查中…';
-  try{const r=await fetch('/api/doctor',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-  const d=await r.json();status.textContent=d.ok?d.checks.map(x=>(x.ok?'✓ ':'– ')+x.name).join(' · '):d.error}
-  catch(e){status.textContent=String(e)}
-}
-</script>
-</body></html>
-"""
+def _variant_list(values: dict, name: str):
+    raw = _text(values, name, "")
+    if not raw:
+        return []
+    entries = [entry.strip() for entry in raw.replace(";", "\n").splitlines()]
+    return [parse_variant(entry) for entry in entries if entry]

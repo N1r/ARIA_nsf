@@ -35,9 +35,15 @@ official corpus / the researcher's recordings
   - `experiment.py`, `lightning.py`: provenance-bound configuration and manifest
     adapters for the frozen engine.
   - `jobs.py`, `launchers.py`: argv-only Slurm control and post-processing bundles.
-  - `manipulation.py`: checkpoint-bound voiced-F0 control and listening reports.
-  - `cli.py`, `gui.py`: thin command-line and loopback-only web adapters over the
+  - `controls/`: dependency-free capability specifications plus checkpoint-time,
+    model-introspected source/filter/output transformations.
+  - `manipulation.py`: named multi-parameter rendering, provenance and listening reports.
+  - `cli.py`, `gui.py`: thin command-line and loopback-only HTTP adapters over the
     same library functions.
+  - `webui_assets.py`: self-contained Streamlit-like browser workbench without a
+    CDN or JavaScript build step.
+  - `webui_results.py`, `webui_workspace.py`: bounded result discovery, audio
+    catalogs, provenance-preserving export and ZIP generation.
 - `models/`, `ltng/`, `loss/`, and selected top-level Python entry points retain
   their historical import names for frozen configs and checkpoints. New workflow
   features should not be added there.
@@ -57,13 +63,16 @@ only training and checkpoint inference to a compute node.
 `manifest.csv` plus `dataset.json` is the portable dataset contract. Relative
 artifact paths permit moving a complete dataset; the dataset fingerprint detects
 silent changes. `experiment.json` binds that fingerprint to config and decoder
-hashes. Manipulation metadata additionally binds the checkpoint SHA-256 and exact
-F0 scale.
+hashes. Manipulation metadata additionally binds the checkpoint SHA-256, exact
+control values, runtime capabilities, decoder-hook execution count and clipping
+diagnostics.
 
-The GUI never interpolates shell commands. CPU actions call Python APIs directly;
+The WebUI never interpolates shell commands. CPU actions call Python APIs directly;
 Slurm actions pass argument arrays to `sbatch`, `squeue`, `sacct` and `scancel`.
 Submission and cancellation require explicit confirmation, and logs are bounded
-and confined to the selected job directory.
+and confined to the selected job directory. The server binds only to loopback;
+result discovery and exports are confined to the selected workspace, symbolic
+links are rejected, and audio responses support bounded HTTP byte ranges.
 
 Mutable environments, downloads, caches and experimental outputs stay in
 `.venv/`, `.cache/` and `artifacts/`. They are not package source and are excluded

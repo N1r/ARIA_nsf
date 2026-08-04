@@ -36,14 +36,32 @@ def write(root: Path, manifest: Path):
 def verify(root: Path, manifest: Path) -> int:
     failures = []
     checked = 0
+    recorded = set()
     for line in manifest.read_text(encoding="utf-8").splitlines():
-        expected, relative = line.split("  ", 1)
+        try:
+            expected, relative = line.split("  ", 1)
+        except ValueError:
+            failures.append(f"malformed manifest line: {line!r}")
+            continue
+        if (
+            len(expected) != 64
+            or any(character not in "0123456789abcdef" for character in expected)
+            or not relative
+        ):
+            failures.append(f"malformed manifest line: {line!r}")
+            continue
+        if relative in recorded:
+            failures.append(f"duplicate: {relative}")
+            continue
+        recorded.add(relative)
         path = root / relative
         if not path.is_file():
             failures.append(f"missing: {relative}")
         elif digest(path) != expected:
             failures.append(f"changed: {relative}")
         checked += 1
+    current = {path.relative_to(root).as_posix() for path in engine_files(root)}
+    failures.extend(f"untracked: {relative}" for relative in sorted(current - recorded))
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return 1

@@ -11,6 +11,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .controls.specs import ControlVariant, pitch_variants, validate_controls
 from .experiment import synthesize
 from .manifest import DatasetManifest
 from .report import _relative_url
@@ -37,16 +38,39 @@ def manipulate_pitch(
     *,
     dry_run: bool = False,
 ) -> list[list[str]]:
-    """Run one predict pass per pitch shift and record its provenance."""
+    """Backward-compatible wrapper for a pitch-only control sweep."""
+    return manipulate_controls(
+        experiment,
+        checkpoint,
+        output,
+        pitch_variants(semitone_shifts),
+        dry_run=dry_run,
+    )
+
+
+def manipulate_controls(
+    experiment: Path,
+    checkpoint: Path,
+    output: Path,
+    variants: list[ControlVariant],
+    *,
+    dry_run: bool = False,
+) -> list[list[str]]:
+    """Render named control variants and write checkpoint-bound provenance."""
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
     output = Path(output).resolve()
-    shifts = [float(value) for value in semitone_shifts]
-    if not shifts:
-        raise ValueError("At least one semitone shift is required")
-    if len(set(shifts)) != len(shifts):
-        raise ValueError("Semitone shifts must be unique")
-    scales = [semitones_to_scale(value) for value in shifts]
+    if not variants:
+        raise ValueError("At least one manipulation variant is required")
+    names = [variant.name for variant in variants]
+    if len(set(names)) != len(names):
+        raise ValueError("Manipulation variant names must be unique")
+    experiment_metadata = json.loads((experiment / "experiment.json").read_text())
+    model = experiment_metadata["model"]
+    normalized = [
+        ControlVariant(variant.name, validate_controls(model, variant.controls))
+        for variant in variants
+    ]
     if output.exists():
         raise FileExistsError(f"Manipulation output already exists: {output}")
 
@@ -55,13 +79,15 @@ def manipulate_pitch(
             synthesize(
                 experiment,
                 checkpoint,
-                output / pitch_directory_name(shift),
+                output / variant.name,
                 dry_run=True,
-                f0_scale=scale,
+                f0_scale=semitones_to_scale(variant.controls.get("pitch_semitones", 0.0)),
+                controls=variant.controls,
             )
-            for shift, scale in zip(shifts, scales)
+            for variant in normalized
         ]
 
+    checkpoint_hash = _sha256(checkpoint)
     output.parent.mkdir(parents=True, exist_ok=True)
     staging = output.parent / f".{output.name}.manipulating-{os.getpid()}"
     if staging.exists():
@@ -70,32 +96,49 @@ def manipulate_pitch(
     commands = []
     try:
         outputs = []
-        for shift, scale in zip(shifts, scales):
-            name = pitch_directory_name(shift)
+        for variant in normalized:
+            _verify_checkpoint(checkpoint, checkpoint_hash)
+            semitones = float(variant.controls.get("pitch_semitones", 0.0))
+            scale = semitones_to_scale(semitones)
             command = synthesize(
                 experiment,
                 checkpoint,
-                staging / name,
+                staging / variant.name,
                 f0_scale=scale,
+                controls=variant.controls,
             )
+            _verify_checkpoint(checkpoint, checkpoint_hash)
             commands.append(command)
-            outputs.append(
-                {
-                    "semitones": shift,
-                    "f0_scale": scale,
-                    "directory": name,
-                }
+            render_metadata = json.loads(
+                (staging / variant.name / "_render.json").read_text(encoding="utf-8")
             )
-        experiment_metadata = json.loads((experiment / "experiment.json").read_text())
+            item = {
+                "name": variant.name,
+                "directory": variant.name,
+                "controls": variant.controls,
+                "f0_scale": scale,
+                "label": _variant_label(variant.controls),
+                "render_audit": {
+                    "metadata": f"{variant.name}/_render.json",
+                    "runtime_capabilities": render_metadata["runtime_capabilities"],
+                    "decoder_control_calls": render_metadata["decoder_control_calls"],
+                    "files_written": render_metadata["files_written"],
+                    "clipped_fraction": render_metadata["clipped_fraction"],
+                },
+            }
+            if "pitch_semitones" in variant.controls:
+                item["semitones"] = semitones
+            outputs.append(item)
         metadata = {
-            "schema_version": "1.0",
+            "schema_version": "2.0",
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "operation": "voiced-f0-scale",
+            "operation": "ddsp-multi-parameter-control",
             "unvoiced_policy": "preserve-zero",
+            "model": model,
             "experiment": str(experiment),
             "dataset_fingerprint": experiment_metadata["dataset_fingerprint"],
             "checkpoint": str(checkpoint),
-            "checkpoint_sha256": _sha256(checkpoint),
+            "checkpoint_sha256": checkpoint_hash,
             "outputs": outputs,
         }
         (staging / "manipulation.json").write_text(
@@ -116,7 +159,7 @@ def build_manipulation_report(
     manipulations: Path,
     output: Path,
 ) -> Path:
-    """Compare held-out originals, baseline reconstruction, and pitch shifts."""
+    """Compare held-out originals, baseline reconstruction, and control variants."""
     experiment = Path(experiment).resolve()
     baseline = Path(baseline).resolve()
     manipulations = Path(manipulations).resolve()
@@ -136,7 +179,7 @@ def build_manipulation_report(
         ]
         files.extend(
             (
-                f"{variant['semitones']:+g} st",
+                _metadata_variant_label(variant),
                 manipulations / variant["directory"] / f"{record.id}.wav",
             )
             for variant in variants
@@ -157,19 +200,19 @@ def build_manipulation_report(
     headers = "".join(
         f"<th>{html.escape(label)}</th>"
         for label in ["Item", "Original", "Reconstruction"]
-        + [f"{variant['semitones']:+g} st" for variant in variants]
+        + [_metadata_variant_label(variant) for variant in variants]
     )
     document = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhonLab-DDSP pitch manipulation</title>
+<title>PhonLab-DDSP parameter manipulation</title>
 <style>
 body{{font:15px system-ui;max-width:1500px;margin:2rem auto;padding:0 1rem;color:#172129}}
 table{{border-collapse:collapse;width:100%;display:block;overflow-x:auto}}
 th,td{{padding:.65rem;border-bottom:1px solid #d9d3c8;text-align:left}}
 audio{{width:230px}}code{{background:#eee;padding:.15rem .3rem}}
 .variant{{font-size:.78rem;color:#66727a;margin-bottom:.2rem}}
-</style></head><body><h1>Held-out pitch manipulation</h1>
-<p>Operation: voiced F0 scaling; unvoiced frames remain zero.</p>
+</style></head><body><h1>Held-out DDSP parameter manipulation</h1>
+<p>{html.escape(_operation_description(manipulation_metadata))}</p>
 <p>Checkpoint SHA-256: <code>{html.escape(manipulation_metadata["checkpoint_sha256"])}</code></p>
 <table><thead><tr>{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table>
 <p>Incomplete rows omitted: {len(missing)}</p>
@@ -186,3 +229,37 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _verify_checkpoint(path: Path, expected_sha256: str) -> None:
+    actual = _sha256(path)
+    if actual != expected_sha256:
+        raise RuntimeError(
+            "Checkpoint changed during manipulation; refusing to mix outputs from "
+            f"different model states ({expected_sha256} != {actual})"
+        )
+
+
+def _variant_label(controls: dict[str, float]) -> str:
+    if set(controls) == {"pitch_semitones"}:
+        return f"{controls['pitch_semitones']:+g} st"
+    return ", ".join(f"{name}={value:g}" for name, value in sorted(controls.items()))
+
+
+def _metadata_variant_label(variant: dict) -> str:
+    if variant.get("label"):
+        return str(variant["label"])
+    if "semitones" in variant:
+        return f"{float(variant['semitones']):+g} st"
+    if isinstance(variant.get("controls"), dict):
+        return _variant_label(variant["controls"])
+    return str(variant.get("name", variant["directory"]))
+
+
+def _operation_description(metadata: dict) -> str:
+    if metadata.get("operation") == "voiced-f0-scale":
+        return "Operation: voiced F0 scaling; unvoiced frames remain zero."
+    return (
+        "Operation: capability-checked DDSP controls. Pitch changes affect voiced F0 "
+        "conditioning; every requested control and checkpoint hash is recorded below."
+    )

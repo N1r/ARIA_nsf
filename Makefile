@@ -2,7 +2,7 @@ UV ?= uv
 PYTHON := .venv/bin/python
 PHONLAB := .venv/bin/phonlab
 
-.PHONY: install test test-lightweight lint format doctor verify-engine audit verify build
+.PHONY: install test test-lightweight lint format doctor verify-engine verify-webui verify-aria audit verify build
 
 install:
 	./scripts/setup_project_env.sh
@@ -27,6 +27,17 @@ doctor:
 
 verify-engine:
 	$(PYTHON) tools/engine_checksums.py
+
+verify-webui:
+	$(PYTHON) tools/check_webui.py \
+		--check-export \
+		--output .cache/webui-acceptance.json
+
+verify-aria:
+	$(PYTHON) tools/check_aria_manipulation.py \
+		artifacts/f024_aria_validated/postprocess-best/reconstruction \
+		artifacts/f024_aria_validated/postprocess-best/manipulations \
+		--output .cache/f024-aria-validated-acceptance.json
 
 audit:
 	$(PYTHON) tools/repo_audit.py --strict

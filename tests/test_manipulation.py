@@ -4,11 +4,14 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from phonlab_ddsp.controls import parse_variant
 from phonlab_ddsp.experiment import create_experiment, synthesize
 from phonlab_ddsp.manifest import prepare_dataset
 from phonlab_ddsp.manipulation import (
     build_manipulation_report,
+    manipulate_controls,
     manipulate_pitch,
     pitch_directory_name,
     semitones_to_scale,
@@ -53,6 +56,34 @@ class ManipulationTest(unittest.TestCase):
             self.assertEqual(len(commands), 2)
             self.assertIn("--data.init_args.predict_f0_scale", commands[0])
             self.assertAlmostEqual(float(commands[0][-1]), semitones_to_scale(-4))
+
+            control_commands = manipulate_controls(
+                experiment,
+                checkpoint,
+                root / "control-manipulations",
+                [
+                    parse_variant("less_noise:noise_gain_db=-6"),
+                    parse_variant("source_shift:glottal_rd_scale=1.2,output_gain_db=-3"),
+                ],
+                dry_run=True,
+            )
+            self.assertEqual(len(control_commands), 2)
+            self.assertIn(
+                '{"noise_gain_db":-6.0}',
+                control_commands[0],
+            )
+            self.assertIn(
+                '{"glottal_rd_scale":1.2,"output_gain_db":-3.0}',
+                control_commands[1],
+            )
+            with self.assertRaisesRegex(ValueError, "not supported"):
+                manipulate_controls(
+                    experiment,
+                    checkpoint,
+                    root / "invalid-controls",
+                    [parse_variant("formant:f1_scale=1.1")],
+                    dry_run=True,
+                )
 
             baseline = root / "baseline"
             manipulations = root / "manipulations"
@@ -102,6 +133,51 @@ class ManipulationTest(unittest.TestCase):
             root = Path(temporary)
             with self.assertRaisesRegex(ValueError, "f0_scale"):
                 synthesize(root, root / "missing.ckpt", root / "output", f0_scale=0)
+
+    def test_manipulation_rejects_checkpoint_drift_between_variants(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            experiment = root / "experiment"
+            experiment.mkdir()
+            (experiment / "experiment.json").write_text(
+                json.dumps(
+                    {
+                        "model": "golf",
+                        "dataset_fingerprint": "fixture",
+                    }
+                )
+            )
+            checkpoint = root / "last.ckpt"
+            checkpoint.write_bytes(b"initial")
+
+            def fake_synthesize(_experiment, _checkpoint, output, **_kwargs):
+                output.mkdir()
+                (output / "_render.json").write_text(
+                    json.dumps(
+                        {
+                            "runtime_capabilities": ["noise_gain_db"],
+                            "decoder_control_calls": 1,
+                            "files_written": 1,
+                            "clipped_fraction": 0.0,
+                        }
+                    )
+                )
+                checkpoint.write_bytes(b"changed")
+                return ["predict"]
+
+            with patch(
+                "phonlab_ddsp.manipulation.synthesize",
+                side_effect=fake_synthesize,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "Checkpoint changed"):
+                    manipulate_controls(
+                        experiment,
+                        checkpoint,
+                        root / "output",
+                        [parse_variant("noise:noise_gain_db=3")],
+                    )
+
+            self.assertFalse((root / "output").exists())
 
     def test_inference_scales_voiced_f0_and_preserves_zeros(self):
         try:

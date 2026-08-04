@@ -6,8 +6,10 @@ import argparse
 import json
 import shlex
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
+from .controls.specs import controls_for_model, parse_variant, pitch_variants
 from .corpus import acquire_cmu_arctic
 from .doctor import as_json, checks
 from .experiment import MODELS, create_experiment, synthesize, train
@@ -16,7 +18,7 @@ from .launchers import create_postprocess_job
 from .manifest import DatasetManifest, prepare_dataset, summarize, validate_manifest
 from .manipulation import (
     build_manipulation_report,
-    manipulate_pitch,
+    manipulate_controls,
     semitones_to_scale,
 )
 from .metrics import build_metrics_dashboard, load_metrics, summarize_metrics
@@ -152,6 +154,13 @@ def parser() -> argparse.ArgumentParser:
     metrics.add_argument("--version")
     metrics.add_argument("--json", action="store_true")
 
+    controls = commands.add_parser(
+        "controls",
+        help="list manipulation parameters declared by an experiment model",
+    )
+    controls.add_argument("experiment", type=Path)
+    controls.add_argument("--json", action="store_true")
+
     synthesis = commands.add_parser("synthesize", help="reconstruct held-out audio")
     synthesis.add_argument("experiment", type=Path)
     synthesis.add_argument("checkpoint", type=Path)
@@ -163,15 +172,34 @@ def parser() -> argparse.ArgumentParser:
         default=0.0,
         help="shift voiced F0 conditioning while preserving unvoiced frames",
     )
+    synthesis.add_argument(
+        "--control",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="apply one non-F0 DDSP control; repeat for combinations",
+    )
 
     manipulation = commands.add_parser(
         "manipulate",
-        help="render auditable pitch manipulations from a checkpoint",
+        help="render auditable named DDSP-control variants from a checkpoint",
     )
     manipulation.add_argument("experiment", type=Path)
     manipulation.add_argument("checkpoint", type=Path)
     manipulation.add_argument("output", type=Path)
-    manipulation.add_argument("--semitones", type=float, nargs="+", required=True)
+    manipulation.add_argument(
+        "--semitones",
+        type=float,
+        nargs="+",
+        help="backward-compatible pitch sweep, in semitones",
+    )
+    manipulation.add_argument(
+        "--variant",
+        action="append",
+        default=[],
+        metavar="NAME:CONTROL=VALUE,...",
+        help="named multi-parameter variant; repeat to render several conditions",
+    )
     manipulation.add_argument("--baseline", type=Path)
     manipulation.add_argument("--report", type=Path)
     manipulation.add_argument("--dry-run", action="store_true")
@@ -183,7 +211,25 @@ def parser() -> argparse.ArgumentParser:
     postprocess.add_argument("experiment", type=Path)
     postprocess.add_argument("checkpoint", type=Path)
     postprocess.add_argument("output", type=Path)
-    postprocess.add_argument("--semitones", type=float, nargs="+", default=[-4, 4])
+    pitch_options = postprocess.add_mutually_exclusive_group()
+    pitch_options.add_argument(
+        "--semitones",
+        type=float,
+        nargs="+",
+        help="pitch conditions; defaults to -4 and +4 unless --no-pitch is used",
+    )
+    pitch_options.add_argument(
+        "--no-pitch",
+        action="store_true",
+        help="omit the default pitch conditions (requires at least one --variant)",
+    )
+    postprocess.add_argument(
+        "--variant",
+        action="append",
+        default=[],
+        metavar="NAME:CONTROL=VALUE,...",
+        help="add a named non-F0 or combined manipulation condition",
+    )
     postprocess.add_argument("--partition", default="gpu-short")
     postprocess.add_argument("--gres", default="gpu:1")
     postprocess.add_argument("--time", default="00:30:00")
@@ -221,9 +267,19 @@ def parser() -> argparse.ArgumentParser:
     compare.add_argument("synthesis", type=Path)
     compare.add_argument("--output", type=Path, default=Path("comparison.html"))
 
-    gui = commands.add_parser("gui", help="launch the local browser workbench")
+    gui = commands.add_parser(
+        "gui",
+        aliases=["webui"],
+        help="launch the local browser workbench (alias: webui)",
+    )
     gui.add_argument("--host", default="127.0.0.1")
     gui.add_argument("--port", type=int, default=8765)
+    gui.add_argument(
+        "--workspace",
+        type=Path,
+        default=Path.cwd(),
+        help="repository/workspace boundary for discovery and result export",
+    )
     gui.add_argument("--no-browser", action="store_true")
     return root
 
@@ -361,23 +417,44 @@ def main(argv=None) -> int:
                     f"{len(data.nonfinite_events)} non-finite values"
                 )
             return 0 if not data.nonfinite_events else 2
+        if args.command == "controls":
+            metadata = json.loads((Path(args.experiment).resolve() / "experiment.json").read_text())
+            available = controls_for_model(metadata["model"])
+            payload = {
+                "model": metadata["model"],
+                "controls": [asdict(spec) for spec in available],
+            }
+            if args.json:
+                print(json.dumps(payload, indent=2, ensure_ascii=False))
+            else:
+                print(f"Model: {metadata['model']}")
+                for spec in available:
+                    print(
+                        f"{spec.name:22} {spec.minimum:g}..{spec.maximum:g} "
+                        f"{spec.unit:10} default={spec.default:g}  {spec.description}"
+                    )
+            return 0
         if args.command == "synthesize":
+            controls = _control_assignments(args.control)
             command = synthesize(
                 args.experiment,
                 args.checkpoint,
                 args.output,
                 dry_run=args.dry_run,
                 f0_scale=semitones_to_scale(args.semitones),
+                controls=controls,
             )
             if args.dry_run:
                 print(" ".join(shlex.quote(part) for part in command))
             return 0
         if args.command == "manipulate":
-            commands = manipulate_pitch(
+            variants = list(pitch_variants(args.semitones or []))
+            variants.extend(parse_variant(value) for value in args.variant)
+            commands = manipulate_controls(
                 args.experiment,
                 args.checkpoint,
                 args.output,
-                args.semitones,
+                variants,
                 dry_run=args.dry_run,
             )
             if args.dry_run:
@@ -397,11 +474,13 @@ def main(argv=None) -> int:
                 print(f"Manipulations: {args.output}")
             return 0
         if args.command == "init-postprocess":
+            shifts = [] if args.no_pitch else (args.semitones or [-4, 4])
             bundle = create_postprocess_job(
                 args.experiment,
                 args.checkpoint,
                 args.output,
-                args.semitones,
+                shifts,
+                control_variants=[parse_variant(value) for value in args.variant],
                 partition=args.partition,
                 gres=args.gres,
                 time_limit=args.time,
@@ -410,7 +489,7 @@ def main(argv=None) -> int:
                 exclude=args.exclude,
             )
             print(f"Post-processing job: {bundle}")
-            print(f"Submit: sbatch {shlex.quote(str(bundle / 'train.slurm'))}")
+            print(f"Submit: .venv/bin/phonlab submit-job {shlex.quote(str(bundle))} --confirm")
             return 0
         if args.command == "submit-job":
             if not args.confirm:
@@ -449,10 +528,15 @@ def main(argv=None) -> int:
             manifest = DatasetManifest.load(args.dataset)
             print(build_synthesis_report(manifest, args.synthesis, args.output))
             return 0
-        if args.command == "gui":
+        if args.command in {"gui", "webui"}:
             from .gui import serve_gui
 
-            serve_gui(args.host, args.port, open_browser=not args.no_browser)
+            serve_gui(
+                args.host,
+                args.port,
+                open_browser=not args.no_browser,
+                workspace_root=args.workspace,
+            )
             return 0
     except (FileNotFoundError, FileExistsError, ValueError, RuntimeError) as error:
         print(f"error: {error}", file=sys.stderr)
@@ -467,6 +551,12 @@ def _validation_text(result):
             f"sample rates {result['sample_rates']}"
         )
     return "INVALID:\n" + "\n".join(f"- {error}" for error in result["errors"])
+
+
+def _control_assignments(values: list[str]) -> dict[str, float]:
+    if not values:
+        return {}
+    return parse_variant("synthesis:" + ",".join(values)).controls
 
 
 if __name__ == "__main__":

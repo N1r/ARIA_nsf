@@ -2,7 +2,17 @@
 
 这套工作流把“原始录音 → 可审计数据 → 训练实验 → 结果”分开保存。不要直接把原始录音丢进旧脚本；那样很难知道重采样、F0 和训练/验证划分究竟发生了什么。
 
+如果不希望填写命令行参数，请先完成下面的 uv 安装，然后在仓库根目录运行
+`.venv/bin/phonlab webui`。图形界面可完成数据准备 0–7、模型能力参数选择、
+Slurm 提交/状态、loss 报告、并排试听与 WAV/ZIP 保存；详细步骤和 SSH 隧道
+说明见 [WebUI 使用指南](WEBUI_ZH.md)。
+
 ## 1. 安装
+
+入口机必须先能执行 `uv`。可以先运行 `command -v uv`；若集群把 uv 放在
+其他位置，则用
+`UV_BIN=/absolute/path/to/uv ./scripts/setup_project_env.sh`。这只指定 uv
+启动程序，uv 管理的 Python、依赖、虚拟环境和下载缓存仍全部位于当前仓库。
 
 仅做数据准备与检查：
 
@@ -22,7 +32,7 @@ source scripts/project_env.sh
 按静音边界切分访谈、朗读或连续语音：
 
 ```bash
-phonlab split path/to/continuous_recordings segments/my_voice \
+.venv/bin/phonlab split path/to/continuous_recordings segments/my_voice \
   --mode silence \
   --silence-threshold-db -40 \
   --min-silence-seconds 0.30 \
@@ -32,7 +42,7 @@ phonlab split path/to/continuous_recordings segments/my_voice \
 按固定 2 秒窗口切分并保留末尾超过 0.25 秒的片段：
 
 ```bash
-phonlab split path/to/recordings segments/fixed \
+.venv/bin/phonlab split path/to/recordings segments/fixed \
   --mode fixed --segment-seconds 2 --overlap-seconds 0
 ```
 
@@ -40,7 +50,7 @@ phonlab split path/to/recordings segments/fixed \
 `--f0-method sidecar`：
 
 ```bash
-phonlab split path/to/recordings segments/with_f0 \
+.venv/bin/phonlab split path/to/recordings segments/with_f0 \
   --mode silence --split-f0-sidecars --f0-hop-seconds 0.005
 ```
 
@@ -53,7 +63,7 @@ phonlab split path/to/recordings segments/with_f0 \
 输入目录可以包含多层子目录；WAV、FLAC、AIFF 和 OGG 均可。输出目录必须是新目录：
 
 ```bash
-phonlab prepare path/to/my_recordings data/my_voice \
+.venv/bin/phonlab prepare path/to/my_recordings data/my_voice \
   --sample-rate 16000 \
   --f0-method autocorr \
   --f0-floor 60 \
@@ -68,7 +78,7 @@ phonlab prepare path/to/my_recordings data/my_voice \
 轨迹，可避免安装或重新运行 WORLD：
 
 ```bash
-phonlab prepare path/to/my_recordings data/my_voice --f0-method sidecar
+.venv/bin/phonlab prepare path/to/my_recordings data/my_voice --f0-method sidecar
 ```
 
 输出包含：
@@ -86,9 +96,9 @@ data/my_voice/
 ## 4. 质检和可视化
 
 ```bash
-phonlab validate data/my_voice
-phonlab inspect data/my_voice
-phonlab parameters data/my_voice
+.venv/bin/phonlab validate data/my_voice
+.venv/bin/phonlab inspect data/my_voice
+.venv/bin/phonlab parameters data/my_voice
 ```
 
 浏览器打开 `data/my_voice/report.html`。报告提供时长/F0 分布、削波和无有声段
@@ -107,15 +117,15 @@ uv sync --extra audio --extra train --extra dev --extra world
 ## 5. 建立实验
 
 ```bash
-phonlab init-experiment data/my_voice experiments/my_voice_golf \
+.venv/bin/phonlab init-experiment data/my_voice experiments/my_voice_golf \
   --model golf \
   --batch-size 32 \
   --max-steps 40000 \
   --f0-min 60 \
   --f0-max 500
 
-phonlab train experiments/my_voice_golf --dry-run
-phonlab submit-job experiments/my_voice_golf --confirm
+.venv/bin/phonlab train experiments/my_voice_golf --dry-run
+.venv/bin/phonlab submit-job experiments/my_voice_golf --confirm
 ```
 
 可选模型：
@@ -130,8 +140,8 @@ phonlab submit-job experiments/my_voice_golf --confirm
 避免“同名数据、不同结果”。可用以下命令检查作业：
 
 ```bash
-phonlab job-status JOB_ID --json
-phonlab job-log experiments/my_voice_golf JOB_ID --tail-lines 200
+.venv/bin/phonlab job-status JOB_ID --json
+.venv/bin/phonlab job-log experiments/my_voice_golf JOB_ID --tail-lines 200
 ```
 
 ## 6. Loss、重建与 manipulation
@@ -140,39 +150,47 @@ phonlab job-log experiments/my_voice_golf JOB_ID --tail-lines 200
 GPU Slurm 作业；可使用 `phonlab init-postprocess` 自动生成作业包：
 
 ```bash
-phonlab metrics experiments/my_voice_golf
+.venv/bin/phonlab metrics experiments/my_voice_golf
 
-phonlab init-postprocess \
+.venv/bin/phonlab controls experiments/my_voice_golf
+
+.venv/bin/phonlab init-postprocess \
   experiments/my_voice_golf \
   experiments/my_voice_golf/runs/checkpoints/last.ckpt \
   experiments/my_voice_golf/postprocess \
-  --semitones -4 4
+  --semitones -4 4 \
+  --variant 'less_noise:noise_gain_db=-6' \
+  --variant 'source_shift:glottal_rd_scale=1.2'
 
 # 使用上一条命令打印的 “Post-processing job” 路径
-phonlab submit-job PRINTED_JOB_BUNDLE_PATH --confirm
+.venv/bin/phonlab submit-job PRINTED_JOB_BUNDLE_PATH --confirm
 ```
 
 作业包会执行等价于以下的 held-out 重建、原音对照和有声 F0 操控：
 
 ```bash
-phonlab synthesize EXPERIMENT CHECKPOINT OUTPUT/reconstruction
+.venv/bin/phonlab synthesize EXPERIMENT CHECKPOINT OUTPUT/reconstruction
 
-phonlab compare data/my_voice OUTPUT/reconstruction \
+.venv/bin/phonlab compare data/my_voice OUTPUT/reconstruction \
   --output OUTPUT/comparison.html
 
-phonlab manipulate EXPERIMENT CHECKPOINT OUTPUT/manipulations \
-  --semitones -4 4 --baseline OUTPUT/reconstruction \
+.venv/bin/phonlab manipulate EXPERIMENT CHECKPOINT OUTPUT/manipulations \
+  --semitones -4 4 \
+  --variant 'less_noise:noise_gain_db=-6' \
+  --baseline OUTPUT/reconstruction \
   --report OUTPUT/manipulation.html
 ```
 
-`comparison.html` 可并排试听原音和重建音，`manipulation.html` 增加多个半音
-条件。它们没有随机化、盲法或响度校准，因此是质检页面，不能替代正式知觉
-实验。
+`comparison.html` 可并排试听原音和重建音，`manipulation.html` 增加多个
+F0/声源/噪声条件。普通 GOLF 不提供独立 F1/F2 控制；显式 formant 需要
+ARIA-GOLF。参数矩阵、组合条件和 `_render.json` 审计说明见
+[Manipulation 指南](MANIPULATION_ZH.md)。这些页面没有随机化、盲法或响度
+校准，因此不能替代正式知觉实验。
 
 ## 7. 图形界面
 
 ```bash
-phonlab gui
+.venv/bin/phonlab gui
 ```
 
 浏览器工作台覆盖语料获取、切分、参数/F0、质检、实验、loss、Slurm 作业和

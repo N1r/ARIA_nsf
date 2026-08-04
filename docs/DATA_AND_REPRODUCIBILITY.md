@@ -29,7 +29,9 @@ should include:
 6. dependency lock or container digest and GPU/CUDA information.
 7. raw Lightning metrics CSV plus the generated loss dashboard;
 8. `training_job.json`/scheduler evidence and manipulation metadata, including
-   checkpoint SHA-256 and exact control values.
+   checkpoint SHA-256 and exact control values;
+9. each manipulation condition's `_render.json`, including runtime capabilities,
+   decoder-hook call count and clipping diagnostics.
 
 ## Frozen baseline
 

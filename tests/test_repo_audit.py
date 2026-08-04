@@ -6,12 +6,20 @@ from tools import repo_audit
 def _write_minimal_repository(root: Path) -> None:
     required_files = (
         "README.md",
+        "README_EN.md",
         "LICENSE",
+        "CITATION.cff",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
         "pyproject.toml",
         "src/phonlab_ddsp/__init__.py",
         "docs/ARCHITECTURE.md",
         "docs/QUICKSTART_ZH.md",
         "docs/DATA_AND_REPRODUCIBILITY.md",
+        "docs/MANIPULATION_ZH.md",
+        "docs/WEBUI_ZH.md",
+        "docs/REPOSITORY_MAP_ZH.md",
+        "docs/GITHUB_RELEASE_ZH.md",
         ".github/workflows/test.yml",
     )
     for relative in required_files:

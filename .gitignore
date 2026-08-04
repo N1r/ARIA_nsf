@@ -9,12 +9,20 @@ __pycache__/
 artifacts/
 autoresearch/
 *.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 dist/
 build/
 
 # User data and reproducible-but-large experiment artifacts.
 data/
 datasets_local/
+recordings/
+segments/
+exports/
 experiments/
 runs/
 checkpoints/
