@@ -48,10 +48,13 @@ recordings/
 ```
 
 1. 建议总数据量为 20–60 分钟；长录音切成数秒的短句训练更快。
-2. F0 默认用自相关法提取，无需安装任何额外软件；已用 Praat 等工具提取过
-   的 `.pv` 音高轨迹可加 `--f0-method sidecar` 直接复用。
-3. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。
-4. 手头没有录音时，可用 `.venv/bin/aris fetch-corpus data/arctic` 下载
+2. F0 提取推荐 `--f0-method pyworld`（WORLD 的 DIO+StoneMask，稳定且快）；
+   默认 `auto` 在未安装 WORLD 时退回自相关法。
+3. 汉语声调等对 F0 敏感的研究，推荐先用 [RMVPE](https://github.com/Dream-High/RMVPE)
+   或 Praat 提取更可靠的音高轨迹，保存为与每条 WAV 同名的 `.pv` 文件，
+   再用 `--f0-method sidecar` 读入。
+4. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。
+5. 手头没有录音时，可用 `.venv/bin/aris fetch-corpus data/arctic` 下载
    约 30 分钟的公开语料 CMU ARCTIC 试跑全流程。
 
 ## 3. 训练
@@ -108,7 +111,9 @@ WAV。可用参数与范围：
    的参数。
 2. 输出目录附带 JSON 元数据：checkpoint 哈希、全部控制值和削波统计，
    便于论文中报告刺激的生成方式。
-3. 条件设计与更多示例见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。
+3. [Manipulation 指南](docs/MANIPULATION_ZH.md)详细讲了每个参数的语音学
+   含义、各模型的支持范围、输出元数据的读法，以及设计刺激条件时的
+   注意事项——正式做实验前值得通读一遍。
 
 ## 6. 命令一览
 
@@ -128,9 +133,16 @@ aris manipulate         生成操控刺激
 ## 7. 引用
 
 ARIS（SLT 2026）的引用条目将在论文上线后补充，机器可读信息见
-[CITATION.cff](CITATION.cff)。本工具基于 GOLF 声码器：
+[CITATION.cff](CITATION.cff)。
+
+本工具直接基于 GOLF 声码器：
 
 - C.-Y. Yu and G. Fazekas, "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis," *Interspeech 2024*. DOI: `10.21437/Interspeech.2024-1187`
 - C.-Y. Yu and G. Fazekas, "Singing Voice Synthesis Using Differentiable LPC and Glottal-Flow-Inspired Wavetables," *ISMIR 2023*. DOI: `10.5281/zenodo.10265377`
+
+方法脉络上还建立在可微 DSP 与神经源–滤波器模型之上：
+
+- J. Engel, L. Hantrakul, C. Gu, and A. Roberts, "DDSP: Differentiable Digital Signal Processing," *ICLR 2020*. arXiv: `2001.04643`
+- X. Wang, S. Takaki, and J. Yamagishi, "Neural Source-Filter Waveform Models for Statistical Parametric Speech Synthesis," *IEEE/ACM TASLP*, 2020. arXiv: `1904.12088`
 
 代码以 MIT 协议发布，见 [LICENSE](LICENSE)。

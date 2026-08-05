@@ -53,12 +53,16 @@ Then segment, preprocess, and check:
 
 1. 20–60 minutes of audio in total is recommended; cutting long recordings
    into utterances of a few seconds speeds up training.
-2. F0 is extracted with autocorrelation by default — nothing extra to
-   install; `.pv` pitch tracks already extracted with Praat or similar can
-   be reused via `--f0-method sidecar`.
-3. Sample rates need not be unified beforehand; `prepare` resamples to the
+2. For F0 extraction, `--f0-method pyworld` (WORLD's DIO+StoneMask, stable
+   and fast) is recommended; the default `auto` falls back to
+   autocorrelation when WORLD is not installed.
+3. For tonal languages such as Mandarin, or other F0-sensitive work,
+   extract a more reliable pitch track first with
+   [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, save it as a
+   `.pv` file next to each WAV, and load it via `--f0-method sidecar`.
+4. Sample rates need not be unified beforehand; `prepare` resamples to the
    model sample rate automatically.
-4. No recordings at hand? `.venv/bin/aris fetch-corpus data/arctic`
+5. No recordings at hand? `.venv/bin/aris fetch-corpus data/arctic`
    downloads ~30 minutes of the public CMU ARCTIC corpus for a full trial
    run.
 
@@ -120,7 +124,10 @@ produces one set of WAVs. Available parameters and ranges:
 2. Each output directory carries JSON metadata — checkpoint hash, all
    control values, and clipping statistics — for reporting exactly how the
    stimuli were generated.
-3. Condition design and more examples: [Manipulation guide (Chinese)](docs/MANIPULATION_ZH.md).
+3. The [Manipulation guide (Chinese)](docs/MANIPULATION_ZH.md) covers the
+   phonetic meaning of each parameter, per-model support, how to read the
+   output metadata, and pitfalls in designing stimulus conditions — worth
+   reading in full before running a real experiment.
 
 ## 6. Command reference
 
@@ -140,10 +147,17 @@ aris manipulate         generate manipulated stimuli
 ## 7. Citation
 
 The ARIS (SLT 2026) entry will be added once the paper is online;
-machine-readable metadata is in [CITATION.cff](CITATION.cff). This tool
-builds on the GOLF vocoder:
+machine-readable metadata is in [CITATION.cff](CITATION.cff).
+
+This tool builds directly on the GOLF vocoder:
 
 - C.-Y. Yu and G. Fazekas, "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis," *Interspeech 2024*. DOI: `10.21437/Interspeech.2024-1187`
 - C.-Y. Yu and G. Fazekas, "Singing Voice Synthesis Using Differentiable LPC and Glottal-Flow-Inspired Wavetables," *ISMIR 2023*. DOI: `10.5281/zenodo.10265377`
+
+and, methodologically, on differentiable DSP and neural source-filter
+models:
+
+- J. Engel, L. Hantrakul, C. Gu, and A. Roberts, "DDSP: Differentiable Digital Signal Processing," *ICLR 2020*. arXiv: `2001.04643`
+- X. Wang, S. Takaki, and J. Yamagishi, "Neural Source-Filter Waveform Models for Statistical Parametric Speech Synthesis," *IEEE/ACM TASLP*, 2020. arXiv: `1904.12088`
 
 Code is released under the MIT license; see [LICENSE](LICENSE).
