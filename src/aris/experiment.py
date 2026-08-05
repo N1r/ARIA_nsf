@@ -36,12 +36,12 @@ def create_experiment(
     f0_min: float = 60,
     f0_max: float = 500,
     workers: int = 4,
-    slurm_partition: str = "gpu-short",
-    slurm_gres: str = "gpu:l4:1",
+    slurm_partition: str = "gpu",
+    slurm_gres: str = "gpu:1",
     slurm_time: str = "04:00:00",
     slurm_cpus: int = 8,
     slurm_memory: str = "32G",
-    slurm_exclude: str = "node857",
+    slurm_exclude: str = "",
 ) -> Path:
     manifest = DatasetManifest.load(dataset)
     errors = validate_manifest(manifest)
@@ -159,7 +159,10 @@ def synthesize(
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
     if not checkpoint.is_file():
-        raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint}")
+        raise FileNotFoundError(
+            f"Checkpoint not found: {checkpoint} — has training completed? "
+            "(expected e.g. experiments/<name>/runs/checkpoints/last.ckpt)"
+        )
     if output.exists():
         raise FileExistsError(f"Synthesis output already exists: {output}")
     if not dry_run:
@@ -323,7 +326,7 @@ def _slurm_script(
 #SBATCH --time={time}
 #SBATCH --output={output.as_posix()}/slurm-%j.log
 set -euo pipefail
-module load ALICE/default CUDA/12.4.0
+# module load <your CUDA module>
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 srun --ntasks=1 --cpus-per-task="$SLURM_CPUS_PER_TASK" {(output / "train.sh").as_posix()}
 """

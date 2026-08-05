@@ -1,5 +1,0 @@
-# These files preserve byte-for-byte imported or diagnostic evidence. Their
-# historical whitespace is covered by provenance/ENGINE_FILES.sha256.
-models/lpc.py -whitespace
-provenance/GIT_DIFF_tracked_files_at_freeze.patch -whitespace
-provenance/GIT_STATE_AT_FREEZE.txt -whitespace

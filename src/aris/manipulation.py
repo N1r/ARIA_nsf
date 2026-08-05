@@ -60,6 +60,11 @@ def manipulate_controls(
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
     output = Path(output).resolve()
+    if not checkpoint.is_file():
+        raise FileNotFoundError(
+            f"Checkpoint not found: {checkpoint} — has training completed? "
+            "(expected e.g. experiments/<name>/runs/checkpoints/last.ckpt)"
+        )
     if not variants:
         raise ValueError("At least one manipulation variant is required")
     names = [variant.name for variant in variants]

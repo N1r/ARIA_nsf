@@ -134,9 +134,7 @@ def estimate_f0(
             return refined.astype(np.float32), "pyworld-dio+stonemask"
         except ImportError as error:
             if method == "pyworld":
-                raise RuntimeError(
-                    "F0 method 'pyworld' requires: pip install 'aris[world]'"
-                ) from error
+                raise RuntimeError("F0 method 'pyworld' requires: uv sync --extra world") from error
     if method not in {"auto", "autocorr"}:
         raise ValueError(f"Unknown F0 method: {method}")
     return _autocorrelation_f0(audio, sample_rate, floor_hz, ceiling_hz, hop_s), "autocorr"

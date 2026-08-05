@@ -26,7 +26,7 @@ Python environment manager). From the repository root:
 ```bash
 source scripts/project_env.sh      # enter the project environment
 ./scripts/setup_project_env.sh     # install all dependencies (inside the repo, system untouched)
-.venv/bin/aris doctor              # self-check: audio, F0, GPU environment
+.venv/bin/aris doctor              # check audio and training dependencies
 ```
 
 All commands are then invoked as `.venv/bin/aris`; every command supports
@@ -64,7 +64,8 @@ Then segment, preprocess, and check:
    model sample rate automatically.
 5. No recordings at hand? `.venv/bin/aris fetch-corpus data/arctic`
    downloads ~30 minutes of the public CMU ARCTIC corpus for a full trial
-   run.
+   run; once downloaded, continue with
+   `.venv/bin/aris prepare data/arctic/selected data/arctic_prepared`.
 
 ## 3. Training
 
@@ -72,15 +73,19 @@ Create an experiment directory, then start training:
 
 ```bash
 .venv/bin/aris init-experiment data/my_voice experiments/my_voice --model aria-golf
-.venv/bin/aris train experiments/my_voice --dry-run   # check the configuration only
+.venv/bin/aris train experiments/my_voice --dry-run   # print the training command without running it
 .venv/bin/aris train experiments/my_voice
 ```
 
 1. `--model` is one of `ddsp`, `golf`, `aria-golf`; choose `aria-golf` if
-   you need formant (F1/F2) and spectral-tilt control.
+   you need formant (F1/F2) and spectral-tilt control (`aria-golf` is the
+   code name of the ARIS decoder).
 2. Checkpoints are saved under `experiments/my_voice/runs/checkpoints/`.
 3. On a Slurm cluster, `init-experiment` has already generated a
-   ready-to-`sbatch` `train.slurm`; ignore it if you have no cluster.
+   ready-to-`sbatch` `train.slurm`; adjust cluster parameters (partition,
+   GPU type, etc.) via `init-experiment` options, and fill in the CUDA
+   module for your cluster before submitting. Ignore it if you have no
+   cluster.
 
 ## 4. Reconstruction (inference)
 
@@ -108,7 +113,8 @@ everything else fixed:
 ```
 
 Each `--variant` is a named condition (`name:param=value,param=value`) and
-produces one set of WAVs. Available parameters and ranges:
+produces one set of WAVs plus JSON metadata recording how they were
+generated. Available parameters and ranges:
 
 | Parameter | Range | Meaning | DDSP | GOLF | ARIS-GOLF |
 |---|---|---|:---:|:---:|:---:|
@@ -119,26 +125,20 @@ produces one set of WAVs. Available parameters and ranges:
 | `f1_scale` / `f2_scale` | `0.7..1.3` | first/second formant | — | — | ✓ |
 | `tilt_alpha_delta` | `-0.25..0.25` | spectral tilt | — | — | ✓ |
 
-1. `.venv/bin/aris controls experiments/my_voice` lists the parameters your
-   trained model actually supports.
-2. Each output directory carries JSON metadata — checkpoint hash, all
-   control values, and clipping statistics — for reporting exactly how the
-   stimuli were generated.
-3. The [Manipulation guide (Chinese)](docs/MANIPULATION_ZH.md) covers the
-   phonetic meaning of each parameter, per-model support, how to read the
-   output metadata, and pitfalls in designing stimulus conditions — worth
-   reading in full before running a real experiment.
+Hear what each parameter does on the [demo page](https://n1r.github.io/ARIS_nsf/);
+parameter semantics and condition design are covered in the
+[Manipulation guide (Chinese)](docs/MANIPULATION_ZH.md).
 
 ## 6. Command reference
 
 ```text
-aris doctor             check audio, F0, and GPU training environment
+aris doctor             check audio and training dependencies
 aris fetch-corpus       download the CMU ARCTIC example corpus
 aris split              segment continuous recordings
 aris prepare            resample, extract F0, split the dataset
 aris validate           check dataset integrity
 aris init-experiment    create a training experiment directory
-aris train              start or resume training
+aris train              start training
 aris controls           list manipulation parameters supported by a model
 aris synthesize         reconstruct recordings from a checkpoint
 aris manipulate         generate manipulated stimuli
@@ -149,15 +149,20 @@ aris manipulate         generate manipulated stimuli
 The ARIS (SLT 2026) entry will be added once the paper is online;
 machine-readable metadata is in [CITATION.cff](CITATION.cff).
 
-This tool builds directly on the GOLF vocoder:
+The ARIS vocoder implementation derives from GOLF:
 
 - C.-Y. Yu and G. Fazekas, "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis," *Interspeech 2024*. DOI: `10.21437/Interspeech.2024-1187`
 - C.-Y. Yu and G. Fazekas, "Singing Voice Synthesis Using Differentiable LPC and Glottal-Flow-Inspired Wavetables," *ISMIR 2023*. DOI: `10.5281/zenodo.10265377`
 
-and, methodologically, on differentiable DSP and neural source-filter
-models:
+The earlier methodological foundations are differentiable DSP and neural
+source-filter models:
 
 - J. Engel, L. Hantrakul, C. Gu, and A. Roberts, "DDSP: Differentiable Digital Signal Processing," *ICLR 2020*. arXiv: `2001.04643`
 - X. Wang, S. Takaki, and J. Yamagishi, "Neural Source-Filter Waveform Models for Statistical Parametric Speech Synthesis," *IEEE/ACM TASLP*, 2020. arXiv: `1904.12088`
 
 Code is released under the MIT license; see [LICENSE](LICENSE).
+
+## 8. Contact
+
+Open an [issue](https://github.com/N1r/ARIS_nsf/issues), or email
+<dingyr@hum.leidenuniv.nl> (Leiden University).

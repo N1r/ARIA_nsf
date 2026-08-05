@@ -259,6 +259,7 @@ def split_summary(result: SplitResult) -> dict:
         "sample_rates": sorted({record.sample_rate for record in result.records}),
         "skipped_files": len(result.metadata["skipped_files"]),
         "output": str(result.root),
+        "audio_output": str(result.root / "audio"),
     }
 
 

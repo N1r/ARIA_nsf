@@ -16,9 +16,7 @@ ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命�
 .venv/bin/aris controls EXP --json
 ```
 
-这里的 `EXP` 是包含 `experiment.json` 的实验目录。第一条适合人读，第二条适合脚本记录。`CHECKPOINT` 通常是
-`EXP/runs/checkpoints/last.ckpt`；用于正式实验时建议保存明确命名的 checkpoint，
-不要让训练进程继续覆盖它。最终能否执行仍由载入 checkpoint 后的运行时检查确认。
+这里的 `EXP` 是包含 `experiment.json` 的实验目录。第一条适合人读，第二条适合脚本记录。最终能否执行仍由载入 checkpoint 后的运行时检查确认。
 
 ## 参数、范围与解释
 
@@ -30,9 +28,9 @@ ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命�
 | `output_gain_db` | `-24..12` dB；`0` | 三种模型 | 在保存前对最终波形乘增益。它是播放/输出电平控制，不是声门能量或说话强度的独立生理变量。正增益可能导致 clipping。 |
 | `noise_gain_db` | `-24..24` dB；`0` | 三种模型 | 改变随机源分支的增益。它通常影响噪声感、周期/非周期成分关系，但不等于直接设定经过校准的 HNR、气声度或湍流强度；应在输出音频上重新测量。 |
 | `glottal_rd_scale` | `0.5..2.0`；`1.0` | `golf`、`aria-golf` | 对模型预测的 LF/GOLF 声门 `R_d` 表位置做乘性偏移，并受可用表范围约束。它会改变脉冲形状和声源谱包络，但方向与效应量应在输出上测量；这里的值不是 EGG 或声门几何的直接测量。 |
-| `f1_scale` | `0.7..1.3`；`1.0` | 仅 `aria-golf` | 按帧乘 ARIA 显式解析 F1 轨迹，并夹在该 decoder 配置的 F1 频率范围内；保持原轮廓的相对变化，不是一个固定 Hz 目标。 |
+| `f1_scale` | `0.7..1.3`；`1.0` | 仅 `aria-golf` | 按帧乘 ARIS 显式解析 F1 轨迹，并夹在该 decoder 配置的 F1 频率范围内；保持原轮廓的相对变化，不是一个固定 Hz 目标。 |
 | `f2_scale` | `0.7..1.3`；`1.0` | 仅 `aria-golf` | 与 F1 相同，但作用于显式解析 F2。F1/F2 同时变化可能改变元音类别和说话人线索。 |
-| `tilt_alpha_delta` | `-0.25..0.25`；`0` | 仅 `aria-golf` | 对 ARIA 一阶谱倾斜滤波器的 `alpha` 加偏移。`alpha` 不是 dB/octave；相同增量在不同基线和频率处不一定产生相同声学变化。 |
+| `tilt_alpha_delta` | `-0.25..0.25`；`0` | 仅 `aria-golf` | 对 ARIS 一阶谱倾斜滤波器的 `alpha` 加偏移。`alpha` 不是 dB/octave；相同增量在不同基线和频率处不一定产生相同声学变化。 |
 
 模型支持矩阵可以概括为：
 
@@ -46,10 +44,7 @@ ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命�
 
 **不要把普通 GOLF 的 LPC 当成显式 formant 控制。** 普通 `golf` 的声道末端滤波器预测一组 LPC/全极点系数；其中可能出现共振峰，但它没有名为 F1/F2 的独立解析控制柄。直接改某个 LPC 系数不能被标注为“只改变 F1”或“只改变 F2”。
 
-只有 `aria-golf` 的解析声道级联明确暴露 F1/F2 轨迹和 `scale_formants` 执行路径，因此 `f1_scale`、`f2_scale` 与 `tilt_alpha_delta` 只对它开放。如果研究问题要求显式 formant 操控，应选择 ARIA-GOLF，并在输出上用独立声学方法复测 formant。
-
-自动化测试已经验证真实 `VocalTractCascade` 的 F1、F2 和 tilt 轨迹按请求
-变化。
+只有 `aria-golf` 的解析声道级联明确暴露 F1/F2 轨迹和 `scale_formants` 执行路径，因此 `f1_scale`、`f2_scale` 与 `tilt_alpha_delta` 只对它开放。如果研究问题要求显式 formant 操控，应选择 ARIS-GOLF，并在输出上用独立声学方法复测 formant。
 
 ## CLI：生成一个或多个命名条件
 
@@ -60,7 +55,7 @@ ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命�
   --variant 'less_noise:noise_gain_db=-6'
 ```
 
-`OUTPUT` 必须尚不存在，避免把不同运行混进同一目录。条件写法为：
+`CHECKPOINT` 通常是 `EXP/runs/checkpoints/last.ckpt`；用于正式实验时建议保存明确命名的 checkpoint，不要让训练进程继续覆盖它。`OUTPUT` 必须尚不存在，避免把不同运行混进同一目录；同一输出路径不能用来“追加条件”，改变参数后应使用新的、可辨识的输出路径。条件写法为：
 
 ```text
 条件名:参数=值,参数=值
@@ -76,7 +71,7 @@ ARIS 的 manipulation 是“给同一 checkpoint 和同一测试材料施加命�
   --variant 'source_shift:glottal_rd_scale=1.2,noise_gain_db=-3'
 ```
 
-对 ARIA-GOLF：
+对 ARIS-GOLF：
 
 ```bash
 .venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
@@ -118,8 +113,6 @@ dry-run 能检查命名、范围和实验模型声明，但不会载入 checkpoi
 ```
 
 批量条件优先使用 `manipulate`，因为它会额外生成条件级 provenance。
-
-输出目录要求是新目录。同一输出路径不能用来“追加条件”；改变参数后应使用新的、可辨识的输出路径。
 
 ## 输出、元数据与 clipping
 

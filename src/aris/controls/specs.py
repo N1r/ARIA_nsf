@@ -130,7 +130,7 @@ _ALL_CONTROL_SPECS = (
         default=0.0,
         models=("aria-golf",),
         unit="alpha",
-        description="Additive change to the ARIA spectral-tilt coefficient.",
+        description="Additive change to the ARIS spectral-tilt coefficient.",
     ),
 )
 

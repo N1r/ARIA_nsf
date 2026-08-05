@@ -40,9 +40,9 @@ def _module(name: str, purpose: str) -> Check:
     detail = "installed" if found else "missing"
     if name in {"soundfile", "scipy", "pyworld"} and not found:
         extra = "world" if name == "pyworld" else "audio"
-        detail += f"; install aris[{extra}]"
+        detail += f"; uv sync --extra {extra}"
     if name in {"torch", "lightning"} and not found:
-        detail += "; install aris[train]"
+        detail += "; uv sync --extra train"
     return Check(name, found, detail, purpose)
 
 

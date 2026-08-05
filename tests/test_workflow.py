@@ -59,13 +59,13 @@ class WorkflowTest(unittest.TestCase):
             experiment = create_experiment(dataset, tmp_path / "experiment", max_steps=2)
             metadata = json.loads((experiment / "experiment.json").read_text())
             self.assertEqual(metadata["dataset_fingerprint"], first.fingerprint)
-            self.assertEqual(metadata["slurm"]["gres"], "gpu:l4:1")
+            self.assertEqual(metadata["slurm"]["gres"], "gpu:1")
             command = train(experiment, dry_run=True)
             self.assertEqual(command[1:4], ["-m", "aris.engine", "fit"])
             self.assertTrue((experiment / "train.slurm").is_file())
             self.assertIn(".venv/bin/python", (experiment / "train.sh").read_text())
             slurm_script = (experiment / "train.slurm").read_text()
-            self.assertIn("module load ALICE/default CUDA/12.4.0", slurm_script)
+            self.assertIn("# module load <your CUDA module>", slurm_script)
             self.assertIn("srun --ntasks=1", slurm_script)
             cli_result = subprocess.run(
                 [

@@ -25,7 +25,7 @@ from .segment import split_audio, split_summary
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="aris",
-        description="Prepare, audit, train, and visualise reproducible DDSP experiments.",
+        description="Prepare data, train differentiable vocoders, and generate manipulated speech stimuli.",
     )
     root.add_argument("--version", action="version", version="aris 0.1.0")
     commands = root.add_subparsers(dest="command", required=True)
@@ -116,14 +116,14 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument("--f0-min", type=float, default=60)
     init.add_argument("--f0-max", type=float, default=500)
     init.add_argument("--workers", type=int, default=4)
-    init.add_argument("--partition", default="gpu-short")
-    init.add_argument("--gres", default="gpu:l4:1")
+    init.add_argument("--partition", default="gpu")
+    init.add_argument("--gres", default="gpu:1")
     init.add_argument("--time", default="04:00:00")
     init.add_argument("--cpus", type=int, default=8)
     init.add_argument("--memory", default="32G")
-    init.add_argument("--exclude", default="node857")
+    init.add_argument("--exclude", default="")
 
-    training = commands.add_parser("train", help="verify provenance and run an experiment")
+    training = commands.add_parser("train", help="check dataset integrity and start training")
     training.add_argument("experiment", type=Path)
     training.add_argument("--dry-run", action="store_true")
 

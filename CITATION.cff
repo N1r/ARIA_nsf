@@ -4,8 +4,14 @@ title: "ARIS"
 type: software
 version: 0.1.0
 license: MIT
+date-released: "2026-08-05"
+repository-code: "https://github.com/N1r/ARIS_nsf"
+url: "https://n1r.github.io/ARIS_nsf/"
 authors:
   - name: "ARIS contributors"
+contact:
+  - name: "ARIS contributors"
+    email: dingyr@hum.leidenuniv.nl
 references:
   - type: conference-paper
     title: "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis"
@@ -16,3 +22,12 @@ references:
         given-names: György
     year: 2024
     doi: 10.21437/Interspeech.2024-1187
+  - type: conference-paper
+    title: "Singing Voice Synthesis Using Differentiable LPC and Glottal-Flow-Inspired Wavetables"
+    authors:
+      - family-names: Yu
+        given-names: Chin-Yun
+      - family-names: Fazekas
+        given-names: György
+    year: 2023
+    doi: 10.5281/zenodo.10265377

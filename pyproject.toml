@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aris"
 version = "0.1.0"
-description = "Reproducible DDSP experiments and acoustic visualisation for phoneticians"
+description = "Prepare data, train differentiable vocoders, and generate manipulated speech stimuli"
 readme = "README_EN.md"
 requires-python = ">=3.9"
 license = "MIT"
@@ -53,6 +53,10 @@ train = [
   "torchlpc",
 ]
 dev = ["pytest>=7", "ruff>=0.5", "build>=1"]
+
+[project.urls]
+Repository = "https://github.com/N1r/ARIS_nsf"
+Demo = "https://n1r.github.io/ARIS_nsf/"
 
 [project.scripts]
 aris = "aris.cli:main"

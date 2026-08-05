@@ -597,7 +597,7 @@ def get_f0(*args, **kwargs):
         import pyworld as pw
     except ImportError as error:
         raise ImportError(
-            "The optional WORLD F0 helper requires: pip install 'aris[world]'"
+            "The optional WORLD F0 helper requires: uv sync --extra world"
         ) from error
     defaults = {
         "f0_ceil": 1047,

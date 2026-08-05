@@ -23,7 +23,7 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 ```bash
 source scripts/project_env.sh      # 进入项目环境
 ./scripts/setup_project_env.sh     # 一键安装全部依赖（装在仓库目录内，不影响系统）
-.venv/bin/aris doctor              # 自检：音频、F0、GPU 环境是否就绪
+.venv/bin/aris doctor              # 检查音频与训练依赖是否就绪
 ```
 
 之后所有命令都通过 `.venv/bin/aris` 调用，每个命令都支持 `--help`。
@@ -55,7 +55,9 @@ recordings/
    再用 `--f0-method sidecar` 读入。
 4. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。
 5. 手头没有录音时，可用 `.venv/bin/aris fetch-corpus data/arctic` 下载
-   约 30 分钟的公开语料 CMU ARCTIC 试跑全流程。
+   约 30 分钟的公开语料 CMU ARCTIC 试跑全流程；下载完成后用
+   `.venv/bin/aris prepare data/arctic/selected data/arctic_prepared`
+   继续后续步骤。
 
 ## 3. 训练
 
@@ -63,15 +65,16 @@ recordings/
 
 ```bash
 .venv/bin/aris init-experiment data/my_voice experiments/my_voice --model aria-golf
-.venv/bin/aris train experiments/my_voice --dry-run   # 只检查配置，不训练
+.venv/bin/aris train experiments/my_voice --dry-run   # 打印将要执行的训练命令
 .venv/bin/aris train experiments/my_voice
 ```
 
 1. `--model` 可选 `ddsp`、`golf`、`aria-golf`；需要共振峰（F1/F2）和
-   谱倾斜操控时选 `aria-golf`。
+   谱倾斜操控时选 `aria-golf`（`aria-golf` 是 ARIS 解码器在代码中的名称）。
 2. checkpoint 保存在 `experiments/my_voice/runs/checkpoints/`。
 3. 在 Slurm 集群上，`init-experiment` 已生成可直接 `sbatch` 提交的
-   `train.slurm`；没有集群则忽略它。
+   `train.slurm`；集群参数（partition、GPU 类型等）可用 `init-experiment`
+   的选项调整，提交前按你的集群补上 CUDA module。没有集群则忽略它。
 
 ## 4. 重建（推理）
 
@@ -96,7 +99,7 @@ recordings/
 ```
 
 每个 `--variant` 是一组命名条件（`名字:参数=值,参数=值`），各生成一套
-WAV。可用参数与范围：
+WAV，附带记录生成方式的 JSON 元数据。可用参数与范围：
 
 | 参数 | 范围 | 含义 | DDSP | GOLF | ARIS-GOLF |
 |---|---|---|:---:|:---:|:---:|
@@ -107,24 +110,19 @@ WAV。可用参数与范围：
 | `f1_scale` / `f2_scale` | `0.7..1.3` | 第一/第二共振峰 | — | — | ✓ |
 | `tilt_alpha_delta` | `-0.25..0.25` | 谱倾斜 | — | — | ✓ |
 
-1. `.venv/bin/aris controls experiments/my_voice` 可列出当前模型实际支持
-   的参数。
-2. 输出目录附带 JSON 元数据：checkpoint 哈希、全部控制值和削波统计，
-   便于论文中报告刺激的生成方式。
-3. [Manipulation 指南](docs/MANIPULATION_ZH.md)详细讲了每个参数的语音学
-   含义、各模型的支持范围、输出元数据的读法，以及设计刺激条件时的
-   注意事项——正式做实验前值得通读一遍。
+各参数的听感效果可在 [Demo 页面](https://n1r.github.io/ARIS_nsf/)直接
+试听；参数含义与条件设计详见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。
 
 ## 6. 命令一览
 
 ```text
-aris doctor             检查音频、F0、GPU 训练环境
+aris doctor             检查音频与训练依赖是否就绪
 aris fetch-corpus       下载 CMU ARCTIC 示例语料
 aris split              切分连续录音
 aris prepare            重采样、提取 F0、划分数据集
 aris validate           检查数据完整性
 aris init-experiment    生成训练实验目录
-aris train              启动/继续训练
+aris train              启动训练
 aris controls           列出模型支持的操控参数
 aris synthesize         用 checkpoint 重建录音
 aris manipulate         生成操控刺激
@@ -135,14 +133,19 @@ aris manipulate         生成操控刺激
 ARIS（SLT 2026）的引用条目将在论文上线后补充，机器可读信息见
 [CITATION.cff](CITATION.cff)。
 
-本工具直接基于 GOLF 声码器：
+ARIS 的声码器实现源自 GOLF：
 
 - C.-Y. Yu and G. Fazekas, "Differentiable Time-Varying Linear Prediction in the Context of End-to-End Analysis-by-Synthesis," *Interspeech 2024*. DOI: `10.21437/Interspeech.2024-1187`
 - C.-Y. Yu and G. Fazekas, "Singing Voice Synthesis Using Differentiable LPC and Glottal-Flow-Inspired Wavetables," *ISMIR 2023*. DOI: `10.5281/zenodo.10265377`
 
-方法脉络上还建立在可微 DSP 与神经源–滤波器模型之上：
+更早的方法基础是可微 DSP 与神经源–滤波器模型：
 
 - J. Engel, L. Hantrakul, C. Gu, and A. Roberts, "DDSP: Differentiable Digital Signal Processing," *ICLR 2020*. arXiv: `2001.04643`
 - X. Wang, S. Takaki, and J. Yamagishi, "Neural Source-Filter Waveform Models for Statistical Parametric Speech Synthesis," *IEEE/ACM TASLP*, 2020. arXiv: `1904.12088`
 
 代码以 MIT 协议发布，见 [LICENSE](LICENSE)。
+
+## 8. 联系
+
+问题与建议请提 [Issue](https://github.com/N1r/ARIS_nsf/issues)，或邮件联系
+<dingyr@hum.leidenuniv.nl>（Leiden University）。
