@@ -10,6 +10,7 @@ from .manifest import DatasetManifest, summarize
 
 
 def build_report(manifest: DatasetManifest, output: Path) -> Path:
+    """Write a single-file HTML audit report for a prepared dataset."""
     output = Path(output).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     summary = summarize(manifest.records)
@@ -116,6 +117,7 @@ def _relative_url(base: Path, target: Path) -> str:
 
 
 def _histogram_svg(values: list[float], label: str, bins: int = 20) -> str:
+    """Render a small inline SVG histogram (no plotting dependency)."""
     if not values:
         return f"<p>No values for {html.escape(label)}.</p>"
     low, high = min(values), max(values)

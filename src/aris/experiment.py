@@ -43,6 +43,11 @@ def create_experiment(
     slurm_memory: str = "32G",
     slurm_exclude: str = "",
 ) -> Path:
+    """Create a self-contained experiment directory bound to a validated dataset.
+
+    Writes config.yaml, decoder.yaml, experiment.json (with content hashes and
+    the dataset fingerprint), train.sh, and train.slurm.
+    """
     manifest = DatasetManifest.load(dataset)
     errors = validate_manifest(manifest)
     if errors:
@@ -64,6 +69,7 @@ def create_experiment(
         exclude=slurm_exclude,
     )
     output = Path(output).resolve()
+    # Refuse non-empty targets so config hashes always describe a single run.
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Experiment directory is not empty: {output}")
     output.mkdir(parents=True, exist_ok=True)
@@ -119,9 +125,11 @@ def create_experiment(
 def train(
     experiment: Path, extra_args: Optional[list[str]] = None, dry_run: bool = False
 ) -> list[str]:
+    """Re-verify the dataset and run (or return) the training command."""
     experiment = Path(experiment).resolve()
     metadata = json.loads((experiment / "experiment.json").read_text())
     manifest = DatasetManifest.load(metadata["dataset"])
+    # The fingerprint ties results to the exact data; refuse silent drift.
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
     command = _command(experiment, metadata["model"]) + list(extra_args or [])
@@ -140,6 +148,7 @@ def synthesize(
     f0_scale: float = 1.0,
     controls: Optional[Mapping[str, float]] = None,
 ) -> list[str]:
+    """Render held-out audio from a checkpoint, optionally with DDSP controls."""
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
     output = Path(output).resolve()
@@ -147,6 +156,8 @@ def synthesize(
         raise ValueError("f0_scale must be in (0, 16)")
     metadata = json.loads((experiment / "experiment.json").read_text())
     control_values = validate_controls(metadata["model"], {} if controls is None else controls)
+    # Pitch is applied through the F0 conditioning path, not the decoder hook,
+    # so it is folded into f0_scale here and removed from the runtime controls.
     pitch_semitones = control_values.pop("pitch_semitones", None)
     if pitch_semitones is not None:
         pitch_scale = 2 ** (pitch_semitones / 12)
@@ -163,6 +174,8 @@ def synthesize(
             f"Checkpoint not found: {checkpoint} — has training completed? "
             "(expected e.g. experiments/<name>/runs/checkpoints/last.ckpt)"
         )
+    # Never write into an existing directory: outputs must stay attributable
+    # to exactly one checkpoint and control set.
     if output.exists():
         raise FileExistsError(f"Synthesis output already exists: {output}")
     if not dry_run:

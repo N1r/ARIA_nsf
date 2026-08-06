@@ -5,7 +5,7 @@
 ## 0. Introduction
 
 ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable
-analysis-by-synthesis tool for phonetic research: train a DDSP/GOLF vocoder
+analysis-by-synthesis tool made for phonetics researchers: train a DDSP/GOLF vocoder
 on a few tens of minutes of single-speaker recordings, then change F0,
 energy, noise, glottal source shape (`R_d`), or formants (F1/F2, spectral
 tilt) one at a time — with everything else held fixed — to batch-generate
@@ -13,14 +13,14 @@ paired experimental stimuli.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
 
-Training runs on an ordinary gaming GPU (e.g. an RTX 4060) in a few hours
-for a few tens of minutes of data; reconstruction and stimulus generation
-need no GPU and run on a regular CPU.
+No dedicated compute is required: training runs on an ordinary gaming GPU
+(e.g. an RTX 4060) in a few hours for a few tens of minutes of data;
+reconstruction and stimulus generation need no GPU and run on a regular CPU.
 
 ## 1. Installing dependencies
 
-The only prerequisite is [uv](https://docs.astral.sh/uv/) (a single-file
-Python environment manager). From the repository root:
+All you need on your machine is [uv](https://docs.astral.sh/uv/) (a
+single-file Python environment manager). From the repository root:
 
 ```bash
 source scripts/project_env.sh      # enter the project environment
@@ -28,12 +28,12 @@ source scripts/project_env.sh      # enter the project environment
 .venv/bin/aris doctor              # check audio and training dependencies
 ```
 
-All commands are then invoked as `.venv/bin/aris`; every command supports
-`--help`.
+Once installed, all commands are invoked as `.venv/bin/aris`; whenever
+you are unsure about usage, every command supports `--help`.
 
 ## 2. Preparing data
 
-Put your recordings in one folder (WAV, single speaker, quiet room):
+First, put your recordings in one folder (WAV, single speaker, quiet room):
 
 ```text
 recordings/
@@ -49,6 +49,8 @@ Then segment, preprocess, and check:
 .venv/bin/aris prepare segments/audio data/my_voice              # resample, extract F0, split the dataset
 .venv/bin/aris validate data/my_voice                            # confirm the dataset is complete and usable
 ```
+
+A few practical notes on data:
 
 1. 20–60 minutes of audio in total is recommended; cutting long recordings
    into utterances of a few seconds speeds up training.
@@ -68,13 +70,15 @@ Then segment, preprocess, and check:
 
 ## 3. Training
 
-Create an experiment directory, then start training:
+With your data ready, create an experiment directory and start training:
 
 ```bash
 .venv/bin/aris init-experiment data/my_voice experiments/my_voice --model aria-golf
 .venv/bin/aris train experiments/my_voice --dry-run   # print the training command without running it
 .venv/bin/aris train experiments/my_voice
 ```
+
+A few notes:
 
 1. `--model` is one of `ddsp`, `golf`, `aria-golf`; choose `aria-golf` if
    you need formant (F1/F2) and spectral-tilt control (`aria-golf` is the
@@ -88,8 +92,8 @@ Create an experiment directory, then start training:
 
 ## 4. Reconstruction (inference)
 
-Reconstruct the held-out test recordings with the trained checkpoint to
-check model quality:
+Once training is done, first reconstruct the held-out test recordings with
+the checkpoint to see how the model sounds:
 
 ```bash
 .venv/bin/aris synthesize experiments/my_voice \
@@ -97,12 +101,12 @@ check model quality:
 ```
 
 The output is reconstructed WAV files; listen against the originals, and if
-they are close, move on.
+they sound close, you are ready for the next step.
 
 ## 5. Generating manipulated stimuli
 
-Change one parameter at a time on top of the reconstruction, keeping
-everything else fixed:
+This step is what ARIS is really for: change one parameter at a time on top
+of the reconstruction, keeping everything else fixed:
 
 ```bash
 .venv/bin/aris manipulate experiments/my_voice \
@@ -162,5 +166,6 @@ Code is released under the MIT license; see [LICENSE](LICENSE).
 
 ## 8. Contact
 
-Open an [issue](https://github.com/N1r/ARIS_nsf/issues), or email
+If you run into problems or have suggestions, feel free to open an
+[issue](https://github.com/N1r/ARIS_nsf/issues), or email
 <dingyr@hum.leidenuniv.nl> (Leiden University).

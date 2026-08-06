@@ -95,6 +95,7 @@ class DecoderControlHook:
             self.handle = None
 
     def verify(self) -> None:
+        """Raise if requested decoder controls were never actually applied."""
         if self.decoder_controls and self.calls == 0:
             raise RuntimeError("Decoder controls were requested but the decoder hook never ran")
 

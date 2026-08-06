@@ -18,6 +18,7 @@ from .report import _relative_url
 
 
 def semitones_to_scale(semitones: float) -> float:
+    """Convert a semitone shift into a multiplicative F0 scale."""
     semitones = float(semitones)
     if not math.isfinite(semitones) or not -36 <= semitones <= 36:
         raise ValueError("semitones must be finite and between -36 and 36")
@@ -25,6 +26,7 @@ def semitones_to_scale(semitones: float) -> float:
 
 
 def pitch_directory_name(semitones: float) -> str:
+    """Return the filesystem-safe directory name for a pitch shift."""
     value = f"{abs(float(semitones)):.2f}".rstrip("0").rstrip(".").replace(".", "p")
     sign = "plus" if semitones > 0 else "minus" if semitones < 0 else "zero"
     return f"pitch_{sign}_{value}st"
@@ -92,10 +94,15 @@ def manipulate_controls(
             for variant in normalized
         ]
 
+    # Hash the checkpoint once up front; it is re-verified around every render
+    # so all variants provably come from the same model state.
     checkpoint_hash = _sha256(checkpoint)
     output.parent.mkdir(parents=True, exist_ok=True)
+    # PID-suffixed staging keeps concurrent runs from colliding; the final
+    # rename makes the output appear atomically or not at all.
     staging = output.parent / f".{output.name}.manipulating-{os.getpid()}"
     if staging.exists():
+        # ignore_errors: NFS silly-rename (.nfs*) files can block deletion.
         shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir()
     commands = []
@@ -237,6 +244,7 @@ def _sha256(path: Path) -> str:
 
 
 def _verify_checkpoint(path: Path, expected_sha256: str) -> None:
+    """Fail if the checkpoint file changed since the manipulation started."""
     actual = _sha256(path)
     if actual != expected_sha256:
         raise RuntimeError(
@@ -246,6 +254,7 @@ def _verify_checkpoint(path: Path, expected_sha256: str) -> None:
 
 
 def _variant_label(controls: dict[str, float]) -> str:
+    """Short human-readable label for a control combination."""
     if set(controls) == {"pitch_semitones"}:
         return f"{controls['pitch_semitones']:+g} st"
     return ", ".join(f"{name}={value:g}" for name, value in sorted(controls.items()))

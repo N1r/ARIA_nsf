@@ -15,6 +15,7 @@ from lightning.pytorch.callbacks import BasePredictionWriter
 from .runtime import DecoderControlHook
 from .specs import CONTROL_SPECS
 
+# Pitch is excluded: it is applied through F0 conditioning, not at render time.
 _RUNTIME_CONTROL_NAMES = frozenset(CONTROL_SPECS) - {"pitch_semitones"}
 
 
@@ -47,6 +48,8 @@ class ControlledPredictionWriter(BasePredictionWriter):
         }
         if any(not math.isfinite(value) for value in self.controls.values()):
             raise ValueError("All controls must be finite")
+        # parents=False: the parent is created by the caller, so a bad path
+        # fails immediately instead of silently building a directory tree.
         self.output_dir.mkdir(parents=False, exist_ok=True)
         self.control_hook = DecoderControlHook(self.controls)
         self.files: list[dict[str, Any]] = []

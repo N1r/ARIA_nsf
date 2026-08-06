@@ -23,6 +23,8 @@ from .manifest import discover_audio
 
 @dataclass(frozen=True)
 class SegmentRecord:
+    """One output segment with its source provenance and sample boundaries."""
+
     id: str
     source_path: str
     source_sha256: str
@@ -39,11 +41,14 @@ class SegmentRecord:
 
 @dataclass
 class SplitResult:
+    """Segments produced by :func:`split_audio` plus the split parameters used."""
+
     root: Path
     records: list[SegmentRecord]
     metadata: dict
 
     def save(self) -> None:
+        """Write segments.csv and split.json under the result root."""
         fields = list(SegmentRecord.__dataclass_fields__)
         with (self.root / "segments.csv").open("w", newline="", encoding="utf-8") as stream:
             writer = csv.DictWriter(stream, fieldnames=fields)
@@ -116,8 +121,10 @@ def split_audio(
         raise ValueError(f"No supported audio files found below {source}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
+    # PID-suffixed staging avoids collisions between concurrent splits.
     staging = output.parent / f".{output.name}.splitting-{os.getpid()}"
     if staging.exists():
+        # ignore_errors: NFS silly-rename (.nfs*) files can block deletion.
         shutil.rmtree(staging, ignore_errors=True)
     (staging / "audio").mkdir(parents=True)
     records: list[SegmentRecord] = []
@@ -249,6 +256,7 @@ def split_audio(
 
 
 def split_summary(result: SplitResult) -> dict:
+    """Summarize a split result for CLI output."""
     durations = [record.duration_s for record in result.records]
     return {
         "source_files": result.metadata["source_files"],
@@ -271,6 +279,7 @@ def _fixed_boundaries(
     min_duration_seconds: float,
     keep_tail: bool,
 ) -> list[tuple[int, int]]:
+    """Compute fixed-size window boundaries in samples."""
     window = max(1, round(segment_seconds * sample_rate))
     step = max(1, round((segment_seconds - overlap_seconds) * sample_rate))
     minimum = max(1, round(min_duration_seconds * sample_rate))
@@ -295,6 +304,7 @@ def _silence_boundaries(
     min_duration_seconds: float,
     max_duration_seconds: float,
 ) -> list[tuple[int, int]]:
+    """Find speech-activity boundaries from 20 ms RMS frames at a 10 ms hop."""
     frame = max(1, round(0.020 * sample_rate))
     hop = max(1, round(0.010 * sample_rate))
     rms_db = []
@@ -331,6 +341,7 @@ def _silence_boundaries(
 
 
 def _limit_duration(start: int, end: int, minimum: int, maximum: int) -> list[tuple[int, int]]:
+    """Chop an over-long region into maximum-sized pieces without a short tail."""
     boundaries = []
     cursor = start
     while end - cursor > maximum:
@@ -339,6 +350,7 @@ def _limit_duration(start: int, end: int, minimum: int, maximum: int) -> list[tu
     if end - cursor >= minimum:
         boundaries.append((cursor, end))
     elif boundaries:
+        # A too-short remainder is merged into the previous piece rather than dropped.
         previous_start, _ = boundaries[-1]
         boundaries[-1] = (previous_start, end)
     return boundaries

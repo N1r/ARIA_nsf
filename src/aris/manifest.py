@@ -31,6 +31,8 @@ SCHEMA_VERSION = "1.0"
 
 @dataclass(frozen=True)
 class DatasetRecord:
+    """One prepared utterance: file paths, provenance hash, and audio statistics."""
+
     id: str
     split: str
     audio_path: str
@@ -51,12 +53,15 @@ class DatasetRecord:
 
 @dataclass
 class DatasetManifest:
+    """A prepared dataset: its root directory, records, and dataset.json metadata."""
+
     root: Path
     records: list[DatasetRecord]
     metadata: dict
 
     @classmethod
     def load(cls, dataset: Path) -> "DatasetManifest":
+        """Load manifest.csv (given the dataset directory or the CSV itself)."""
         dataset = Path(dataset).resolve()
         manifest_path = dataset if dataset.name == "manifest.csv" else dataset / "manifest.csv"
         root = manifest_path.parent
@@ -91,6 +96,7 @@ class DatasetManifest:
         return cls(root=root, records=records, metadata=metadata)
 
     def save(self) -> None:
+        """Write manifest.csv and dataset.json under the manifest root."""
         self.root.mkdir(parents=True, exist_ok=True)
         fields = list(DatasetRecord.__dataclass_fields__)
         with (self.root / "manifest.csv").open("w", newline="", encoding="utf-8") as stream:
@@ -104,6 +110,10 @@ class DatasetManifest:
 
     @property
     def fingerprint(self) -> str:
+        """Order-independent SHA-256 over (id, source hash, split) of every record.
+
+        Experiments record this value and refuse to run if it changes.
+        """
         digest = hashlib.sha256()
         for record in sorted(self.records, key=lambda item: item.id):
             digest.update(record.id.encode())
@@ -113,6 +123,7 @@ class DatasetManifest:
 
 
 def discover_audio(root: Path) -> list[Path]:
+    """Recursively list supported audio files in stable sorted order."""
     root = Path(root)
     return sorted(
         path
@@ -135,6 +146,11 @@ def prepare_dataset(
     min_duration: float = 0.25,
     normalize_peak: Optional[float] = None,
 ) -> DatasetManifest:
+    """Resample, extract F0, split deterministically, and write a manifest.
+
+    The dataset is built in a staging directory and renamed into place only on
+    success, so an existing output directory is never partially overwritten.
+    """
     source = Path(source).resolve()
     output = Path(output).resolve()
     if not source.is_dir():
@@ -154,8 +170,10 @@ def prepare_dataset(
     if not files:
         raise ValueError(f"No supported audio files found below {source}")
 
+    # PID-suffixed staging avoids collisions between concurrent preparations.
     staging = output.parent / f".{output.name}.preparing-{os.getpid()}"
     if staging.exists():
+        # ignore_errors: NFS silly-rename (.nfs*) files can block deletion.
         shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True)
     records: list[DatasetRecord] = []
@@ -165,6 +183,7 @@ def prepare_dataset(
             source_hash = _sha256(path)
             split = splits[path]
             safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", path.stem).strip("-") or "audio"
+            # The hash suffix keeps ids unique when different files share a stem.
             item_id = f"{safe_stem}-{source_hash[:10]}"
             relative_audio = Path("audio") / f"{item_id}.wav"
             relative_f0 = Path("f0") / f"{item_id}.f0.txt"
@@ -285,6 +304,7 @@ def _sha256(path: Path) -> str:
 
 
 def validate_manifest(manifest: DatasetManifest) -> list[str]:
+    """Return a list of integrity errors; an empty list means the dataset is valid."""
     errors = []
     ids = set()
     for record in manifest.records:
@@ -305,6 +325,7 @@ def validate_manifest(manifest: DatasetManifest) -> list[str]:
 
 
 def summarize(records: Iterable[DatasetRecord]) -> dict:
+    """Aggregate record counts, duration, splits, and quality warnings."""
     records = list(records)
     by_split = {
         split: sum(record.split == split for record in records)

@@ -91,6 +91,7 @@ def resample(audio: np.ndarray, source_rate: int, target_rate: int) -> np.ndarra
 
 
 def audio_statistics(audio: np.ndarray, sample_rate: int) -> dict:
+    """Compute duration, peak, RMS level, clipping fraction, and DC offset."""
     audio = np.asarray(audio, dtype=np.float64)
     peak = float(np.max(np.abs(audio), initial=0.0))
     rms = float(np.sqrt(np.mean(audio**2))) if audio.size else 0.0

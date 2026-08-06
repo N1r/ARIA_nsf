@@ -4,19 +4,19 @@
 
 ## 0. 简介
 
-ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学研究的
-可微分析合成工具：用几十分钟的单说话人录音训练一个 DDSP/GOLF 声码器，
+ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研究者
+准备的可微分析合成工具：用几十分钟的单说话人录音训练一个 DDSP/GOLF 声码器，
 然后在其余参数保持不变的前提下，单独改变 F0、能量、噪声、声源形状（`R_d`）
 或共振峰（F1/F2、谱倾斜），批量生成成对的实验刺激。
 
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
 
-训练在一张普通游戏显卡（如 RTX 4060）上即可完成，几十分钟数据约训练
-数小时；重建与刺激生成不需要显卡，普通电脑的 CPU 就能运行。
+不需要专门的计算设备：训练在一张普通游戏显卡（如 RTX 4060）上即可完成，
+几十分钟数据约训练数小时；重建与刺激生成不需要显卡，普通电脑的 CPU 就能运行。
 
 ## 1. 安装依赖
 
-只需要机器上有 [uv](https://docs.astral.sh/uv/)（一个单文件的 Python
+你只需要机器上有 [uv](https://docs.astral.sh/uv/)（一个单文件的 Python
 环境管理器）。在仓库根目录执行：
 
 ```bash
@@ -25,11 +25,12 @@ source scripts/project_env.sh      # 进入项目环境
 .venv/bin/aris doctor              # 检查音频与训练依赖是否就绪
 ```
 
-之后所有命令都通过 `.venv/bin/aris` 调用，每个命令都支持 `--help`。
+装好之后，所有命令都通过 `.venv/bin/aris` 调用；不确定用法时，
+每个命令都支持 `--help`。
 
 ## 2. 准备数据
 
-把录音放进一个文件夹（WAV 格式，单说话人，安静环境）：
+先把你的录音放进一个文件夹（WAV 格式，单说话人，安静环境）：
 
 ```text
 recordings/
@@ -38,13 +39,15 @@ recordings/
 └── ...
 ```
 
-依次执行切分、预处理和检查：
+然后依次执行切分、预处理和检查：
 
 ```bash
 .venv/bin/aris split recordings/ segments/ --mode silence        # 按静音切成短句
 .venv/bin/aris prepare segments/audio data/my_voice              # 重采样、提取 F0、划分数据集
 .venv/bin/aris validate data/my_voice                            # 确认数据完整可用
 ```
+
+关于数据，有几点经验可以参考：
 
 1. 建议总数据量为 20–60 分钟；长录音切成数秒的短句训练更快。
 2. F0 提取推荐 `--f0-method pyworld`（WORLD 的 DIO+StoneMask，稳定且快）；
@@ -60,13 +63,15 @@ recordings/
 
 ## 3. 训练
 
-先生成实验目录，再启动训练：
+数据准备好了，就可以生成实验目录、启动训练：
 
 ```bash
 .venv/bin/aris init-experiment data/my_voice experiments/my_voice --model aria-golf
 .venv/bin/aris train experiments/my_voice --dry-run   # 打印将要执行的训练命令
 .venv/bin/aris train experiments/my_voice
 ```
+
+几点说明：
 
 1. `--model` 可选 `ddsp`、`golf`、`aria-golf`；需要共振峰（F1/F2）和
    谱倾斜操控时选 `aria-golf`（`aria-golf` 是 ARIS 解码器在代码中的名称）。
@@ -77,18 +82,18 @@ recordings/
 
 ## 4. 重建（推理）
 
-用训练好的 checkpoint 重建测试集录音，检验模型质量：
+训练完成后，先用 checkpoint 重建测试集录音，看看模型质量如何：
 
 ```bash
 .venv/bin/aris synthesize experiments/my_voice \
   experiments/my_voice/runs/checkpoints/last.ckpt out/reconstruction
 ```
 
-输出为重建的 WAV 文件；和原始录音对听，接近即可进入下一步。
+输出为重建的 WAV 文件；和原始录音对听一下，觉得接近就可以进入下一步。
 
 ## 5. 生成操控刺激
 
-在重建的基础上单独改变某个参数，其余保持不变：
+这一步是 ARIS 的核心用途：在重建的基础上单独改变某个参数，其余保持不变：
 
 ```bash
 .venv/bin/aris manipulate experiments/my_voice \
@@ -145,5 +150,5 @@ ARIS 的声码器实现源自 GOLF：
 
 ## 8. 联系
 
-问题与建议请提 [Issue](https://github.com/N1r/ARIS_nsf/issues)，或邮件联系
-<dingyr@hum.leidenuniv.nl>（Leiden University）。
+遇到问题或有建议，欢迎提 [Issue](https://github.com/N1r/ARIS_nsf/issues)，
+也可以邮件联系 <dingyr@hum.leidenuniv.nl>（Leiden University）。

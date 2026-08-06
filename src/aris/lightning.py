@@ -19,6 +19,8 @@ from .manifest import DatasetManifest
 
 
 class ManifestSegmentDataset(Dataset):
+    """Fixed-length overlapping training segments with sample-aligned F0."""
+
     def __init__(self, manifest_path, split, duration=1.5, overlap=1.0):
         self.manifest = DatasetManifest.load(Path(manifest_path))
         self.records = [record for record in self.manifest.records if record.split == split]
@@ -53,6 +55,8 @@ class ManifestSegmentDataset(Dataset):
         if len(segment) < self.segment_frames:
             segment = np.pad(segment, (0, self.segment_frames - len(segment)))
         f0 = np.loadtxt(self.manifest.root / record.f0_path, dtype=np.float32, ndmin=1)
+        # Upsample the 5 ms F0 track to sample rate, but keep frames adjacent
+        # to unvoiced regions at zero instead of interpolating across them.
         hop = record.sample_rate * 0.005
         positions = np.arange(len(f0)) * hop
         target = np.arange(offset, offset + self.segment_frames)
@@ -93,6 +97,8 @@ class ManifestInferenceDataset(Dataset):
 
 
 class ManifestDataModule(LightningDataModule):
+    """LightningDataModule serving train/val/test/predict splits from one manifest."""
+
     def __init__(
         self,
         manifest_path: str,

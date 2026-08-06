@@ -23,6 +23,7 @@ from .segment import split_audio, split_summary
 
 
 def parser() -> argparse.ArgumentParser:
+    """Build the argument parser for all ``aris`` subcommands."""
     root = argparse.ArgumentParser(
         prog="aris",
         description="Prepare data, train differentiable vocoders, and generate manipulated speech stimuli.",
@@ -180,8 +181,10 @@ def parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    """Dispatch a parsed command and return a process exit code."""
     argument_parser = parser()
     args, extra = argument_parser.parse_known_args(argv)
+    # Only `train` forwards unrecognized arguments (to the training engine).
     if extra and args.command != "train":
         argument_parser.error("unrecognized arguments: " + " ".join(extra))
     try:
@@ -360,6 +363,7 @@ def _validation_text(result):
 
 
 def _control_assignments(values: list[str]) -> dict[str, float]:
+    """Parse repeated ``NAME=VALUE`` options into a control mapping."""
     if not values:
         return {}
     return parse_variant("synthesis:" + ",".join(values)).controls

@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 
 @dataclass
 class Check:
+    """Result of one dependency check."""
+
     name: str
     ok: bool
     detail: str
@@ -19,6 +21,7 @@ class Check:
 
 
 def checks() -> list[Check]:
+    """Probe optional dependencies and report what each one enables."""
     result = [
         Check("Python", sys.version_info >= (3, 9), platform.python_version(), "all commands"),
         _module("numpy", "data preparation"),
@@ -47,4 +50,5 @@ def _module(name: str, purpose: str) -> Check:
 
 
 def as_json() -> str:
+    """Return all checks as a JSON string."""
     return json.dumps([asdict(item) for item in checks()], indent=2)
