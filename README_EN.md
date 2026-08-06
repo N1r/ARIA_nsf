@@ -19,6 +19,12 @@ reconstruction and stimulus generation need no GPU and run on a regular CPU.
 
 ## 1. Installing dependencies
 
+A note on platforms first: the commands below are meant for a **Linux or
+macOS terminal**. On Windows, we recommend installing
+[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Microsoft's
+official Linux subsystem — a single `wsl --install` command sets it up)
+and following the steps inside the WSL terminal.
+
 All you need on your machine is [uv](https://docs.astral.sh/uv/) (a
 single-file Python environment manager). From the repository root:
 

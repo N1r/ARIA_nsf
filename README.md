@@ -16,6 +16,12 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 
 ## 1. 安装依赖
 
+先说明运行环境：以下命令在 **Linux 或 macOS 的终端**里执行。
+如果你用的是 Windows，建议先安装
+[WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install)（微软官方的
+Linux 子系统，一条 `wsl --install` 命令即可装好），然后在 WSL 的终端里
+按下面的步骤操作。
+
 你只需要机器上有 [uv](https://docs.astral.sh/uv/)（一个单文件的 Python
 环境管理器）。在仓库根目录执行：
 
