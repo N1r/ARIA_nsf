@@ -10,7 +10,6 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 或共振峰（F1/F2、谱倾斜），批量生成成对的实验刺激。
 
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
-- 论文：SLT 2026（引用方式见文末）
 
 训练在一张普通游戏显卡（如 RTX 4060）上即可完成，几十分钟数据约训练
 数小时；重建与刺激生成不需要显卡，普通电脑的 CPU 就能运行。
@@ -130,8 +129,7 @@ aris manipulate         生成操控刺激
 
 ## 7. 引用
 
-ARIS（SLT 2026）的引用条目将在论文上线后补充，机器可读信息见
-[CITATION.cff](CITATION.cff)。
+机器可读的引用信息见 [CITATION.cff](CITATION.cff)。
 
 ARIS 的声码器实现源自 GOLF：
 

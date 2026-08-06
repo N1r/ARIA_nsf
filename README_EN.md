@@ -12,7 +12,6 @@ tilt) one at a time — with everything else held fixed — to batch-generate
 paired experimental stimuli.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
-- Paper: SLT 2026 (citation at the end)
 
 Training runs on an ordinary gaming GPU (e.g. an RTX 4060) in a few hours
 for a few tens of minutes of data; reconstruction and stimulus generation
@@ -146,8 +145,7 @@ aris manipulate         generate manipulated stimuli
 
 ## 7. Citation
 
-The ARIS (SLT 2026) entry will be added once the paper is online;
-machine-readable metadata is in [CITATION.cff](CITATION.cff).
+Machine-readable citation metadata is in [CITATION.cff](CITATION.cff).
 
 The ARIS vocoder implementation derives from GOLF:
 
