@@ -34,8 +34,9 @@ source scripts/project_env.sh      # 进入项目环境
 装好之后，所有命令都通过 `.venv/bin/aris` 调用；不确定用法时，
 每个命令都支持 `--help`。
 
-**想先听听效果？** 我们提供了一个训练好的模型（普通话女声，16 kHz）
-和配套示例数据，不用训练就能直接体验重建和参数操控：
+**先用现成模型试一试。** 我们提供了一个训练好的模型（普通话女声，
+16 kHz）及配套示例数据；下载解压后即可直接运行重建与参数操控，
+了解各步骤的输出形式：
 
 ```bash
 curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
@@ -96,7 +97,11 @@ recordings/
 1. `--model` 可选 `ddsp`、`golf`、`aria-golf`；需要共振峰（F1/F2）和
    谱倾斜操控时选 `aria-golf`（`aria-golf` 是 ARIS 解码器在代码中的名称）。
 2. checkpoint 保存在 `experiments/my_voice/runs/checkpoints/`。
-3. 在 Slurm 集群上，`init-experiment` 已生成可直接 `sbatch` 提交的
+3. 训练需要支持 CUDA 的 PyTorch。默认安装的 Linux 版 PyTorch 已带
+   CUDA 支持；如果与你的显卡或驱动不匹配，需要按设备另装对应版本——
+   可以把显卡型号和操作系统告诉 ChatGPT、Claude 等 AI 助手请它给出
+   安装命令，或参考 [pytorch.org](https://pytorch.org) 的版本选择器。
+4. 在 Slurm 集群上，`init-experiment` 已生成可直接 `sbatch` 提交的
    `train.slurm`；集群参数（partition、GPU 类型等）可用 `init-experiment`
    的选项调整，提交前按你的集群补上 CUDA module。没有集群则忽略它。
 

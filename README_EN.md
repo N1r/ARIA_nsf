@@ -37,9 +37,10 @@ source scripts/project_env.sh      # enter the project environment
 Once installed, all commands are invoked as `.venv/bin/aris`; whenever
 you are unsure about usage, every command supports `--help`.
 
-**Want to hear it first?** We provide a trained model (Mandarin female
-speaker, 16 kHz) with a matching example dataset, so you can try
-reconstruction and manipulation without training anything:
+**Start with a pretrained model.** We provide a trained model (Mandarin
+female speaker, 16 kHz) with a matching example dataset; after
+downloading and extracting it, you can run reconstruction and
+manipulation directly and see what each step produces:
 
 ```bash
 curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
@@ -105,7 +106,13 @@ A few notes:
    you need formant (F1/F2) and spectral-tilt control (`aria-golf` is the
    code name of the ARIS decoder).
 2. Checkpoints are saved under `experiments/my_voice/runs/checkpoints/`.
-3. On a Slurm cluster, `init-experiment` has already generated a
+3. Training requires a CUDA-enabled PyTorch. The default Linux install
+   already ships with CUDA support; if it does not match your GPU or
+   driver, install the matching build for your machine — tell an AI
+   assistant (ChatGPT, Claude, …) your GPU model and operating system
+   and ask for the install command, or use the selector at
+   [pytorch.org](https://pytorch.org).
+4. On a Slurm cluster, `init-experiment` has already generated a
    ready-to-`sbatch` `train.slurm`; adjust cluster parameters (partition,
    GPU type, etc.) via `init-experiment` options, and fill in the CUDA
    module for your cluster before submitting. Ignore it if you have no
