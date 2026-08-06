@@ -31,6 +31,21 @@ source scripts/project_env.sh      # enter the project environment
 Once installed, all commands are invoked as `.venv/bin/aris`; whenever
 you are unsure about usage, every command supports `--help`.
 
+**Want to hear it first?** We provide a trained model (Mandarin female
+speaker, 16 kHz) with a matching example dataset, so you can try
+reconstruction and manipulation without training anything:
+
+```bash
+curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
+tar -xzf aris_f024_demo.tar.gz    # extract in the repository root; creates demo_f024/
+
+.venv/bin/aris synthesize demo_f024/experiment \
+  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
+.venv/bin/aris manipulate demo_f024/experiment \
+  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
+  --variant 'f1_up:f1_scale=1.2'
+```
+
 ## 2. Preparing data
 
 First, put your recordings in one folder (WAV, single speaker, quiet room):

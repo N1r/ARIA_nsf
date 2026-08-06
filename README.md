@@ -28,6 +28,20 @@ source scripts/project_env.sh      # 进入项目环境
 装好之后，所有命令都通过 `.venv/bin/aris` 调用；不确定用法时，
 每个命令都支持 `--help`。
 
+**想先听听效果？** 我们提供了一个训练好的模型（普通话女声，16 kHz）
+和配套示例数据，不用训练就能直接体验重建和参数操控：
+
+```bash
+curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
+tar -xzf aris_f024_demo.tar.gz    # 在仓库根目录解压，得到 demo_f024/
+
+.venv/bin/aris synthesize demo_f024/experiment \
+  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
+.venv/bin/aris manipulate demo_f024/experiment \
+  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
+  --variant 'f1_up:f1_scale=1.2'
+```
+
 ## 2. 准备数据
 
 先把你的录音放进一个文件夹（WAV 格式，单说话人，安静环境）：
