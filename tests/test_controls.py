@@ -35,6 +35,8 @@ EXPECTED_CONTROLS = {
         "glottal_rd_scale",
         "f1_scale",
         "f2_scale",
+        "f1_hz",
+        "f2_hz",
         "tilt_alpha_delta",
     ),
 }
@@ -92,6 +94,8 @@ def test_control_capability_matrix(model):
         ("glottal_rd_scale", 0.5, 2.0),
         ("f1_scale", 0.7, 1.3),
         ("f2_scale", 0.7, 1.3),
+        ("f1_hz", 150.0, 1300.0),
+        ("f2_hz", 600.0, 3200.0),
         ("tilt_alpha_delta", -0.25, 0.25),
     ),
 )
@@ -131,12 +135,42 @@ def test_parse_variant_rejects_invalid_values(text):
         parse_variant(text)
 
 
+def test_parse_variant_accepts_absolute_formant_controls():
+    variant = parse_variant("f1_target:f1_hz=550,f2_hz=1800")
+
+    assert variant.controls == {"f1_hz": 550.0, "f2_hz": 1800.0}
+
+
+def test_parse_variant_rejects_out_of_range_absolute_formant_control():
+    with pytest.raises(ValueError):
+        parse_variant("too_low:f1_hz=100")
+
+
 def test_validate_controls_rejects_unsupported_control_and_model():
     with pytest.raises(ValueError, match="not supported.*'ddsp'"):
         validate_controls("ddsp", {"glottal_rd_scale": 1.0})
 
     with pytest.raises(ValueError, match="Unknown model"):
         validate_controls("not-a-model", {"pitch_semitones": 0.0})
+
+
+def test_absolute_formant_controls_are_gated_to_aria_golf():
+    with pytest.raises(ValueError, match="not supported.*'golf'"):
+        validate_controls("golf", {"f1_hz": 500.0})
+
+    assert validate_controls("aria-golf", {"f1_hz": 550.0, "f2_hz": 1800.0}) == {
+        "f1_hz": 550.0,
+        "f2_hz": 1800.0,
+    }
+
+
+@pytest.mark.parametrize(
+    ("absolute", "ratio"),
+    (("f1_hz", "f1_scale"), ("f2_hz", "f2_scale")),
+)
+def test_validate_controls_rejects_absolute_and_ratio_formant_conflict(absolute, ratio):
+    with pytest.raises(ValueError, match="Conflicting formant controls"):
+        validate_controls("aria-golf", {absolute: CONTROL_SPECS[absolute].default, ratio: 1.1})
 
 
 def test_runtime_capabilities_follow_decoder_surfaces():
@@ -278,6 +312,96 @@ def test_real_aria_filter_changes_interpretable_tracks_by_requested_amount():
         atol=1e-6,
         rtol=1e-6,
     )
+    hook.verify()
+    hook.remove()
+
+
+def test_absolute_formant_controls_are_not_unlocked_by_scale_only_end_filter():
+    end_filter = _AriaLikeEndFilter()
+    decoder = _CaptureDecoder(end_filter=end_filter)
+
+    capabilities = runtime_capabilities(SimpleNamespace(decoder=decoder))
+
+    assert "f1_hz" not in capabilities
+    assert "f2_hz" not in capabilities
+
+
+def test_real_aria_filter_absolute_hz_overrides_natural_contour():
+    from aris.models.analytic_filter import VocalTractCascade
+
+    end_filter = VocalTractCascade(sr=16000, n_learned=0)
+    decoder = _CaptureDecoder(end_filter=end_filter)
+    capabilities = runtime_capabilities(SimpleNamespace(decoder=decoder))
+    assert {"f1_hz", "f2_hz"} <= capabilities
+
+    hook = DecoderControlHook({"f1_hz": 500.0, "f2_hz": 1800.0})
+    hook.install(SimpleNamespace(decoder=decoder))
+    original = AudioTensor(torch.zeros(1, 3, end_filter.n_ctrl), hop_length=80)
+
+    result = decoder(end_filter_params=(original,))
+    changed = result["end_filter_params"][0]
+    after = end_filter.get_formant_params(changed.as_tensor())
+
+    torch.testing.assert_close(after["f1"], torch.full_like(after["f1"], 500.0))
+    torch.testing.assert_close(after["f2"], torch.full_like(after["f2"], 1800.0))
+    hook.verify()
+    hook.remove()
+
+
+def test_real_aria_filter_combines_absolute_f1_hz_with_relative_f2_scale():
+    from aris.models.analytic_filter import VocalTractCascade
+
+    end_filter = VocalTractCascade(sr=16000, n_learned=0)
+    decoder = _CaptureDecoder(end_filter=end_filter)
+    hook = DecoderControlHook({"f1_hz": 400.0, "f2_scale": 1.1})
+    hook.install(SimpleNamespace(decoder=decoder))
+    original = AudioTensor(torch.zeros(1, 3, end_filter.n_ctrl), hop_length=80)
+
+    result = decoder(end_filter_params=(original,))
+    changed = result["end_filter_params"][0]
+    before = end_filter.get_formant_params(original.as_tensor())
+    after = end_filter.get_formant_params(changed.as_tensor())
+
+    torch.testing.assert_close(after["f1"], torch.full_like(after["f1"], 400.0))
+    torch.testing.assert_close(after["f2"], before["f2"] * 1.1)
+    hook.verify()
+    hook.remove()
+
+
+def test_formant_tracking_reports_achieved_vs_requested_after_clamp():
+    from aris.models.analytic_filter import VocalTractCascade
+
+    end_filter = VocalTractCascade(sr=16000, n_learned=0, f1_range=(150, 300))
+    decoder = _CaptureDecoder(end_filter=end_filter)
+    hook = DecoderControlHook({"f1_scale": 1.3})
+    hook.install(SimpleNamespace(decoder=decoder))
+    # A large positive logit saturates sigmoid() near the top of f1_range, so a
+    # 1.3x request cannot fit inside the range and must be clamped every frame.
+    ctrl = torch.full((1, 4, end_filter.n_ctrl), 4.0)
+    original = AudioTensor(ctrl, hop_length=80)
+
+    decoder(end_filter_params=(original,))
+    summary = hook.formant_tracking_summary()
+
+    assert "f1" in summary
+    assert summary["f1"]["max_abs_hz_discrepancy"] > 0.0
+    assert summary["f1"]["clamped_frame_fraction"] == 1.0
+    hook.verify()
+    hook.remove()
+
+
+def test_formant_tracking_is_empty_without_ratio_formant_controls():
+    from aris.models.analytic_filter import VocalTractCascade
+
+    end_filter = VocalTractCascade(sr=16000, n_learned=0)
+    decoder = _CaptureDecoder(end_filter=end_filter)
+    hook = DecoderControlHook({"f1_hz": 500.0})
+    hook.install(SimpleNamespace(decoder=decoder))
+    original = AudioTensor(torch.zeros(1, 3, end_filter.n_ctrl), hop_length=80)
+
+    decoder(end_filter_params=(original,))
+
+    assert hook.formant_tracking_summary() == {}
     hook.verify()
     hook.remove()
 

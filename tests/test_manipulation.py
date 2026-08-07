@@ -6,6 +6,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import numpy as np
+
+from aris import __version__ as ARIS_VERSION
 from aris.controls import parse_variant
 from aris.experiment import create_experiment, synthesize
 from aris.manifest import prepare_dataset
@@ -28,6 +31,15 @@ class ManipulationTest(unittest.TestCase):
         self.assertEqual(pitch_directory_name(-3.5), "pitch_minus_3p5st")
         with self.assertRaises(ValueError):
             semitones_to_scale(math.inf)
+
+    def test_pitch_directory_name_delegates_to_shared_formatter(self):
+        # manipulation.py must not reimplement the magnitude-formatting logic
+        # that controls/specs.py's _pitch_variant_name already owns.
+        with patch(
+            "aris.manipulation._pitch_variant_name", return_value="sentinel"
+        ) as mock_formatter:
+            self.assertEqual(pitch_directory_name(4.0), "sentinel")
+        mock_formatter.assert_called_once_with(4.0)
 
     def test_dry_run_and_listening_report(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -134,6 +146,47 @@ class ManipulationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "f0_scale"):
                 synthesize(root, root / "missing.ckpt", root / "output", f0_scale=0)
 
+    def test_synthesize_rejects_conflicting_pitch_semitones_and_f0_scale(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            experiment = root / "experiment"
+            experiment.mkdir()
+            (experiment / "experiment.json").write_text(
+                json.dumps({"model": "golf", "dataset_fingerprint": "fixture"})
+            )
+            # pitch_semitones=12 implies a 2.0x f0_scale; 1.5 does not match it
+            # and is not the neutral default, so the two controls disagree.
+            with self.assertRaisesRegex(ValueError, "Conflicting pitch controls"):
+                synthesize(
+                    experiment,
+                    root / "missing.ckpt",
+                    root / "output",
+                    f0_scale=1.5,
+                    controls={"pitch_semitones": 12},
+                )
+
+    def test_synthesize_allows_matching_pitch_semitones_and_f0_scale(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            for index in range(6):
+                _tone(source / f"item-{index}.wav", 140 + index)
+            dataset = root / "dataset"
+            prepare_dataset(source, dataset, f0_method="autocorr", min_duration=0.2)
+            experiment = create_experiment(dataset, root / "experiment", max_steps=2)
+            checkpoint = experiment / "fake.ckpt"
+            checkpoint.touch()
+
+            command = synthesize(
+                experiment,
+                checkpoint,
+                root / "output",
+                dry_run=True,
+                f0_scale=semitones_to_scale(12),
+                controls={"pitch_semitones": 12},
+            )
+            self.assertAlmostEqual(float(command[-1]), semitones_to_scale(12))
+
     def test_manipulation_rejects_checkpoint_drift_between_variants(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -179,6 +232,45 @@ class ManipulationTest(unittest.TestCase):
 
             self.assertFalse((root / "output").exists())
 
+    def test_manipulate_controls_writes_aris_version_and_formant_tracking_audit(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            experiment = root / "experiment"
+            experiment.mkdir()
+            (experiment / "experiment.json").write_text(
+                json.dumps({"model": "golf", "dataset_fingerprint": "fixture"})
+            )
+            checkpoint = root / "last.ckpt"
+            checkpoint.write_bytes(b"stable")
+
+            def fake_synthesize(_experiment, _checkpoint, output, **_kwargs):
+                output.mkdir()
+                (output / "_render.json").write_text(
+                    json.dumps(
+                        {
+                            "runtime_capabilities": ["noise_gain_db"],
+                            "decoder_control_calls": 1,
+                            "files_written": 1,
+                            "clipped_fraction": 0.0,
+                        }
+                    )
+                )
+                return ["predict"]
+
+            with patch("aris.manipulation.synthesize", side_effect=fake_synthesize):
+                manipulate_controls(
+                    experiment,
+                    checkpoint,
+                    root / "output",
+                    [parse_variant("noise:noise_gain_db=3")],
+                )
+
+            metadata = json.loads((root / "output" / "manipulation.json").read_text())
+            self.assertEqual(metadata["aris_version"], ARIS_VERSION)
+            # The fake _render.json above has no formant_tracking key; the
+            # render_audit must default to {} rather than raising KeyError.
+            self.assertEqual(metadata["outputs"][0]["render_audit"]["formant_tracking"], {})
+
     def test_inference_scales_voiced_f0_and_preserves_zeros(self):
         try:
             from aris.lightning import ManifestInferenceDataset
@@ -203,6 +295,81 @@ class ManipulationTest(unittest.TestCase):
             _, shifted_f0, _ = shifted[0]
             self.assertTrue((shifted_f0[base_f0 == 0] == 0).all())
             self.assertTrue((shifted_f0[base_f0 > 0] == 2 * base_f0[base_f0 > 0]).all())
+
+    def test_inference_tail_matches_last_frame_voicing(self):
+        try:
+            from aris.lightning import ManifestInferenceDataset
+        except ImportError:
+            self.skipTest("training extras are not installed")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            path = source / "item.wav"
+            _tone(path, 150)  # 0.30 s at 8 kHz, resampled to 0.30 s at 16 kHz
+            np.savetxt(path.with_suffix(".pv"), np.full(60, 150.0))  # 60 * 5 ms = 0.30 s
+            manifest = prepare_dataset(
+                source,
+                root / "dataset",
+                f0_method="sidecar",
+                min_duration=0.2,
+                validation_ratio=0,
+                test_ratio=0,
+            )
+            dataset = ManifestInferenceDataset(manifest.root, split="train")
+            _, f0_track, _ = dataset[0]
+            # The last known frame (index 59, at sample 4720) is voiced, so the
+            # trailing fractional-hop samples beyond it must stay voiced too.
+            self.assertTrue((f0_track[-10:] > 0).all())
+
+    def test_inference_tail_stays_unvoiced_when_last_frame_is(self):
+        try:
+            from aris.lightning import ManifestInferenceDataset
+        except ImportError:
+            self.skipTest("training extras are not installed")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            path = source / "item.wav"
+            _tone(path, 150)
+            np.savetxt(path.with_suffix(".pv"), np.array([150.0] * 59 + [0.0]))
+            manifest = prepare_dataset(
+                source,
+                root / "dataset",
+                f0_method="sidecar",
+                min_duration=0.2,
+                validation_ratio=0,
+                test_ratio=0,
+            )
+            dataset = ManifestInferenceDataset(manifest.root, split="train")
+            _, f0_track, _ = dataset[0]
+            self.assertTrue((f0_track[-10:] == 0).all())
+
+    def test_segment_dataset_tail_matches_last_frame_voicing(self):
+        try:
+            from aris.lightning import ManifestSegmentDataset
+        except ImportError:
+            self.skipTest("training extras are not installed")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            path = source / "item.wav"
+            _tone(path, 150)
+            np.savetxt(path.with_suffix(".pv"), np.full(60, 150.0))
+            manifest = prepare_dataset(
+                source,
+                root / "dataset",
+                f0_method="sidecar",
+                min_duration=0.2,
+                validation_ratio=0,
+                test_ratio=0,
+            )
+            dataset = ManifestSegmentDataset(
+                manifest.root, split="train", duration=1.0, overlap=0.0
+            )
+            _, f0_track = dataset[0]
+            # Segment padding extends past the 0.30 s recording; the padded tail
+            # is still governed by the last real frame's voicing, index 4720+.
+            self.assertTrue((f0_track[5000:5020] > 0).all())
 
 
 if __name__ == "__main__":

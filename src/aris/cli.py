@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
+import subprocess
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -28,41 +29,100 @@ def parser() -> argparse.ArgumentParser:
         prog="aris",
         description="Prepare data, train differentiable vocoders, and generate manipulated speech stimuli.",
     )
-    root.add_argument("--version", action="version", version="aris 0.1.0")
+    root.add_argument(
+        "--version", action="version", version="aris 0.1.0", help="show the version and exit"
+    )
     commands = root.add_subparsers(dest="command", required=True)
 
     doctor = commands.add_parser("doctor", help="check audio and training dependencies")
-    doctor.add_argument("--json", action="store_true")
+    doctor.add_argument(
+        "--json", action="store_true", help="emit machine-readable JSON instead of text"
+    )
 
     corpus = commands.add_parser(
         "fetch-corpus",
         help="download and select a reproducible 30-60 minute CMU ARCTIC corpus",
     )
-    corpus.add_argument("output", type=Path)
+    corpus.add_argument("output", type=Path, help="directory to write the selected corpus into")
     corpus.add_argument(
         "--archive",
         type=Path,
         help="reuse an already downloaded official archive instead of downloading it",
     )
-    corpus.add_argument("--target-minutes", type=float, default=30.0)
-    corpus.add_argument("--max-minutes", type=float, default=60.0)
-    corpus.add_argument("--silence-gap", type=float, default=0.35)
+    corpus.add_argument(
+        "--target-minutes",
+        type=float,
+        default=30.0,
+        help="desired total speech duration in minutes (default: %(default)s)",
+    )
+    corpus.add_argument(
+        "--max-minutes",
+        type=float,
+        default=60.0,
+        help="hard cap on total speech duration in minutes (default: %(default)s)",
+    )
+    corpus.add_argument(
+        "--silence-gap",
+        type=float,
+        default=0.35,
+        help="minimum silence gap in seconds used to choose utterance boundaries (default: %(default)s)",
+    )
 
     split = commands.add_parser(
         "split-audio",
         aliases=["split"],
         help="split recordings at silence boundaries or into fixed windows",
     )
-    split.add_argument("source", type=Path)
-    split.add_argument("output", type=Path)
-    split.add_argument("--mode", choices=["silence", "fixed"], default="silence")
-    split.add_argument("--segment-seconds", type=float, default=2.0)
-    split.add_argument("--overlap-seconds", type=float, default=0.0)
-    split.add_argument("--silence-threshold-db", type=float, default=-40.0)
-    split.add_argument("--min-silence-seconds", type=float, default=0.30)
-    split.add_argument("--padding-seconds", type=float, default=0.05)
-    split.add_argument("--min-duration-seconds", type=float, default=0.25)
-    split.add_argument("--max-duration-seconds", type=float, default=15.0)
+    split.add_argument("source", type=Path, help="input audio file or directory")
+    split.add_argument("output", type=Path, help="directory to write split segments into")
+    split.add_argument(
+        "--mode",
+        choices=["silence", "fixed"],
+        default="silence",
+        help="split at detected silence boundaries or into fixed-length windows (default: %(default)s)",
+    )
+    split.add_argument(
+        "--segment-seconds",
+        type=float,
+        default=2.0,
+        help="window length in seconds for --mode fixed (default: %(default)s)",
+    )
+    split.add_argument(
+        "--overlap-seconds",
+        type=float,
+        default=0.0,
+        help="overlap between consecutive windows in seconds for --mode fixed (default: %(default)s)",
+    )
+    split.add_argument(
+        "--silence-threshold-db",
+        type=float,
+        default=-40.0,
+        help="level below which audio counts as silence, in dBFS (default: %(default)s)",
+    )
+    split.add_argument(
+        "--min-silence-seconds",
+        type=float,
+        default=0.30,
+        help="minimum silence duration in seconds to count as a split boundary (default: %(default)s)",
+    )
+    split.add_argument(
+        "--padding-seconds",
+        type=float,
+        default=0.05,
+        help="audio kept on each side of a silence boundary, in seconds (default: %(default)s)",
+    )
+    split.add_argument(
+        "--min-duration-seconds",
+        type=float,
+        default=0.25,
+        help="discard segments shorter than this, in seconds (default: %(default)s)",
+    )
+    split.add_argument(
+        "--max-duration-seconds",
+        type=float,
+        default=15.0,
+        help="discard segments longer than this, in seconds (default: %(default)s)",
+    )
     split.add_argument(
         "--sample-rate",
         type=int,
@@ -86,60 +146,171 @@ def parser() -> argparse.ArgumentParser:
     )
 
     prepare = commands.add_parser("prepare", help="prepare audio and a deterministic manifest")
-    prepare.add_argument("source", type=Path)
-    prepare.add_argument("output", type=Path)
-    prepare.add_argument("--sample-rate", type=int, default=16000)
+    prepare.add_argument("source", type=Path, help="input audio directory")
+    prepare.add_argument("output", type=Path, help="directory to write the prepared dataset into")
+    prepare.add_argument(
+        "--sample-rate",
+        type=int,
+        default=16000,
+        help="target sample rate in Hz (default: %(default)s)",
+    )
     prepare.add_argument(
         "--f0-method",
         choices=["auto", "pyworld", "autocorr", "sidecar"],
         default="auto",
         help="'sidecar' reuses a .pv file beside each source WAV",
     )
-    prepare.add_argument("--f0-floor", type=float, default=60)
-    prepare.add_argument("--f0-ceiling", type=float, default=500)
-    prepare.add_argument("--validation-ratio", type=float, default=0.1)
-    prepare.add_argument("--test-ratio", type=float, default=0.1)
-    prepare.add_argument("--seed", type=int, default=42)
-    prepare.add_argument("--min-duration", type=float, default=0.25)
-    prepare.add_argument("--normalize-peak", type=float)
+    prepare.add_argument(
+        "--f0-floor",
+        type=float,
+        default=60,
+        help="lowest F0 to track, in Hz (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--f0-ceiling",
+        type=float,
+        default=500,
+        help="highest F0 to track, in Hz (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--validation-ratio",
+        type=float,
+        default=0.1,
+        help="fraction of utterances held out for validation (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--test-ratio",
+        type=float,
+        default=0.1,
+        help="fraction of utterances held out for testing (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="random seed for the train/validation/test split (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--min-duration",
+        type=float,
+        default=0.25,
+        help="discard utterances shorter than this, in seconds (default: %(default)s)",
+    )
+    prepare.add_argument(
+        "--normalize-peak",
+        type=float,
+        help="peak-normalize audio to this level in dBFS; omit to leave levels unchanged",
+    )
 
     validate = commands.add_parser("validate", help="validate a prepared dataset")
-    validate.add_argument("dataset", type=Path)
-    validate.add_argument("--json", action="store_true")
+    validate.add_argument("dataset", type=Path, help="prepared dataset directory to validate")
+    validate.add_argument(
+        "--json", action="store_true", help="emit machine-readable JSON instead of text"
+    )
 
     init = commands.add_parser("init-experiment", help="create a portable training experiment")
-    init.add_argument("dataset", type=Path)
-    init.add_argument("output", type=Path)
-    init.add_argument("--model", choices=sorted(MODELS), default="golf")
-    init.add_argument("--batch-size", type=int, default=32)
-    init.add_argument("--max-steps", type=int, default=40000)
-    init.add_argument("--seed", type=int, default=42)
-    init.add_argument("--f0-min", type=float, default=60)
-    init.add_argument("--f0-max", type=float, default=500)
-    init.add_argument("--workers", type=int, default=4)
-    init.add_argument("--partition", default="gpu")
-    init.add_argument("--gres", default="gpu:1")
-    init.add_argument("--time", default="04:00:00")
-    init.add_argument("--cpus", type=int, default=8)
-    init.add_argument("--memory", default="32G")
-    init.add_argument("--exclude", default="")
+    init.add_argument(
+        "dataset", type=Path, help="prepared dataset directory to bind the experiment to"
+    )
+    init.add_argument(
+        "output", type=Path, help="directory to create the experiment in (must not already exist)"
+    )
+    init.add_argument(
+        "--model",
+        choices=sorted(MODELS),
+        default="golf",
+        help="decoder architecture preset to train (default: %(default)s)",
+    )
+    init.add_argument(
+        "--batch-size", type=int, default=32, help="training batch size (default: %(default)s)"
+    )
+    init.add_argument(
+        "--max-steps",
+        type=int,
+        default=40000,
+        help="number of training steps to run (default: %(default)s)",
+    )
+    init.add_argument(
+        "--seed", type=int, default=42, help="random seed for training (default: %(default)s)"
+    )
+    init.add_argument(
+        "--f0-min",
+        type=float,
+        default=60,
+        help="lowest F0 the encoder should expect, in Hz (default: %(default)s)",
+    )
+    init.add_argument(
+        "--f0-max",
+        type=float,
+        default=500,
+        help="highest F0 the encoder should expect, in Hz (default: %(default)s)",
+    )
+    init.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="number of data-loading worker processes (default: %(default)s)",
+    )
+    init.add_argument(
+        "--partition",
+        default="gpu",
+        help="Slurm partition for the generated train.slurm script (default: %(default)s)",
+    )
+    init.add_argument(
+        "--gres",
+        default="gpu:1",
+        help="Slurm --gres value for the generated train.slurm script (default: %(default)s)",
+    )
+    init.add_argument(
+        "--time",
+        default="04:00:00",
+        help="Slurm wall-clock time limit for the generated train.slurm script (default: %(default)s)",
+    )
+    init.add_argument(
+        "--cpus",
+        type=int,
+        default=8,
+        help="Slurm CPUs per task for the generated train.slurm script (default: %(default)s)",
+    )
+    init.add_argument(
+        "--memory",
+        default="32G",
+        help="Slurm memory request for the generated train.slurm script (default: %(default)s)",
+    )
+    init.add_argument(
+        "--exclude", default="", help="comma-separated Slurm node names to exclude, if any"
+    )
 
     training = commands.add_parser("train", help="check dataset integrity and start training")
-    training.add_argument("experiment", type=Path)
-    training.add_argument("--dry-run", action="store_true")
+    training.add_argument("experiment", type=Path, help="experiment directory from init-experiment")
+    training.add_argument(
+        "--dry-run", action="store_true", help="print the training command instead of running it"
+    )
 
     controls = commands.add_parser(
         "controls",
         help="list manipulation parameters declared by an experiment model",
     )
-    controls.add_argument("experiment", type=Path)
-    controls.add_argument("--json", action="store_true")
+    controls.add_argument("experiment", type=Path, help="experiment directory from init-experiment")
+    controls.add_argument(
+        "--json", action="store_true", help="emit machine-readable JSON instead of text"
+    )
 
     synthesis = commands.add_parser("synthesize", help="reconstruct held-out audio")
-    synthesis.add_argument("experiment", type=Path)
-    synthesis.add_argument("checkpoint", type=Path)
-    synthesis.add_argument("output", type=Path)
-    synthesis.add_argument("--dry-run", action="store_true")
+    synthesis.add_argument(
+        "experiment", type=Path, help="experiment directory from init-experiment"
+    )
+    synthesis.add_argument(
+        "checkpoint", type=Path, help="trained checkpoint file, e.g. runs/checkpoints/last.ckpt"
+    )
+    synthesis.add_argument(
+        "output",
+        type=Path,
+        help="directory to write synthesized audio into (must not already exist)",
+    )
+    synthesis.add_argument(
+        "--dry-run", action="store_true", help="print the synthesis command instead of running it"
+    )
     synthesis.add_argument(
         "--semitones",
         type=float,
@@ -151,16 +322,28 @@ def parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="NAME=VALUE",
-        help="apply one non-F0 DDSP control; repeat for combinations",
+        help=(
+            "apply one non-F0 DDSP control; repeat for combinations, e.g. "
+            "--control f1_scale=1.1 --control pitch_semitones=2 (equivalent to manipulate's "
+            "--variant name:f1_scale=1.1,pitch_semitones=2)"
+        ),
     )
 
     manipulation = commands.add_parser(
         "manipulate",
         help="render auditable named DDSP-control variants from a checkpoint",
     )
-    manipulation.add_argument("experiment", type=Path)
-    manipulation.add_argument("checkpoint", type=Path)
-    manipulation.add_argument("output", type=Path)
+    manipulation.add_argument(
+        "experiment", type=Path, help="experiment directory from init-experiment"
+    )
+    manipulation.add_argument(
+        "checkpoint", type=Path, help="trained checkpoint file, e.g. runs/checkpoints/last.ckpt"
+    )
+    manipulation.add_argument(
+        "output",
+        type=Path,
+        help="directory to write rendered variants into (must not already exist)",
+    )
     manipulation.add_argument(
         "--semitones",
         type=float,
@@ -172,11 +355,25 @@ def parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="NAME:CONTROL=VALUE,...",
-        help="named multi-parameter variant; repeat to render several conditions",
+        help=(
+            "named multi-parameter variant; repeat to render several conditions, e.g. "
+            "--variant boosted:f1_scale=1.1,pitch_semitones=2 (equivalent to synthesize's "
+            "--control f1_scale=1.1 --control pitch_semitones=2)"
+        ),
     )
-    manipulation.add_argument("--baseline", type=Path)
-    manipulation.add_argument("--report", type=Path)
-    manipulation.add_argument("--dry-run", action="store_true")
+    manipulation.add_argument(
+        "--baseline",
+        type=Path,
+        help="unmodified reconstruction directory to compare variants against in --report",
+    )
+    manipulation.add_argument(
+        "--report",
+        type=Path,
+        help="path for the generated HTML comparison report (default: <output>/comparison.html)",
+    )
+    manipulation.add_argument(
+        "--dry-run", action="store_true", help="print the render commands instead of running them"
+    )
     return root
 
 
@@ -255,7 +452,12 @@ def main(argv=None) -> int:
                 min_duration=args.min_duration,
                 normalize_peak=args.normalize_peak,
             )
-            print(json.dumps(summarize(manifest.records), indent=2))
+            print(
+                json.dumps(
+                    summarize(manifest.records, skipped=manifest.metadata.get("skipped")),
+                    indent=2,
+                )
+            )
             print(f"Dataset: {manifest.root}")
             print(f"Fingerprint: {manifest.fingerprint}")
             return 0
@@ -293,15 +495,18 @@ def main(argv=None) -> int:
             return 0
         if args.command == "controls":
             metadata = json.loads((Path(args.experiment).resolve() / "experiment.json").read_text())
-            available = controls_for_model(metadata["model"])
+            model = metadata.get("model")
+            if not isinstance(model, str):
+                raise ValueError(f"experiment.json has no valid 'model' field (found {model!r})")
+            available = controls_for_model(model)
             payload = {
-                "model": metadata["model"],
+                "model": model,
                 "controls": [asdict(spec) for spec in available],
             }
             if args.json:
                 print(json.dumps(payload, indent=2, ensure_ascii=False))
             else:
-                print(f"Model: {metadata['model']}")
+                print(f"Model: {model}")
                 for spec in available:
                     print(
                         f"{spec.name:22} {spec.minimum:g}..{spec.maximum:g} "
@@ -347,8 +552,21 @@ def main(argv=None) -> int:
             else:
                 print(f"Manipulations: {args.output}")
             return 0
-    except (FileNotFoundError, FileExistsError, ValueError, RuntimeError) as error:
-        print(f"error: {error}", file=sys.stderr)
+    except (
+        FileNotFoundError,
+        FileExistsError,
+        ValueError,
+        RuntimeError,
+        subprocess.CalledProcessError,
+    ) as error:
+        if isinstance(error, subprocess.CalledProcessError):
+            message = (
+                f"aris {args.command} failed: the underlying engine exited with "
+                f"status {error.returncode} (see output above for details)"
+            )
+        else:
+            message = str(error)
+        print(f"error: {message}", file=sys.stderr)
         return 2
     return 1
 

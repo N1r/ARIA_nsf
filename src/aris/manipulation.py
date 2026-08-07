@@ -11,8 +11,9 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .controls.specs import ControlVariant, pitch_variants, validate_controls
-from .experiment import synthesize
+from . import __version__
+from .controls.specs import ControlVariant, _pitch_variant_name, pitch_variants, validate_controls
+from .experiment import _resolve_dataset_path, synthesize
 from .manifest import DatasetManifest
 from .report import _relative_url
 
@@ -27,9 +28,7 @@ def semitones_to_scale(semitones: float) -> float:
 
 def pitch_directory_name(semitones: float) -> str:
     """Return the filesystem-safe directory name for a pitch shift."""
-    value = f"{abs(float(semitones)):.2f}".rstrip("0").rstrip(".").replace(".", "p")
-    sign = "plus" if semitones > 0 else "minus" if semitones < 0 else "zero"
-    return f"pitch_{sign}_{value}st"
+    return _pitch_variant_name(float(semitones))
 
 
 def manipulate_pitch(
@@ -136,6 +135,7 @@ def manipulate_controls(
                     "decoder_control_calls": render_metadata["decoder_control_calls"],
                     "files_written": render_metadata["files_written"],
                     "clipped_fraction": render_metadata["clipped_fraction"],
+                    "formant_tracking": render_metadata.get("formant_tracking", {}),
                 },
             }
             if "pitch_semitones" in variant.controls:
@@ -151,6 +151,7 @@ def manipulate_controls(
             "dataset_fingerprint": experiment_metadata["dataset_fingerprint"],
             "checkpoint": str(checkpoint),
             "checkpoint_sha256": checkpoint_hash,
+            "aris_version": __version__,
             "outputs": outputs,
         }
         (staging / "manipulation.json").write_text(
@@ -177,7 +178,9 @@ def build_manipulation_report(
     manipulations = Path(manipulations).resolve()
     output = Path(output).resolve()
     experiment_metadata = json.loads((experiment / "experiment.json").read_text())
-    manifest = DatasetManifest.load(Path(experiment_metadata["dataset"]))
+    manifest = DatasetManifest.load(
+        _resolve_dataset_path(experiment_metadata["dataset"], experiment)
+    )
     manipulation_metadata = json.loads((manipulations / "manipulation.json").read_text())
     variants = manipulation_metadata["outputs"]
     rows = []

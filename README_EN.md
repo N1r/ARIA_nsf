@@ -83,6 +83,14 @@ A few practical notes on data:
    extract a more reliable pitch track first with
    [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, save it as a
    `.pv` file next to each WAV, and load it via `--f0-method sidecar`.
+   `.pv` is plain text: one float per line, one line per frame, at a
+   fixed 5 ms hop; `0.0` means unvoiced, a positive number is that
+   frame's F0 in Hz. Praat's default pitch time step is not 5 ms, and it
+   marks unvoiced frames `--undefined--`, not `0` — so a Praat export
+   needs resampling to the 5 ms grid and an `--undefined--` → `0.0`
+   substitution before `prepare` will accept it. A frame count that does
+   not match the audio duration now raises a clear error instead of
+   silently misaligning.
 4. Sample rates need not be unified beforehand; `prepare` resamples to the
    model sample rate automatically.
 5. No recordings at hand? `.venv/bin/aris fetch-corpus data/arctic`
@@ -117,6 +125,12 @@ A few notes:
    GPU type, etc.) via `init-experiment` options, and fill in the CUDA
    module for your cluster before submitting. Ignore it if you have no
    cluster.
+5. Experiment directories created from now on are portable: move a fresh
+   `init-experiment` output together with its dataset directory (keeping
+   their relative position), and `train`/`synthesize`/`manipulate` still
+   find the dataset from any working directory. Older experiment
+   directories (like the demo above) keep resolving against their
+   original path.
 
 ## 4. Reconstruction (inference)
 
@@ -153,8 +167,15 @@ generated. Available parameters and ranges:
 | `output_gain_db` | `-24..12` | overall energy (dB) | ✓ | ✓ | ✓ |
 | `noise_gain_db` | `-24..24` | noise component (dB) | ✓ | ✓ | ✓ |
 | `glottal_rd_scale` | `0.5..2.0` | glottal shape `R_d` (breathy–pressed) | — | ✓ | ✓ |
-| `f1_scale` / `f2_scale` | `0.7..1.3` | first/second formant | — | — | ✓ |
+| `f1_scale` / `f2_scale` | `0.7..1.3` | first/second formant (ratio) | — | — | ✓ |
+| `f1_hz` / `f2_hz` | `150..1300` / `600..3200` | first/second formant (absolute Hz) | — | — | ✓ |
 | `tilt_alpha_delta` | `-0.25..0.25` | spectral tilt | — | — | ✓ |
+
+`f1_hz` / `f2_hz` set a formant to an absolute Hz target, useful for
+building an evenly-spaced Hz continuum across different stimulus items;
+`f1_scale` / `f2_scale` instead shift each frame's natural contour
+proportionally, keeping its shape. The two cannot be combined on the
+same formant.
 
 Hear what each parameter does on the [demo page](https://n1r.github.io/ARIS_nsf/);
 parameter semantics and condition design are covered in the

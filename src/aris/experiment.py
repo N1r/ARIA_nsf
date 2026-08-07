@@ -88,10 +88,17 @@ def create_experiment(
     config_path.write_text(config, encoding="utf-8")
     shutil.copyfile(_preset(model), output / "decoder.yaml")
     decoder_bytes = (output / "decoder.yaml").read_bytes()
+    try:
+        # Relative to the experiment dir so the pair stays portable if moved
+        # or copied together; only an unrelated location (e.g. another drive)
+        # falls back to an absolute path.
+        dataset_value = os.path.relpath(manifest.root, output)
+    except ValueError:
+        dataset_value = str(manifest.root)
     metadata = {
         "schema_version": "1.0",
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "dataset": str(manifest.root),
+        "dataset": dataset_value,
         "dataset_fingerprint": manifest.fingerprint,
         "model": model,
         "decoder_config": "decoder.yaml",
@@ -128,7 +135,7 @@ def train(
     """Re-verify the dataset and run (or return) the training command."""
     experiment = Path(experiment).resolve()
     metadata = json.loads((experiment / "experiment.json").read_text())
-    manifest = DatasetManifest.load(metadata["dataset"])
+    manifest = DatasetManifest.load(_resolve_dataset_path(metadata["dataset"], experiment))
     # The fingerprint ties results to the exact data; refuse silent drift.
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
@@ -166,7 +173,7 @@ def synthesize(
         ):
             raise ValueError("Conflicting pitch controls: f0_scale does not match pitch_semitones")
         f0_scale = pitch_scale
-    manifest = DatasetManifest.load(metadata["dataset"])
+    manifest = DatasetManifest.load(_resolve_dataset_path(metadata["dataset"], experiment))
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
     if not checkpoint.is_file():
@@ -217,6 +224,31 @@ def _command(experiment: Path, model: str) -> list[str]:
         "--model",
         str(experiment / "decoder.yaml"),
     ]
+
+
+def _resolve_dataset_path(dataset: str, experiment: Path) -> Path:
+    """Resolve experiment.json's ``dataset`` field to an existing directory.
+
+    A relative path is tried against the experiment's own directory first —
+    so a copied experiment+dataset pair keeps working from any working
+    directory — then against the current working directory for backward
+    compatibility with older experiment.json files that stored an absolute
+    or cwd-relative path.
+    """
+    candidate = Path(dataset)
+    if candidate.is_absolute():
+        return candidate
+    experiment_relative = (experiment / candidate).resolve()
+    if experiment_relative.exists():
+        return experiment_relative
+    cwd_relative = candidate.resolve()
+    if cwd_relative.exists():
+        return cwd_relative
+    raise FileNotFoundError(
+        f"Dataset {dataset!r} from {experiment / 'experiment.json'} not found; tried:\n"
+        f"  {experiment_relative} (relative to the experiment directory)\n"
+        f"  {cwd_relative} (relative to the current directory)"
+    )
 
 
 def _repo_root() -> Path:

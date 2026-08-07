@@ -124,6 +124,34 @@ _ALL_CONTROL_SPECS = (
         description="Multiplicative shift of the second formant frequency.",
     ),
     ControlSpec(
+        name="f1_hz",
+        minimum=150.0,
+        maximum=1300.0,
+        default=500.0,
+        models=("aria-golf",),
+        unit="Hz",
+        description=(
+            "Absolute target frequency for the first formant. Overrides the frame's "
+            "natural contour entirely, for evenly-spaced Hz stimulus continua; f1_scale "
+            "instead preserves the natural shape and shifts it proportionally. Conflicts "
+            "with f1_scale."
+        ),
+    ),
+    ControlSpec(
+        name="f2_hz",
+        minimum=600.0,
+        maximum=3200.0,
+        default=1500.0,
+        models=("aria-golf",),
+        unit="Hz",
+        description=(
+            "Absolute target frequency for the second formant. Overrides the frame's "
+            "natural contour entirely, for evenly-spaced Hz stimulus continua; f2_scale "
+            "instead preserves the natural shape and shifts it proportionally. Conflicts "
+            "with f2_scale."
+        ),
+    ),
+    ControlSpec(
         name="tilt_alpha_delta",
         minimum=-0.25,
         maximum=0.25,
@@ -200,6 +228,7 @@ def validate_controls(
                 f"available controls: {available}"
             )
         normalized[name] = spec.normalize(value)
+    _check_formant_control_conflicts(normalized)
     return normalized
 
 
@@ -284,6 +313,28 @@ def pitch_variants(semitones: Iterable[object]) -> tuple[ControlVariant, ...]:
             "Pitch values must produce unique output names; values are named to two decimal places"
         )
     return variants
+
+
+_FORMANT_ABSOLUTE_VS_RATIO = {
+    "f1_hz": "f1_scale",
+    "f2_hz": "f2_scale",
+}
+
+
+def _check_formant_control_conflicts(controls: Mapping[str, float]) -> None:
+    """Reject an absolute Hz target combined with a ratio scale on the same formant.
+
+    Mirrors the f0_scale-vs-pitch_semitones conflict check in ``experiment.synthesize``:
+    the two controls express incompatible intents (overriding the frame's contour vs.
+    preserving its natural shape), so only one may be given per formant.
+    """
+
+    for absolute, ratio in _FORMANT_ABSOLUTE_VS_RATIO.items():
+        if absolute in controls and ratio in controls:
+            raise ValueError(
+                f"Conflicting formant controls: {absolute!r} and {ratio!r} cannot both be "
+                "set; choose an absolute target or a relative scale, not both"
+            )
 
 
 def _validate_model(model: object) -> str:

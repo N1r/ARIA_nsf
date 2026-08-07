@@ -110,7 +110,7 @@ class DatasetManifest:
 
     @property
     def fingerprint(self) -> str:
-        """Order-independent SHA-256 over (id, source hash, split) of every record.
+        """Order-independent SHA-256 over (id, source hash, split, sample rate) of every record.
 
         Experiments record this value and refuse to run if it changes.
         """
@@ -119,6 +119,7 @@ class DatasetManifest:
             digest.update(record.id.encode())
             digest.update(record.source_sha256.encode())
             digest.update(record.split.encode())
+            digest.update(str(record.sample_rate).encode())
         return digest.hexdigest()
 
 
@@ -177,66 +178,90 @@ def prepare_dataset(
         shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True)
     records: list[DatasetRecord] = []
+    skipped_invalid: list[dict] = []
+    skipped_too_short: list[str] = []
     try:
         splits = _split_map(files, source, seed, validation_ratio, test_ratio)
         for path in files:
-            source_hash = _sha256(path)
-            split = splits[path]
-            safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", path.stem).strip("-") or "audio"
-            # The hash suffix keeps ids unique when different files share a stem.
-            item_id = f"{safe_stem}-{source_hash[:10]}"
-            relative_audio = Path("audio") / f"{item_id}.wav"
-            relative_f0 = Path("f0") / f"{item_id}.f0.txt"
+            relative_source = path.relative_to(source).as_posix()
+            try:
+                source_hash = _sha256(path)
+                split = splits[path]
+                safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", path.stem).strip("-") or "audio"
+                # The hash suffix keeps ids unique when different files share a stem.
+                item_id = f"{safe_stem}-{source_hash[:10]}"
+                relative_audio = Path("audio") / f"{item_id}.wav"
+                relative_f0 = Path("f0") / f"{item_id}.f0.txt"
 
-            audio, original_rate = read_audio(path)
-            if audio.ndim != 1 or not np.isfinite(audio).all():
-                raise ValueError(f"Invalid samples in {path}")
-            audio = resample(audio, original_rate, sample_rate)
-            if len(audio) / sample_rate < min_duration:
-                continue
-            if normalize_peak is not None:
-                peak = float(np.max(np.abs(audio), initial=0))
-                if peak > 0:
-                    audio = audio * (normalize_peak / peak)
-            statistics = audio_statistics(audio, sample_rate)
-            if f0_method == "sidecar":
-                sidecar = path.with_suffix(".pv")
-                if not sidecar.is_file():
-                    raise FileNotFoundError(f"F0 sidecar is missing: {sidecar}")
-                f0 = np.loadtxt(sidecar, dtype=np.float32, ndmin=1)
-                if not np.isfinite(f0).all() or np.any(f0 < 0):
-                    raise ValueError(f"Invalid F0 values in {sidecar}")
-                backend = "sidecar-pv"
-            else:
-                f0, backend = estimate_f0(
-                    audio, sample_rate, f0_floor, f0_ceiling, method=f0_method
+                audio, original_rate = read_audio(path)
+                if audio.ndim != 1 or not np.isfinite(audio).all():
+                    raise ValueError(f"Invalid samples in {path}")
+                audio = resample(audio, original_rate, sample_rate)
+                if len(audio) / sample_rate < min_duration:
+                    skipped_too_short.append(relative_source)
+                    continue
+                if normalize_peak is not None:
+                    peak = float(np.max(np.abs(audio), initial=0))
+                    if peak > 0:
+                        audio = audio * (normalize_peak / peak)
+                statistics = audio_statistics(audio, sample_rate)
+                if f0_method == "sidecar":
+                    sidecar = path.with_suffix(".pv")
+                    if not sidecar.is_file():
+                        raise FileNotFoundError(f"F0 sidecar is missing: {sidecar}")
+                    f0 = np.loadtxt(sidecar, dtype=np.float32, ndmin=1)
+                    if not np.isfinite(f0).all() or np.any(f0 < 0):
+                        raise ValueError(f"Invalid F0 values in {sidecar}")
+                    # Matches the 5 ms hop lightning.py assumes when upsampling F0.
+                    f0_hop_seconds = 0.005
+                    audio_seconds = len(audio) / sample_rate
+                    sidecar_seconds = len(f0) * f0_hop_seconds
+                    if abs(audio_seconds - sidecar_seconds) > max(0.1, 2 * f0_hop_seconds):
+                        expected_frames = audio_seconds / f0_hop_seconds
+                        raise ValueError(
+                            f"F0 sidecar frame count does not match audio duration in "
+                            f"{sidecar}: expected ~{expected_frames:.1f} frames "
+                            f"({audio_seconds:.3f}s audio) but got {len(f0)} frames "
+                            f"({sidecar_seconds:.3f}s) at a {f0_hop_seconds * 1000:.0f} ms hop"
+                        )
+                    backend = "sidecar-pv"
+                else:
+                    f0, backend = estimate_f0(
+                        audio, sample_rate, f0_floor, f0_ceiling, method=f0_method
+                    )
+                voiced = f0[f0 > 0]
+                write_wav(staging / relative_audio, audio, sample_rate)
+                (staging / relative_f0).parent.mkdir(parents=True, exist_ok=True)
+                np.savetxt(staging / relative_f0, f0, fmt="%.5f")
+                records.append(
+                    DatasetRecord(
+                        id=item_id,
+                        split=split,
+                        audio_path=relative_audio.as_posix(),
+                        f0_path=relative_f0.as_posix(),
+                        source_path=relative_source,
+                        source_sha256=source_hash,
+                        sample_rate=sample_rate,
+                        samples=len(audio),
+                        duration_s=statistics["duration_s"],
+                        peak=statistics["peak"],
+                        rms_dbfs=statistics["rms_dbfs"],
+                        clipped_fraction=statistics["clipped_fraction"],
+                        dc_offset=statistics["dc_offset"],
+                        f0_backend=backend,
+                        median_f0_hz=float(np.median(voiced)) if voiced.size else 0.0,
+                        voiced_fraction=float(np.mean(f0 > 0)),
+                    )
                 )
-            voiced = f0[f0 > 0]
-            write_wav(staging / relative_audio, audio, sample_rate)
-            (staging / relative_f0).parent.mkdir(parents=True, exist_ok=True)
-            np.savetxt(staging / relative_f0, f0, fmt="%.5f")
-            records.append(
-                DatasetRecord(
-                    id=item_id,
-                    split=split,
-                    audio_path=relative_audio.as_posix(),
-                    f0_path=relative_f0.as_posix(),
-                    source_path=path.relative_to(source).as_posix(),
-                    source_sha256=source_hash,
-                    sample_rate=sample_rate,
-                    samples=len(audio),
-                    duration_s=statistics["duration_s"],
-                    peak=statistics["peak"],
-                    rms_dbfs=statistics["rms_dbfs"],
-                    clipped_fraction=statistics["clipped_fraction"],
-                    dc_offset=statistics["dc_offset"],
-                    f0_backend=backend,
-                    median_f0_hz=float(np.median(voiced)) if voiced.size else 0.0,
-                    voiced_fraction=float(np.mean(f0 > 0)),
-                )
-            )
+            except Exception as error:
+                # One corrupt/mismatched file should not discard the work already
+                # done on every other file in the source tree.
+                skipped_invalid.append({"file": relative_source, "error": str(error)})
         if not records:
-            raise ValueError("All audio files were shorter than min_duration")
+            raise ValueError(
+                f"No usable audio files below {source}: {len(skipped_too_short)} too short, "
+                f"{len(skipped_invalid)} invalid/unreadable"
+            )
         manifest = DatasetManifest(
             root=staging,
             records=records,
@@ -256,6 +281,7 @@ def prepare_dataset(
                 "tool": "aris",
                 "python": sys.version.split()[0],
                 "platform": platform.platform(),
+                "skipped": {"invalid": skipped_invalid, "too_short": skipped_too_short},
             },
         )
         manifest.metadata["dataset_fingerprint"] = manifest.fingerprint
@@ -324,14 +350,18 @@ def validate_manifest(manifest: DatasetManifest) -> list[str]:
     return errors
 
 
-def summarize(records: Iterable[DatasetRecord]) -> dict:
-    """Aggregate record counts, duration, splits, and quality warnings."""
+def summarize(records: Iterable[DatasetRecord], skipped: Optional[dict] = None) -> dict:
+    """Aggregate record counts, duration, splits, and quality warnings.
+
+    ``skipped`` (see ``prepare_dataset``'s ``metadata["skipped"]``) adds a
+    ``skipped`` key with per-reason counts when provided.
+    """
     records = list(records)
     by_split = {
         split: sum(record.split == split for record in records)
         for split in ("train", "validation", "test")
     }
-    return {
+    result = {
         "files": len(records),
         "duration_s": sum(record.duration_s for record in records),
         "splits": by_split,
@@ -339,3 +369,9 @@ def summarize(records: Iterable[DatasetRecord]) -> dict:
         "clipped_files": sum(record.clipped_fraction > 0 for record in records),
         "unvoiced_files": sum(record.voiced_fraction == 0 for record in records),
     }
+    if skipped is not None:
+        result["skipped"] = {
+            reason: (len(entries) if isinstance(entries, list) else entries)
+            for reason, entries in skipped.items()
+        }
+    return result

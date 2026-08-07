@@ -75,7 +75,12 @@ recordings/
    默认 `auto` 在未安装 WORLD 时退回自相关法。
 3. 汉语声调等对 F0 敏感的研究，推荐先用 [RMVPE](https://github.com/Dream-High/RMVPE)
    或 Praat 提取更可靠的音高轨迹，保存为与每条 WAV 同名的 `.pv` 文件，
-   再用 `--f0-method sidecar` 读入。
+   再用 `--f0-method sidecar` 读入。`.pv` 是纯文本格式：每行一个浮点数，
+   每行对应固定 5 ms 的一帧，`0.0` 表示无声帧，正数表示该帧 F0（Hz）。
+   注意 Praat 默认的 pitch time step 不是 5 ms，无声帧标的也是
+   `--undefined--` 而不是 `0`——从 Praat 导出后要重采样到 5 ms 网格、把
+   `--undefined--` 换成 `0.0`，才能喂给 `prepare`。帧数和音频时长对不上
+   时，`prepare` 现在会直接报错，不会静默错位。
 4. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。
 5. 手头没有录音时，可用 `.venv/bin/aris fetch-corpus data/arctic` 下载
    约 30 分钟的公开语料 CMU ARCTIC 试跑全流程；下载完成后用
@@ -104,6 +109,10 @@ recordings/
 4. 在 Slurm 集群上，`init-experiment` 已生成可直接 `sbatch` 提交的
    `train.slurm`；集群参数（partition、GPU 类型等）可用 `init-experiment`
    的选项调整，提交前按你的集群补上 CUDA module。没有集群则忽略它。
+5. 新建的实验目录是可移动的：把 `init-experiment` 生成的实验目录和它
+   对应的数据集目录一起搬到别处（保持相对位置不变），在任意工作目录下
+   `train`/`synthesize`/`manipulate` 依然能找到数据集。已有的旧实验
+   目录（比如前面下载的 demo）仍按原路径解析，不受影响。
 
 ## 4. 重建（推理）
 
@@ -136,8 +145,13 @@ WAV，附带记录生成方式的 JSON 元数据。可用参数与范围：
 | `output_gain_db` | `-24..12` | 整体能量（dB） | ✓ | ✓ | ✓ |
 | `noise_gain_db` | `-24..24` | 噪声成分（dB） | ✓ | ✓ | ✓ |
 | `glottal_rd_scale` | `0.5..2.0` | 声源形状 `R_d`（气声–紧嗓） | — | ✓ | ✓ |
-| `f1_scale` / `f2_scale` | `0.7..1.3` | 第一/第二共振峰 | — | — | ✓ |
+| `f1_scale` / `f2_scale` | `0.7..1.3` | 第一/第二共振峰（比例） | — | — | ✓ |
+| `f1_hz` / `f2_hz` | `150..1300` / `600..3200` | 第一/第二共振峰（绝对 Hz） | — | — | ✓ |
 | `tilt_alpha_delta` | `-0.25..0.25` | 谱倾斜 | — | — | ✓ |
+
+`f1_hz` / `f2_hz` 把共振峰设到一个绝对 Hz 值，适合搭建跨条目一致的 Hz
+连续统；`f1_scale` / `f2_scale` 按比例整体平移、保留每帧原有轮廓，更
+适合保留自然语调形状的操控。两者不能对同一共振峰同时使用。
 
 各参数的听感效果可在 [Demo 页面](https://n1r.github.io/ARIS_nsf/)直接
 试听；参数含义与条件设计详见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。

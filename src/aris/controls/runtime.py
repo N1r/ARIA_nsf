@@ -15,6 +15,15 @@ import torch
 
 _LOG_10_OVER_20 = math.log(10.0) / 20.0
 
+# Discrepancy tolerance between a requested formant ratio and the ratio actually
+# achieved after scale_formants clamps to the model's static frequency range.
+_FORMANT_CLAMP_TOLERANCE = 0.01
+
+# f1_hz/f2_hz write an absolute target frequency; unlike the ratio controls
+# there is no numeric value that means "no-op", so presence alone makes them
+# active rather than comparing against a default.
+_ABSOLUTE_FORMANT_CONTROLS = frozenset({"f1_hz", "f2_hz"})
+
 
 def active_runtime_controls(controls: Mapping[str, float]) -> dict[str, float]:
     """Return non-default controls that must be applied inside prediction."""
@@ -26,14 +35,20 @@ def active_runtime_controls(controls: Mapping[str, float]) -> dict[str, float]:
         "f2_scale": 1.0,
         "tilt_alpha_delta": 0.0,
     }
-    unknown = sorted(set(controls) - set(defaults))
+    unknown = sorted(set(controls) - set(defaults) - _ABSOLUTE_FORMANT_CONTROLS)
     if unknown:
         raise ValueError("Unknown runtime control(s): " + ", ".join(unknown))
-    return {
+    active = {
         name: float(value)
         for name, value in controls.items()
         if name in defaults and not math.isclose(float(value), defaults[name], abs_tol=1e-12)
     }
+    active.update(
+        (name, float(value))
+        for name, value in controls.items()
+        if name in _ABSOLUTE_FORMANT_CONTROLS
+    )
+    return active
 
 
 def runtime_capabilities(pl_module: Any) -> set[str]:
@@ -56,6 +71,8 @@ def runtime_capabilities(pl_module: Any) -> set[str]:
         capabilities.update({"f1_scale", "f2_scale"})
         if bool(getattr(end_filter, "use_tilt", False)):
             capabilities.add("tilt_alpha_delta")
+    if callable(getattr(end_filter, "set_formant_params", None)):
+        capabilities.update({"f1_hz", "f2_hz"})
     return capabilities
 
 
@@ -67,6 +84,9 @@ class DecoderControlHook:
         self.handle = None
         self.calls = 0
         self.capabilities: set[str] = set()
+        # Per-formant achieved-vs-requested discrepancy, accumulated across all
+        # decoder calls; see formant_tracking_summary() for the reported shape.
+        self.formant_tracking: dict[str, dict[str, float]] = {}
 
     @property
     def decoder_controls(self) -> dict[str, float]:
@@ -99,6 +119,24 @@ class DecoderControlHook:
         if self.decoder_controls and self.calls == 0:
             raise RuntimeError("Decoder controls were requested but the decoder hook never ran")
 
+    def formant_tracking_summary(self) -> dict[str, dict[str, float]]:
+        """Achieved-vs-requested formant-scale discrepancy, for metadata only.
+
+        scale_formants clamps its per-frame Hz target to the model's static
+        frequency range with no record of it; this reports, per formant, the
+        worst absolute Hz miss and the fraction of frames the clamp touched.
+        """
+        summary: dict[str, dict[str, float]] = {}
+        for key, stats in self.formant_tracking.items():
+            frames_total = stats["frames_total"]
+            summary[key] = {
+                "max_abs_hz_discrepancy": stats["max_abs_hz_discrepancy"],
+                "clamped_frame_fraction": (
+                    stats["clamped_frames"] / frames_total if frames_total else 0.0
+                ),
+            }
+        return summary
+
     def _apply(self, module: Any, args: tuple[Any, ...], kwargs: dict[str, Any]):
         changed = dict(kwargs)
         if "noise_gain_db" in self.decoder_controls:
@@ -116,15 +154,66 @@ class DecoderControlHook:
             "f1_scale",
             "f2_scale",
             "tilt_alpha_delta",
+            "f1_hz",
+            "f2_hz",
         } & self.decoder_controls.keys()
         if formant_names:
+            end_filter = getattr(module, "end_filter", None)
+            end_filter_value = changed.get("end_filter_params")
             changed["end_filter_params"] = _scale_formants(
-                changed.get("end_filter_params"),
-                getattr(module, "end_filter", None),
+                end_filter_value,
+                end_filter,
                 self.decoder_controls,
+            )
+            self._record_formant_tracking(
+                end_filter_value, changed["end_filter_params"], end_filter
             )
         self.calls += 1
         return args, changed
+
+    def _record_formant_tracking(
+        self, before_value: Any, after_value: Any, end_filter: Any
+    ) -> None:
+        ratio_controls = {"f1_scale", "f2_scale"} & self.decoder_controls.keys()
+        get_formant_params = getattr(end_filter, "get_formant_params", None)
+        if not ratio_controls or not callable(get_formant_params):
+            return
+        before_ctrl, _ = _first_parameter(before_value, "end_filter_params")
+        after_ctrl, _ = _first_parameter(after_value, "end_filter_params")
+        before_raw = (
+            before_ctrl.as_tensor()
+            if callable(getattr(before_ctrl, "as_tensor", None))
+            else before_ctrl
+        )
+        after_raw = (
+            after_ctrl.as_tensor()
+            if callable(getattr(after_ctrl, "as_tensor", None))
+            else after_ctrl
+        )
+        before_params = get_formant_params(before_raw)
+        after_params = get_formant_params(after_raw)
+        for index, scale_name in ((1, "f1_scale"), (2, "f2_scale")):
+            if scale_name not in ratio_controls:
+                continue
+            key = f"f{index}"
+            if key not in before_params or key not in after_params:
+                continue
+            requested_scale = self.decoder_controls[scale_name]
+            original_hz = before_params[key]
+            achieved_hz = after_params[key]
+            requested_hz = original_hz * requested_scale
+            achieved_ratio = achieved_hz / original_hz
+            discrepancy = (achieved_hz - requested_hz).abs()
+            clamped = (achieved_ratio - requested_scale).abs() > _FORMANT_CLAMP_TOLERANCE
+            running = self.formant_tracking.setdefault(
+                key, {"max_abs_hz_discrepancy": 0.0, "clamped_frames": 0, "frames_total": 0}
+            )
+            running["max_abs_hz_discrepancy"] = max(
+                running["max_abs_hz_discrepancy"],
+                float(discrepancy.max().detach().cpu()),
+            )
+            running["clamped_frames"] += int(clamped.sum().detach().cpu())
+            running["frames_total"] += int(clamped.numel())
 
 
 def _first_parameter(value: Any, name: str) -> tuple[Any, tuple[Any, ...]]:
@@ -165,16 +254,29 @@ def _scale_glottal_rd(value: Any, scale: float, oscillator: Any):
 
 def _scale_formants(value: Any, end_filter: Any, controls: Mapping[str, float]):
     ctrl, rest = _first_parameter(value, "end_filter_params")
-    scale_formants = getattr(end_filter, "scale_formants", None)
-    if not callable(scale_formants):
-        raise ValueError("Decoder end filter is not formant-controllable")
     raw = ctrl.as_tensor() if callable(getattr(ctrl, "as_tensor", None)) else ctrl
-    changed = scale_formants(
-        raw,
-        f1_scale=float(controls.get("f1_scale", 1.0)),
-        f2_scale=float(controls.get("f2_scale", 1.0)),
-        alpha_delta=float(controls.get("tilt_alpha_delta", 0.0)),
-    )
+    ratio_names = {"f1_scale", "f2_scale", "tilt_alpha_delta"} & controls.keys()
+    if ratio_names:
+        scale_formants = getattr(end_filter, "scale_formants", None)
+        if not callable(scale_formants):
+            raise ValueError("Decoder end filter is not formant-controllable")
+        raw = scale_formants(
+            raw,
+            f1_scale=float(controls.get("f1_scale", 1.0)),
+            f2_scale=float(controls.get("f2_scale", 1.0)),
+            alpha_delta=float(controls.get("tilt_alpha_delta", 0.0)),
+        )
+    hz_names = {"f1_hz", "f2_hz"} & controls.keys()
+    if hz_names:
+        set_formant_params = getattr(end_filter, "set_formant_params", None)
+        if not callable(set_formant_params):
+            raise ValueError("Decoder end filter does not support absolute formant targets")
+        raw = set_formant_params(
+            raw,
+            f1=controls.get("f1_hz"),
+            f2=controls.get("f2_hz"),
+        )
+    changed = raw
     if callable(getattr(ctrl, "new_tensor", None)):
         changed = ctrl.new_tensor(changed)
     return (changed, *rest)

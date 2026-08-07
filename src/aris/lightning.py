@@ -60,7 +60,9 @@ class ManifestSegmentDataset(Dataset):
         hop = record.sample_rate * 0.005
         positions = np.arange(len(f0)) * hop
         target = np.arange(offset, offset + self.segment_frames)
-        unvoiced = np.interp(target, positions, (f0 <= 0).astype(float), right=1) > 0
+        unvoiced = (
+            np.interp(target, positions, (f0 <= 0).astype(float), right=float(f0[-1] <= 0)) > 0
+        )
         interpolated = np.where(unvoiced, 0, np.interp(target, positions, f0))
         return segment.astype(np.float32), interpolated.astype(np.float32)
 
@@ -84,10 +86,14 @@ class ManifestInferenceDataset(Dataset):
             str(self.manifest.root / record.audio_path), dtype="float32", always_2d=True
         )
         audio = audio.mean(axis=1)
+        if sample_rate != record.sample_rate:
+            raise RuntimeError(f"Sample-rate drift in {record.audio_path}")
         f0 = np.loadtxt(self.manifest.root / record.f0_path, dtype=np.float32, ndmin=1)
         positions = np.arange(len(f0)) * sample_rate * 0.005
         target = np.arange(len(audio))
-        unvoiced = np.interp(target, positions, (f0 <= 0).astype(float), right=1) > 0
+        unvoiced = (
+            np.interp(target, positions, (f0 <= 0).astype(float), right=float(f0[-1] <= 0)) > 0
+        )
         interpolated = np.where(unvoiced, 0, np.interp(target, positions, f0) * self.f0_scale)
         return (
             audio.astype(np.float32),

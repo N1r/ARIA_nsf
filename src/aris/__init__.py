@@ -1,5 +1,10 @@
 """ARIS: reproducible voice analysis-by-synthesis workflows."""
 
+# Defined before the submodule imports below: manipulation.py and
+# controls/lightning.py import this back out of the (still-initializing)
+# package to stamp their metadata, which only resolves if it is set first.
+__version__ = "0.1.0"
+
 from .controls import (
     CONTROL_SPECS,
     ControlSpec,
@@ -35,4 +40,3 @@ __all__ = [
     "split_audio",
     "validate_manifest",
 ]
-__version__ = "0.1.0"

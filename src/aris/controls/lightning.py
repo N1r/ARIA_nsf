@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
@@ -12,11 +13,17 @@ import torchaudio
 from lightning import LightningModule, Trainer
 from lightning.pytorch.callbacks import BasePredictionWriter
 
+from .. import __version__
 from .runtime import DecoderControlHook
 from .specs import CONTROL_SPECS
 
 # Pitch is excluded: it is applied through F0 conditioning, not at render time.
 _RUNTIME_CONTROL_NAMES = frozenset(CONTROL_SPECS) - {"pitch_semitones"}
+
+# Individually-in-range controls can combine to clip a rendered file well past
+# what any single control's own range would suggest; warn rather than fail so
+# a phonetician who wants a scaled-back result is still told about it.
+_CLIPPING_WARNING_THRESHOLD = 0.001
 
 
 class ControlledPredictionWriter(BasePredictionWriter):
@@ -87,15 +94,24 @@ class ControlledPredictionWriter(BasePredictionWriter):
             encoding="PCM_S",
             bits_per_sample=16,
         )
+        samples = int(waveform.numel())
         self.files.append(
             {
                 "path": relative,
                 "peak_before_gain": float(waveform.abs().max().detach().cpu()),
                 "peak_after_gain_unclipped": float(scaled.abs().max().detach().cpu()),
                 "clipped_samples": clipped_samples,
-                "samples": int(waveform.numel()),
+                "samples": samples,
             }
         )
+        clipped_fraction = clipped_samples / samples if samples else 0.0
+        if clipped_fraction > _CLIPPING_WARNING_THRESHOLD:
+            print(
+                f"aris: WARNING {relative} clipped {clipped_fraction:.4%} of samples "
+                f"(threshold {_CLIPPING_WARNING_THRESHOLD:.2%}); requested controls "
+                "combined to exceed full scale",
+                file=sys.stderr,
+            )
 
     def on_predict_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         del trainer, pl_module
@@ -105,6 +121,7 @@ class ControlledPredictionWriter(BasePredictionWriter):
             samples = sum(item["samples"] for item in self.files)
             metadata = {
                 "schema_version": "1.0",
+                "aris_version": __version__,
                 "controls": self.controls,
                 "runtime_capabilities": sorted(self.control_hook.capabilities),
                 "decoder_control_calls": self.control_hook.calls,
@@ -112,6 +129,7 @@ class ControlledPredictionWriter(BasePredictionWriter):
                 "clipped_samples": clipped,
                 "samples": samples,
                 "clipped_fraction": clipped / samples if samples else 0.0,
+                "formant_tracking": self.control_hook.formant_tracking_summary(),
                 "files": self.files,
             }
             (self.output_dir / "_render.json").write_text(
