@@ -374,6 +374,28 @@ def parser() -> argparse.ArgumentParser:
     manipulation.add_argument(
         "--dry-run", action="store_true", help="print the render commands instead of running them"
     )
+
+    studio = commands.add_parser(
+        "studio",
+        help="launch a local web studio for manipulation design and A/B listening",
+    )
+    studio.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="local port to serve the studio on (default: %(default)s)",
+    )
+    studio.add_argument(
+        "--workspace",
+        type=Path,
+        default=Path("."),
+        help="directory scanned for experiments (default: current directory)",
+    )
+    studio.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="do not open a web browser automatically",
+    )
     return root
 
 
@@ -551,6 +573,13 @@ def main(argv=None) -> int:
                 )
             else:
                 print(f"Manipulations: {args.output}")
+            return 0
+        if args.command == "studio":
+            # Imported lazily: gradio is an optional extra and must not be
+            # required for any other subcommand.
+            from .studio import launch_studio
+
+            launch_studio(args.workspace, port=args.port, open_browser=not args.no_browser)
             return 0
     except (
         FileNotFoundError,

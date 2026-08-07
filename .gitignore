@@ -35,6 +35,9 @@ swanlog/
 # Generated reports may contain absolute provenance.
 report.html
 
+# aris studio render outputs (workspace-local, reproducible from manipulation.json).
+studio_output/
+
 # Demo site / LaTeX
 .DS_Store
 *.aux

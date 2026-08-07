@@ -156,7 +156,23 @@ WAV，附带记录生成方式的 JSON 元数据。可用参数与范围：
 各参数的听感效果可在 [Demo 页面](https://n1r.github.io/ARIS_nsf/)直接
 试听；参数含义与条件设计详见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。
 
-## 6. 命令一览
+## 6. 浏览器工作台（Studio）
+
+不想在命令行里拼 `--variant` 字符串的话，可以在浏览器里完成条件设计和
+试听对比：
+
+```bash
+source scripts/project_env.sh && uv sync --extra studio   # 首次使用先装 studio 依赖
+.venv/bin/aris studio        # 启动后自动打开 http://127.0.0.1:8765/
+```
+
+页面按模型自动生成参数滑杆，支持命名条件与连续统生成器（比如 F1 从
+400 到 600 Hz 分五档，一键生成整组刺激）、一键渲染、原始/变体 A/B
+试听，以及时间轴对齐的波形与语谱图对比；削波或共振峰到达模型边界时
+会以红色标出。渲染结果保存在 `studio_output/` 下，与命令行 `manipulate`
+的输出和元数据格式完全一致。
+
+## 7. 命令一览
 
 ```text
 aris doctor             检查音频与训练依赖是否就绪
@@ -169,9 +185,10 @@ aris train              启动训练
 aris controls           列出模型支持的操控参数
 aris synthesize         用 checkpoint 重建录音
 aris manipulate         生成操控刺激
+aris studio             启动浏览器工作台
 ```
 
-## 7. 引用
+## 8. 引用
 
 机器可读的引用信息见 [CITATION.cff](CITATION.cff)。
 
@@ -187,7 +204,7 @@ ARIS 的声码器实现源自 GOLF：
 
 代码以 MIT 协议发布，见 [LICENSE](LICENSE)。
 
-## 8. 联系
+## 9. 联系
 
 遇到问题或有建议，欢迎提 [Issue](https://github.com/N1r/ARIS_nsf/issues)，
 也可以邮件联系 <dingyr@hum.leidenuniv.nl>（Leiden University）。

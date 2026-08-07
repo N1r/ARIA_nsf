@@ -181,7 +181,25 @@ Hear what each parameter does on the [demo page](https://n1r.github.io/ARIS_nsf/
 parameter semantics and condition design are covered in the
 [Manipulation guide (Chinese)](docs/MANIPULATION_ZH.md).
 
-## 6. Command reference
+## 6. Browser workbench (Studio)
+
+If you would rather not assemble `--variant` strings on the command line,
+you can design conditions and compare results in the browser:
+
+```bash
+source scripts/project_env.sh && uv sync --extra studio   # install the studio extra once
+.venv/bin/aris studio        # opens http://127.0.0.1:8765/
+```
+
+The page generates parameter sliders for your model, supports named
+conditions and a continuum builder (e.g. F1 from 400 to 600 Hz in five
+steps, one click for the whole stimulus set), one-click rendering,
+original/variant A/B listening, and time-aligned waveform and
+spectrogram comparison; clipping or formants hitting the model's range
+edge are flagged in red. Renders land in `studio_output/` with exactly
+the same output and metadata format as the command-line `manipulate`.
+
+## 7. Command reference
 
 ```text
 aris doctor             check audio and training dependencies
@@ -194,9 +212,10 @@ aris train              start training
 aris controls           list manipulation parameters supported by a model
 aris synthesize         reconstruct recordings from a checkpoint
 aris manipulate         generate manipulated stimuli
+aris studio             launch the browser workbench
 ```
 
-## 7. Citation
+## 8. Citation
 
 Machine-readable citation metadata is in [CITATION.cff](CITATION.cff).
 
@@ -213,7 +232,7 @@ source-filter models:
 
 Code is released under the MIT license; see [LICENSE](LICENSE).
 
-## 8. Contact
+## 9. Contact
 
 If you run into problems or have suggestions, feel free to open an
 [issue](https://github.com/N1r/ARIS_nsf/issues), or email
