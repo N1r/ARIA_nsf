@@ -2,6 +2,10 @@
 
 [简体中文](README.md) | **English**
 
+[![Listening demo](https://img.shields.io/badge/demo-listen-blue)](https://n1r.github.io/ARIS_nsf/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](pyproject.toml)
+
 ## 0. Introduction
 
 ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable
@@ -16,6 +20,16 @@ paired experimental stimuli.
 No dedicated compute is required: training runs on an ordinary gaming GPU
 (e.g. an RTX 4060) in a few hours for a few tens of minutes of data;
 reconstruction and stimulus generation need no GPU and run on a regular CPU.
+
+There are three ways in, by increasing commitment:
+
+1. **Zero install**: open the [listening demo](https://n1r.github.io/ARIS_nsf/)
+   and drag one parameter at a time to hear its effect.
+2. **About half an hour**: install the dependencies, download the
+   pretrained model, and run reconstruction and manipulation once
+   (Section 1).
+3. **The full pipeline**: take your own recordings through
+   data preparation → training → stimulus generation (Sections 2–5).
 
 ## 1. Installing dependencies
 
@@ -37,6 +51,11 @@ source scripts/project_env.sh      # enter the project environment
 Once installed, all commands are invoked as `.venv/bin/aris`; whenever
 you are unsure about usage, every command supports `--help`.
 
+Each `doctor` line starting with `[OK]` means that dependency is ready;
+a `[--]` line means it is missing and includes the install command to
+fix it. Once the training rows (`torch`, `lightning`) show `[OK]`, you
+are ready for the steps below.
+
 **Start with a pretrained model.** We provide a trained model (Mandarin
 female speaker, 16 kHz) with a matching example dataset; after
 downloading and extracting it, you can run reconstruction and
@@ -52,6 +71,12 @@ tar -xzf aris_f024_demo.tar.gz    # extract in the repository root; creates demo
   demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
   --variant 'f1_up:f1_scale=1.2'
 ```
+
+What success looks like: reconstructed WAV files appear under
+`out/demo_recon/`, and `out/demo_stimuli/` contains one set of WAVs per
+condition plus JSON metadata recording how they were generated. Listen
+to the `f1_up` variant against the reconstruction — the raised first
+formant should be clearly audible.
 
 ## 2. Preparing data
 

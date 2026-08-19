@@ -2,6 +2,10 @@
 
 **简体中文** | [English](README_EN.md)
 
+[![试听 Demo](https://img.shields.io/badge/demo-%E8%AF%95%E5%90%AC-blue)](https://n1r.github.io/ARIS_nsf/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](pyproject.toml)
+
 ## 0. 简介
 
 ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研究者
@@ -13,6 +17,15 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 
 不需要专门的计算设备：训练在一张普通游戏显卡（如 RTX 4060）上即可完成，
 几十分钟数据约训练数小时；重建与刺激生成不需要显卡，普通电脑的 CPU 就能运行。
+
+按投入程度，有三种上手方式：
+
+1. **零安装**：直接打开[试听 Demo](https://n1r.github.io/ARIS_nsf/)，
+   逐个拖动参数听效果。
+2. **约半小时**：安装依赖，下载现成的预训练模型，跑一遍重建与参数操控
+   （见第 1 节）。
+3. **完整流程**：用自己的录音走完 数据准备 → 训练 → 生成刺激
+   （见第 2–5 节）。
 
 ## 1. 安装依赖
 
@@ -34,6 +47,10 @@ source scripts/project_env.sh      # 进入项目环境
 装好之后，所有命令都通过 `.venv/bin/aris` 调用；不确定用法时，
 每个命令都支持 `--help`。
 
+`doctor` 的每一行以 `[OK]` 开头表示该依赖就绪；`[--]` 行表示缺失，并附
+对应的安装命令。训练相关行（`torch`、`lightning`）为 `[OK]` 即可开始
+后续步骤。
+
 **先用现成模型试一试。** 我们提供了一个训练好的模型（普通话女声，
 16 kHz）及配套示例数据；下载解压后即可直接运行重建与参数操控，
 了解各步骤的输出形式：
@@ -48,6 +65,10 @@ tar -xzf aris_f024_demo.tar.gz    # 在仓库根目录解压，得到 demo_f024/
   demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
   --variant 'f1_up:f1_scale=1.2'
 ```
+
+成功的标志：`out/demo_recon/` 下出现重建的 WAV 文件，`out/demo_stimuli/`
+下出现每个条件一套的 WAV 及记录生成方式的 JSON 元数据。对听 `f1_up`
+变体和重建原声，能听出第一共振峰升高带来的音色变化。
 
 ## 2. 准备数据
 
