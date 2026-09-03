@@ -81,7 +81,7 @@ Open the Colab link above, select a **T4 GPU** runtime, and choose
 the project environment from `uv.lock`, and executes ARIS through `uv run aris ...`.
 Plots and audio players remain in the Colab kernel, so changes to Colab's system Python
 do not affect ARIS and no runtime restart is needed. For a Colab Tesla T4, the tutorial
-uses batch size 32, 2,000 steps, and a `4e-4` learning rate, then uses that checkpoint
+uses batch size 32, 1,500 steps, and a `4e-4` learning rate, then uses that checkpoint
 for reconstruction and manipulation. The measured training allocation is about 2.2 GB,
 leaving ample T4 headroom. This is enough to hear an initial result, but it is not
 evidence of convergence or research-ready quality; the release's 40,000-step checkpoint

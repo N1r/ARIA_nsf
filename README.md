@@ -77,7 +77,7 @@ uv run aris doctor
 **运行时 → 全部运行**。教程同样全程使用 uv：uv 会安装 Python 3.11、按
 `uv.lock` 创建项目环境，并通过 `uv run aris ...` 执行 ARIS。绘图和音频播放器
 保留在 Colab kernel 中，因此不受 Colab 系统 Python 版本变化影响，也无需重启运行时。
-教程针对 Colab Tesla T4 使用 batch size 32、2,000 步和 `4e-4` 学习率，
+教程针对 Colab Tesla T4 使用 batch size 32、1,500 步和 `4e-4` 学习率，
 再用该 checkpoint 完成重建与操控。
 这通常足以在小型单说话人语料上得到有意义的可听结果，但不代表模型已经收敛或可直接用于正式实验；
 实测该 batch 的训练显存约 2.2 GB，能为 T4 留出充分余量。Release 中的示例 checkpoint
