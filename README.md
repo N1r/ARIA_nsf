@@ -9,10 +9,7 @@
 
 ## 0. 简介
 
-ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研究者
-准备的可微分析合成工具：用单说话人录音训练 DDSP/GOLF 声码器，在同一条
-重建语音上施加可记录的 F0、数字增益、随机源、声门源形状（`R_d`）或声道
-共振（F1/F2、谱倾斜）控制，批量生成配对或连续统刺激。
+ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学与言语科学研究的可微分析合成工具。基于神经源–滤波器（Source-Filter）声码器架构，ARIS 能够在保持说话人音色与自然度的前提下，对基频轨迹（F0）、共振峰（F1/F2）、声门波形态（`R_d`）及谱倾斜等声学线索进行精准、正交的解耦调控，用于高效、可复现地批量生成知觉实验所需的成对刺激与声学连续统。
 
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
 - 交互教程：[`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)

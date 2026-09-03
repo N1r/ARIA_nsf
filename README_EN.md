@@ -9,11 +9,7 @@
 
 ## 0. Introduction
 
-ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable
-analysis-by-synthesis tool for phonetics research. Train a DDSP/GOLF vocoder on
-single-speaker recordings, then apply recorded controls to F0, post-synthesis waveform
-gain, stochastic-source gain, glottal-source shape (`R_d`), or vocal-tract resonances (F1/F2 and spectral
-tilt) on the same reconstruction to generate paired stimuli or continua.
+ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable analysis-by-synthesis tool designed for phonetics and speech science. Built upon a differentiable source-filter vocoder architecture, ARIS enables precise, orthogonal manipulation of fundamental frequency (F0), vocal-tract formants (F1/F2), glottal pulse shape (`R_d`), and spectral tilt while preserving speaker identity and naturalness, facilitating reproducible batch generation of paired stimuli and acoustic continua for perceptual experiments.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
 - Tutorial notebook: [`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
