@@ -2,6 +2,7 @@
 
 [简体中文](README.md) | **English**
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 [![Listening demo](https://img.shields.io/badge/demo-listen-blue)](https://n1r.github.io/ARIS_nsf/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](pyproject.toml)
@@ -16,60 +17,57 @@ tilt) one at a time — with everything else held fixed — to batch-generate
 paired experimental stimuli.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
+- **Interactive Google Colab Notebook**: Click the [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb) badge above to run the complete workflow on free cloud GPUs with zero local setup.
 
-No dedicated compute is required: training runs on an ordinary gaming GPU
-(e.g. an RTX 4060) in a few hours for a few tens of minutes of data;
-reconstruction and stimulus generation need no GPU and run on a regular CPU.
+No dedicated high-performance computing cluster is required: training runs on a standard gaming GPU
+(e.g. RTX 4060 or Colab T4) in a few hours for a few tens of minutes of data;
+reconstruction and stimulus generation require no GPU at all and run quickly on a regular CPU.
 
-There are three ways in, by increasing commitment:
+There are four ways in, by increasing commitment:
 
-1. **Zero install**: open the [listening demo](https://n1r.github.io/ARIS_nsf/)
-   and drag one parameter at a time to hear its effect.
-2. **About half an hour**: install the dependencies, download the
-   pretrained model, and run reconstruction and manipulation once
-   (Section 1).
-3. **The full pipeline**: take your own recordings through
-   data preparation → training → stimulus generation (Sections 2–5).
+1. **Google Colab Cloud Workflow (Zero local setup, recommended for beginners)**: Open the [Colab Tutorial](notebooks/ARIS_Tutorial_and_Workflow.ipynb) to run data segmentation, feature extraction, training, synthesis, and the interactive web studio directly in your browser.
+2. **Zero install**: Open the [listening demo](https://n1r.github.io/ARIS_nsf/) and drag parameters to audition acoustic effects.
+3. **Local GUI Workbench (Two commands, mouse-driven)**: Run `uv sync --all-extras && uv run aris studio` to launch a visual slider workspace in your browser (similar to Praat).
+4. **The full pipeline**: Take your own recordings through data preparation → training → stimulus generation (Sections 2–5).
 
-## 1. Installing dependencies
+> ### 💡 Note for Phonetics and Linguistics Researchers (Little CS Background?)
+> If you are accustomed to Praat, R, or SPSS and unfamiliar with command-line environments or Python:
+> - **To generate stimuli for perception experiments**: Use the **Google Colab Notebook** or run `uv run aris studio` locally. A web interface opens automatically where you can select recordings, adjust pitch or formant sliders, listen immediately, and download WAV files.
+> - **To train a model on your own voice recordings**: Put your WAV files into a folder and run the 4 straightforward commands in Sections 2–4. ARIS automatically handles silence splitting, F0 tracking, validation, and training.
 
-A note on platforms first: the commands below are meant for a **Linux or
-macOS terminal**. On Windows, we recommend installing
-[WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Microsoft's
-official Linux subsystem — a single `wsl --install` command sets it up)
-and following the steps inside the WSL terminal.
+## 1. Installation & Quickstart
 
-All you need on your machine is [uv](https://docs.astral.sh/uv/) (a
-single-file Python environment manager). From the repository root:
+Platforms: Linux, macOS, or Windows (via [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
+
+### Recommended Installation (Using uv)
+
+All dependencies are defined in `pyproject.toml` and locked in `uv.lock`. With [uv](https://docs.astral.sh/uv/) installed, a single command sets up a synchronized Python 3.11 environment with all audio, training, and web studio dependencies in seconds:
 
 ```bash
-source scripts/project_env.sh      # enter the project environment
-./scripts/setup_project_env.sh     # install all dependencies (inside the repo, system untouched)
-.venv/bin/aris doctor              # check audio and training dependencies
+# 1. Create virtual environment and sync all extras:
+uv sync --all-extras
+
+# 2. Run diagnostic check (via uv run, no need to manually activate):
+uv run aris doctor
 ```
 
-Once installed, all commands are invoked as `.venv/bin/aris`; whenever
-you are unsure about usage, every command supports `--help`.
+> **Tip**: If you prefer an activated shell, run `source .venv/bin/activate` to use `aris doctor` and other CLI tools directly. Standard `pip` installation via `pip install -e ".[all]"` is also supported.
 
-Each `doctor` line starting with `[OK]` means that dependency is ready;
-a `[--]` line means it is missing and includes the install command to
-fix it. Once the training rows (`torch`, `lightning`) show `[OK]`, you
-are ready for the steps below.
+`aris doctor` verifies your Python environment, audio packages, CUDA toolkit, and GPU hardware. Once ready, proceed below!
 
-**Start with a pretrained model.** We provide a trained model (Mandarin
-female speaker, 16 kHz) with a matching example dataset; after
-downloading and extracting it, you can run reconstruction and
-manipulation directly and see what each step produces:
+**Try the Pretrained Model Immediately:**
+The repository bundles a trained model (Mandarin female speaker, 16 kHz) and test recordings (if missing locally, download the official release zip: `curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.zip && unzip -q aris_f024_demo.zip`):
 
 ```bash
-curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
-tar -xzf aris_f024_demo.tar.gz    # extract in the repository root; creates demo_f024/
+# 1. Reconstruct baseline audio:
+uv run aris synthesize demo_f024/experiment demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
 
-.venv/bin/aris synthesize demo_f024/experiment \
-  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
-.venv/bin/aris manipulate demo_f024/experiment \
-  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
-  --variant 'f1_up:f1_scale=1.2'
+# 2. Generate acoustic manipulation stimuli:
+uv run aris manipulate demo_f024/experiment demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
+  --variant 'f1_up:f1_scale=1.2' \
+  --variant 'f1_down:f1_scale=0.85' \
+  --variant 'pitch_down:pitch_semitones=-4' \
+  --variant 'breathy:glottal_rd_scale=1.6'
 ```
 
 What success looks like: reconstructed WAV files appear under
@@ -212,8 +210,11 @@ If you would rather not assemble `--variant` strings on the command line,
 you can design conditions and compare results in the browser:
 
 ```bash
-source scripts/project_env.sh && uv sync --extra studio   # install the studio extra once
-.venv/bin/aris studio        # opens http://127.0.0.1:8765/
+# Launch locally (opens http://127.0.0.1:8765/):
+aris studio
+
+# Launch with a public shareable URL (ideal for Google Colab and remote servers):
+aris studio --share
 ```
 
 The page generates parameter sliders for your model, supports named
@@ -224,10 +225,52 @@ spectrogram comparison; clipping or formants hitting the model's range
 edge are flagged in red. Renders land in `studio_output/` with exactly
 the same output and metadata format as the command-line `manipulate`.
 
-## 7. Command reference
+## 7. Python API (Jupyter / Colab / Scripts)
+
+In addition to the CLI, ARIS provides a high-level Python API designed for notebooks and automated scripts:
+
+```python
+import aris
+
+# 1. Segment audio & prepare dataset manifest
+aris.split("recordings/", "segments/", mode="silence")
+manifest = aris.prepare("segments/audio", "data/my_voice", sample_rate=16000)
+
+# 2. Validate manifest integrity
+errors = aris.validate("data/my_voice")
+assert not errors
+
+# 3. Create experiment and run training
+exp_dir = aris.init_experiment("data/my_voice", "experiments/my_voice", model="aria-golf")
+aris.train(exp_dir)
+
+# 4. Reconstruct speech (inference)
+aris.synthesize(
+    exp_dir,
+    "experiments/my_voice/runs/checkpoints/last.ckpt",
+    "out/recon",
+)
+
+# 5. Generate acoustic manipulation stimuli
+aris.manipulate(
+    exp_dir,
+    "experiments/my_voice/runs/checkpoints/last.ckpt",
+    "out/stimuli",
+    variants=[
+        "f1_up:f1_scale=1.2",
+        "pitch_down:pitch_semitones=-4",
+        "breathy:glottal_rd_scale=1.6",
+    ],
+)
+
+# 6. Launch interactive Gradio Web Studio inside Jupyter / Colab
+aris.launch_studio(workspace=".", share=True)
+```
+
+## 8. Command reference
 
 ```text
-aris doctor             check audio and training dependencies
+aris doctor             check audio, training dependencies, CUDA, and GPU hardware
 aris fetch-corpus       download the CMU ARCTIC example corpus
 aris split              segment continuous recordings
 aris prepare            resample, extract F0, split the dataset
@@ -237,7 +280,7 @@ aris train              start training
 aris controls           list manipulation parameters supported by a model
 aris synthesize         reconstruct recordings from a checkpoint
 aris manipulate         generate manipulated stimuli
-aris studio             launch the browser workbench
+aris studio             launch the browser workbench (supports --share for public URL)
 ```
 
 ## 8. Citation

@@ -506,6 +506,38 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "diffsptk", version = "2.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "diffsptk", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "gradio", version = "4.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "gradio", version = "5.50.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "jsonargparse", version = "4.49.0", source = { registry = "https://pypi.org/simple" }, extra = ["signatures"], marker = "python_full_version < '3.10'" },
+    { name = "jsonargparse", version = "4.50.0", source = { registry = "https://pypi.org/simple" }, extra = ["signatures"], marker = "python_full_version >= '3.10'" },
+    { name = "kazane" },
+    { name = "lightning", version = "2.6.0", source = { registry = "https://pypi.org/simple" }, extra = ["pytorch-extra"], marker = "python_full_version < '3.10'" },
+    { name = "lightning", version = "2.6.5", source = { registry = "https://pypi.org/simple" }, extra = ["pytorch-extra"], marker = "python_full_version >= '3.10'" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "matplotlib", version = "3.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numba", version = "0.60.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numba", version = "0.66.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "omegaconf" },
+    { name = "pyloudnorm" },
+    { name = "pyworld" },
+    { name = "pyyaml" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "soundfile", version = "0.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "soundfile", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "soxr" },
+    { name = "torch" },
+    { name = "torch-fftconv" },
+    { name = "torchaudio" },
+    { name = "torchlpc" },
+    { name = "tqdm" },
+]
 audio = [
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
@@ -520,6 +552,43 @@ dev = [
     { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pytest", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "ruff" },
+]
+full = [
+    { name = "build", version = "1.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "build", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "diffsptk", version = "2.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "diffsptk", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "gradio", version = "4.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "gradio", version = "5.50.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "jsonargparse", version = "4.49.0", source = { registry = "https://pypi.org/simple" }, extra = ["signatures"], marker = "python_full_version < '3.10'" },
+    { name = "jsonargparse", version = "4.50.0", source = { registry = "https://pypi.org/simple" }, extra = ["signatures"], marker = "python_full_version >= '3.10'" },
+    { name = "kazane" },
+    { name = "lightning", version = "2.6.0", source = { registry = "https://pypi.org/simple" }, extra = ["pytorch-extra"], marker = "python_full_version < '3.10'" },
+    { name = "lightning", version = "2.6.5", source = { registry = "https://pypi.org/simple" }, extra = ["pytorch-extra"], marker = "python_full_version >= '3.10'" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "matplotlib", version = "3.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numba", version = "0.60.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numba", version = "0.66.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "omegaconf" },
+    { name = "pyloudnorm" },
+    { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "pytest", version = "9.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pyworld" },
+    { name = "pyyaml" },
+    { name = "ruff" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "soundfile", version = "0.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "soundfile", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "soxr" },
+    { name = "torch" },
+    { name = "torch-fftconv" },
+    { name = "torchaudio" },
+    { name = "torchlpc" },
+    { name = "tqdm" },
 ]
 studio = [
     { name = "gradio", version = "4.44.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -567,6 +636,8 @@ world = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aris", extras = ["all", "dev"], marker = "extra == 'full'" },
+    { name = "aris", extras = ["audio", "world", "visualize", "studio", "train"], marker = "extra == 'all'" },
     { name = "build", marker = "extra == 'dev'", specifier = ">=1" },
     { name = "diffsptk", marker = "extra == 'train'" },
     { name = "gradio", marker = "extra == 'studio'", specifier = ">=4,<6" },
@@ -589,13 +660,13 @@ requires-dist = [
     { name = "soundfile", marker = "extra == 'studio'", specifier = ">=0.12" },
     { name = "soundfile", marker = "extra == 'train'", specifier = ">=0.12" },
     { name = "soxr", marker = "extra == 'train'" },
-    { name = "torch", marker = "extra == 'train'", specifier = "==2.4.1" },
+    { name = "torch", marker = "extra == 'train'", specifier = ">=2.1.0" },
     { name = "torch-fftconv", marker = "extra == 'train'" },
-    { name = "torchaudio", marker = "extra == 'train'", specifier = "==2.4.1" },
+    { name = "torchaudio", marker = "extra == 'train'", specifier = ">=2.1.0" },
     { name = "torchlpc", marker = "extra == 'train'" },
     { name = "tqdm", marker = "extra == 'train'", specifier = ">=4.65" },
 ]
-provides-extras = ["audio", "world", "visualize", "studio", "train", "dev"]
+provides-extras = ["audio", "world", "visualize", "studio", "train", "all", "full", "dev"]
 
 [[package]]
 name = "async-timeout"
@@ -6488,7 +6559,7 @@ version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' and sys_platform == 'linux'" },
-    { name = "filelock", version = "3.32.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and sys_platform == 'linux'" },
+    { name = "filelock", version = "3.32.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and python_full_version < '3.13' and sys_platform == 'linux'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/45/27/14cc3101409b9b4b9241d2ba7deaa93535a217a211c86c4cc7151fb12181/triton-3.0.0-1-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e1efef76935b2febc365bfadf74bcb65a6f959a9872e5bddf44cc9e0adce1e1a", size = 209376304, upload-time = "2024-07-19T20:56:41.483Z" },

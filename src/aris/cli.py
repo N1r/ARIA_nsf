@@ -380,6 +380,12 @@ def parser() -> argparse.ArgumentParser:
         help="launch a local web studio for manipulation design and A/B listening",
     )
     studio.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="host address to bind the studio server to (default: %(default)s)",
+    )
+    studio.add_argument(
         "--port",
         type=int,
         default=8765,
@@ -396,11 +402,20 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="do not open a web browser automatically",
     )
+    studio.add_argument(
+        "--share",
+        action="store_true",
+        help="create a publicly shareable Gradio link (recommended for Google Colab and remote hosts)",
+    )
     return root
 
 
 def main(argv=None) -> int:
     """Dispatch a parsed command and return a process exit code."""
+    from .cuda_env import auto_configure_cuda
+
+    auto_configure_cuda()
+
     argument_parser = parser()
     args, extra = argument_parser.parse_known_args(argv)
     # Only `train` forwards unrecognized arguments (to the training engine).
@@ -579,7 +594,13 @@ def main(argv=None) -> int:
             # required for any other subcommand.
             from .studio import launch_studio
 
-            launch_studio(args.workspace, port=args.port, open_browser=not args.no_browser)
+            launch_studio(
+                args.workspace,
+                host=args.host,
+                port=args.port,
+                open_browser=not args.no_browser,
+                share=args.share,
+            )
             return 0
     except (
         FileNotFoundError,

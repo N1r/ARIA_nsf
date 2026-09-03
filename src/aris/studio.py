@@ -369,15 +369,37 @@ def build_app(workspace: Path):
             checkpoint_dd = gr.Dropdown(label="检查点 (checkpoint)")
         model_md = gr.Markdown()
 
-        gr.Markdown("## 条件设计 (condition design)")
+        _FRIENDLY_LABELS = {
+            "pitch_semitones": "音高调整 pitch_semitones (半音)",
+            "output_gain_db": "整体响度 output_gain_db (dB)",
+            "noise_gain_db": "气流杂音 noise_gain_db (dB)",
+            "glottal_rd_scale": "声门波形 glottal_rd_scale (气声 vs 嘎裂紧嗓)",
+            "f1_scale": "第一共振峰比例 f1_scale (舌位高低 / 开口度)",
+            "f2_scale": "第二共振峰比例 f2_scale (舌位前后)",
+            "f1_hz": "第一共振峰绝对值 f1_hz (Hz)",
+            "f2_hz": "第二共振峰绝对值 f2_hz (Hz)",
+            "tilt_alpha_delta": "谱倾斜 tilt_alpha_delta (正数柔和暗淡 / 负数明亮尖锐)",
+        }
+        _FRIENDLY_INFOS = {
+            "pitch_semitones": "正数提高音高，负数降低音高（12半音=1个八度）",
+            "output_gain_db": "整体输出音频音量放大或衰减（分贝）",
+            "noise_gain_db": "调节发音中的送气与摩擦白噪声强弱",
+            "glottal_rd_scale": "控制声门闭合状态：>1.0 呈现漏气声/耳语感；<1.0 呈现紧喉/嘎裂声 (creaky)",
+            "f1_scale": "按比例平移F1（保留自然语调轮廓）：>1.0 下降舌位/开口增大；<1.0 提升舌位",
+            "f2_scale": "按比例平移F2：>1.0 舌位向前（如/u/变/i/）；<1.0 舌位向后",
+            "f1_hz": "将第一共振峰强制固定在指定绝对Hz值，用于制作感知连续统",
+            "f2_hz": "将第二共振峰强制固定在指定绝对Hz值",
+            "tilt_alpha_delta": "改变高频衰减斜率：>0 柔和暗淡，<0 亮丽清脆",
+        }
+
         sliders = [
             gr.Slider(
                 minimum=spec.minimum,
                 maximum=spec.maximum,
                 value=spec.default,
                 step=_SLIDER_STEPS.get(spec.unit, 0.01),
-                label=f"{spec.name} ({spec.unit})",
-                info=spec.description,
+                label=_FRIENDLY_LABELS.get(spec.name, f"{spec.name} ({spec.unit})"),
+                info=_FRIENDLY_INFOS.get(spec.name, spec.description),
                 visible=False,
             )
             for spec in all_specs
@@ -451,16 +473,23 @@ def build_app(workspace: Path):
     return app
 
 
-def launch_studio(workspace: Path, port: int = 8765, open_browser: bool = True) -> None:
-    """Build and serve the studio on 127.0.0.1 only; blocks until interrupted."""
+def launch_studio(
+    workspace: Path,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    open_browser: bool = True,
+    share: bool = False,
+) -> None:
+    """Build and serve the studio; blocks until interrupted."""
     app = build_app(workspace)
     app.queue(default_concurrency_limit=1)
-    print(f"ARIS Studio: http://127.0.0.1:{port}/ (Ctrl+C 退出 / to stop)", flush=True)
+    url_hint = f"http://{host}:{port}/"
+    print(f"ARIS Studio: {url_hint} (Ctrl+C 退出 / to stop)", flush=True)
     app.launch(
-        server_name="127.0.0.1",
+        server_name=host,
         server_port=port,
-        share=False,
-        inbrowser=open_browser,
+        share=share,
+        inbrowser=open_browser and not share,
         show_api=False,
         quiet=True,
     )

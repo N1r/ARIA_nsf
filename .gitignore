@@ -52,3 +52,8 @@ studio_output/
 CLAUDE.md
 demo_f024/
 aris_f024_demo.tar.gz
+aris_f024_demo.zip
+*.zip
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/

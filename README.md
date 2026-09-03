@@ -2,6 +2,7 @@
 
 **简体中文** | [English](README_EN.md)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 [![试听 Demo](https://img.shields.io/badge/demo-%E8%AF%95%E5%90%AC-blue)](https://n1r.github.io/ARIS_nsf/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)](pyproject.toml)
@@ -14,56 +15,55 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 或共振峰（F1/F2、谱倾斜），批量生成成对的实验刺激。
 
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
+- **Google Colab 在线全流程体验**：直接点击上方的 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb) 徽章，免费在云端 GPU 上无需任何配置直接运行全流程。
 
-不需要专门的计算设备：训练在一张普通游戏显卡（如 RTX 4060）上即可完成，
-几十分钟数据约训练数小时；重建与刺激生成不需要显卡，普通电脑的 CPU 就能运行。
+不需要专门的高端计算设备：训练在一张普通游戏显卡（如 RTX 4060）或 Google Colab T4 上即可完成，
+几十分钟数据约训练数小时；重建与刺激生成甚至不需要显卡，普通电脑的 CPU 就能快速运行。
 
-按投入程度，有三种上手方式：
+按投入程度，有四种上手方式：
 
-1. **零安装**：直接打开[试听 Demo](https://n1r.github.io/ARIS_nsf/)，
-   逐个拖动参数听效果。
-2. **约半小时**：安装依赖，下载现成的预训练模型，跑一遍重建与参数操控
-   （见第 1 节）。
-3. **完整流程**：用自己的录音走完 数据准备 → 训练 → 生成刺激
-   （见第 2–5 节）。
+1. **Google Colab 云端全流程（零本地配置，最适合新手）**：点击 [Open In Colab 教程](notebooks/ARIS_Tutorial_and_Workflow.ipynb)，无需在电脑上配置任何软件，在浏览器里直接点击运行即可完成数据切分、特征提取、模型训练、刺激生成与网页工作台。
+2. **零安装在线试听**：直接打开[试听 Demo](https://n1r.github.io/ARIS_nsf/)，逐个拖动参数听音色变化。
+3. **本地图形化工作台（两行命令，鼠标操作）**：安装 `uv` 后运行 `uv sync --all-extras && uv run aris studio`，直接在浏览器弹出类似 Praat 的可视化滑块界面。
+4. **完整科研流程**：用自己的录音走完 数据准备 → 训练声码器 → 批量生成成对实验刺激（见第 2–5 节）。
 
-## 1. 安装依赖
+> ### 💡 写给语言学与语音学研究者（对计算机底层了解不多？）
+> 如果您平时主要使用 Praat、R 或 SPSS，对终端命令或 Python 虚拟环境不熟悉，完全不用担心：
+> - **做感知实验刺激**：推荐使用 **Google Colab 在线版**，或者在本地终端运行 `uv run aris studio`。浏览器会自动弹出可视化网页，您只需在网页上选择录音、用鼠标拖动音高或共振峰滑块，点击试听并一键下载实验所需的 WAV 文件。
+> - **用自己的录音训练新说话人模型**：只需将录音保存为 WAV 格式放入文件夹，按照第 2–4 节依次复制粘贴运行 4 条命令，ARIS 会全自动完成降噪静音切分、F0 基频提取、数据校验和模型训练。
 
-先说明运行环境：以下命令在 **Linux 或 macOS 的终端**里执行。
-如果你用的是 Windows，建议先安装
-[WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install)（微软官方的
-Linux 子系统，一条 `wsl --install` 命令即可装好），然后在 WSL 的终端里
-按下面的步骤操作。
+## 1. 快速上手与依赖安装
 
-你只需要机器上有 [uv](https://docs.astral.sh/uv/)（一个单文件的 Python
-环境管理器）。在仓库根目录执行：
+运行环境：Linux、macOS 或 Windows（建议通过 [WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install) 运行）。
+
+### 推荐安装方式（使用 uv 一键同步）
+
+项目基于 `pyproject.toml` 与 `uv.lock` 进行现代依赖管理。只需安装单文件工具 [uv](https://docs.astral.sh/uv/)，在仓库根目录下执行一条命令即可自动完成 Python 3.11 虚拟环境的建立和全部依赖（音频、训练、Studio 等）的秒级安装：
 
 ```bash
-source scripts/project_env.sh      # 进入项目环境
-./scripts/setup_project_env.sh     # 一键安装全部依赖（装在仓库目录内，不影响系统）
-.venv/bin/aris doctor              # 检查音频与训练依赖是否就绪
+# 1. 一键创建虚拟环境并同步全部依赖：
+uv sync --all-extras
+
+# 2. 运行内置诊断工具（可通过 uv run 直接调用，无需手动激活环境）：
+uv run aris doctor
 ```
 
-装好之后，所有命令都通过 `.venv/bin/aris` 调用；不确定用法时，
-每个命令都支持 `--help`。
+> **提示**：若习惯激活虚拟环境后使用，也可执行 `source .venv/bin/activate`，之后即可直接使用 `aris doctor`、`aris train` 等命令。若需使用传统 `pip`，亦支持 `pip install -e ".[all]"`。
 
-`doctor` 的每一行以 `[OK]` 开头表示该依赖就绪；`[--]` 行表示缺失，并附
-对应的安装命令。训练相关行（`torch`、`lightning`）为 `[OK]` 即可开始
-后续步骤。
+`doctor` 会自动探测您的 Python 环境、CUDA 工具链与 GPU 显卡（如 RTX 4090 / L4 / T4 等），确认依赖完备即可开始！
 
-**先用现成模型试一试。** 我们提供了一个训练好的模型（普通话女声，
-16 kHz）及配套示例数据；下载解压后即可直接运行重建与参数操控，
-了解各步骤的输出形式：
+**直接使用现成预训练模型试一试：** 仓库中已包含训练好的模型（普通话女声，16 kHz）及配套示例数据（若本地缺失可直接下载官方 ZIP 包：`curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.zip && unzip -q aris_f024_demo.zip`），直接运行重建与参数操控：
 
 ```bash
-curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.tar.gz
-tar -xzf aris_f024_demo.tar.gz    # 在仓库根目录解压，得到 demo_f024/
+# 1. 重建测试录音
+uv run aris synthesize demo_f024/experiment demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
 
-.venv/bin/aris synthesize demo_f024/experiment \
-  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
-.venv/bin/aris manipulate demo_f024/experiment \
-  demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
-  --variant 'f1_up:f1_scale=1.2'
+# 2. 生成共振峰与音高操控刺激
+uv run aris manipulate demo_f024/experiment demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_stimuli \
+  --variant 'f1_up:f1_scale=1.2' \
+  --variant 'f1_down:f1_scale=0.85' \
+  --variant 'pitch_down:pitch_semitones=-4' \
+  --variant 'breathy:glottal_rd_scale=1.6'
 ```
 
 成功的标志：`out/demo_recon/` 下出现重建的 WAV 文件，`out/demo_stimuli/`
@@ -183,8 +183,11 @@ WAV，附带记录生成方式的 JSON 元数据。可用参数与范围：
 试听对比：
 
 ```bash
-source scripts/project_env.sh && uv sync --extra studio   # 首次使用先装 studio 依赖
-.venv/bin/aris studio        # 启动后自动打开 http://127.0.0.1:8765/
+# 本地启动（自动打开 http://127.0.0.1:8765/）：
+aris studio
+
+# 在 Google Colab 或远程云服务器上启动（自动生成公网 Gradio 链接）：
+aris studio --share
 ```
 
 页面按模型自动生成参数滑杆，支持命名条件与连续统生成器（比如 F1 从
@@ -193,10 +196,52 @@ source scripts/project_env.sh && uv sync --extra studio   # 首次使用先装 s
 会以红色标出。渲染结果保存在 `studio_output/` 下，与命令行 `manipulate`
 的输出和元数据格式完全一致。
 
-## 7. 命令一览
+## 7. Python API 使用方式（Jupyter / Colab / 脚本）
+
+除命令行外，ARIS 提供了高阶 Python 编程接口，可直接在 Jupyter Notebook 或脚本中无缝调用：
+
+```python
+import aris
+
+# 1. 切分长音频 & 提取特征划分数据集
+aris.split("recordings/", "segments/", mode="silence")
+manifest = aris.prepare("segments/audio", "data/my_voice", sample_rate=16000)
+
+# 2. 校验数据集完整性
+errors = aris.validate("data/my_voice")
+assert not errors
+
+# 3. 初始化实验并启动训练
+exp_dir = aris.init_experiment("data/my_voice", "experiments/my_voice", model="aria-golf")
+aris.train(exp_dir)
+
+# 4. 重建语音（推理）
+aris.synthesize(
+    exp_dir,
+    "experiments/my_voice/runs/checkpoints/last.ckpt",
+    "out/recon",
+)
+
+# 5. 生成参数操控刺激（支持直接传入命名字符串或 ControlVariant 对象）
+aris.manipulate(
+    exp_dir,
+    "experiments/my_voice/runs/checkpoints/last.ckpt",
+    "out/stimuli",
+    variants=[
+        "f1_up:f1_scale=1.2",
+        "pitch_down:pitch_semitones=-4",
+        "breathy:glottal_rd_scale=1.6",
+    ],
+)
+
+# 6. 在 Notebook 中一键启动可视化 Web 工作台
+aris.launch_studio(workspace=".", share=True)
+```
+
+## 8. 命令一览
 
 ```text
-aris doctor             检查音频与训练依赖是否就绪
+aris doctor             检查音频与训练依赖、CUDA 及 GPU 状态
 aris fetch-corpus       下载 CMU ARCTIC 示例语料
 aris split              切分连续录音
 aris prepare            重采样、提取 F0、划分数据集
@@ -206,7 +251,7 @@ aris train              启动训练
 aris controls           列出模型支持的操控参数
 aris synthesize         用 checkpoint 重建录音
 aris manipulate         生成操控刺激
-aris studio             启动浏览器工作台
+aris studio             启动浏览器工作台（支持 --share 生成公网链接）
 ```
 
 ## 8. 引用

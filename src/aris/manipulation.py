@@ -58,6 +58,10 @@ def manipulate_controls(
     dry_run: bool = False,
 ) -> list[list[str]]:
     """Render named control variants and write checkpoint-bound provenance."""
+    from .controls.specs import parse_variant
+    from .cuda_env import auto_configure_cuda
+
+    auto_configure_cuda()
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
     output = Path(output).resolve()
@@ -68,14 +72,15 @@ def manipulate_controls(
         )
     if not variants:
         raise ValueError("At least one manipulation variant is required")
-    names = [variant.name for variant in variants]
+    parsed_variants = [parse_variant(v) if isinstance(v, str) else v for v in variants]
+    names = [variant.name for variant in parsed_variants]
     if len(set(names)) != len(names):
         raise ValueError("Manipulation variant names must be unique")
     experiment_metadata = json.loads((experiment / "experiment.json").read_text())
     model = experiment_metadata["model"]
     normalized = [
         ControlVariant(variant.name, validate_controls(model, variant.controls))
-        for variant in variants
+        for variant in parsed_variants
     ]
     if output.exists():
         raise FileExistsError(f"Manipulation output already exists: {output}")

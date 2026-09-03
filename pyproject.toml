@@ -40,8 +40,8 @@ studio = [
   "soundfile>=0.12",
 ]
 train = [
-  "torch==2.4.1",
-  "torchaudio==2.4.1",
+  "torch>=2.1.0",
+  "torchaudio>=2.1.0",
   "lightning[pytorch-extra]>=2.1,<3",
   "jsonargparse[signatures]>=4.27",
   "omegaconf>=2.3",
@@ -56,6 +56,12 @@ train = [
   "PyYAML>=5.4",
   "soxr",
   "torchlpc",
+]
+all = [
+  "aris[audio,world,visualize,studio,train]",
+]
+full = [
+  "aris[all,dev]",
 ]
 dev = ["pytest>=7", "ruff>=0.5", "build>=1"]
 

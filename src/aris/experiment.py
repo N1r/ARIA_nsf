@@ -115,10 +115,14 @@ def create_experiment(
         "#!/usr/bin/env bash\nset -euo pipefail\n"
         'EXPERIMENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n'
         f"PROJECT_ROOT={shlex.quote(str(project_root))}\n"
-        'source "$PROJECT_ROOT/scripts/project_env.sh"\n'
-        'test -x "$PROJECT_ROOT/.venv/bin/python" || '
-        '{ echo "error: run scripts/setup_project_env.sh first" >&2; exit 2; }\n'
-        '"$PROJECT_ROOT/.venv/bin/python" -m aris.cli train "$EXPERIMENT_DIR"\n',
+        'if [ -f "$PROJECT_ROOT/scripts/project_env.sh" ]; then\n'
+        '  source "$PROJECT_ROOT/scripts/project_env.sh"\n'
+        'fi\n'
+        'PYTHON_BIN="${PYTHON:-$(command -v python3 || command -v python)}"\n'
+        'if [ -x "$PROJECT_ROOT/.venv/bin/python" ]; then\n'
+        '  PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"\n'
+        'fi\n'
+        '"$PYTHON_BIN" -m aris.cli train "$EXPERIMENT_DIR"\n',
         encoding="utf-8",
     )
     os.chmod(output / "train.sh", 0o755)
@@ -133,6 +137,9 @@ def train(
     experiment: Path, extra_args: Optional[list[str]] = None, dry_run: bool = False
 ) -> list[str]:
     """Re-verify the dataset and run (or return) the training command."""
+    from .cuda_env import auto_configure_cuda
+
+    auto_configure_cuda()
     experiment = Path(experiment).resolve()
     metadata = json.loads((experiment / "experiment.json").read_text())
     manifest = DatasetManifest.load(_resolve_dataset_path(metadata["dataset"], experiment))
@@ -156,6 +163,9 @@ def synthesize(
     controls: Optional[Mapping[str, float]] = None,
 ) -> list[str]:
     """Render held-out audio from a checkpoint, optionally with DDSP controls."""
+    from .cuda_env import auto_configure_cuda
+
+    auto_configure_cuda()
     experiment = Path(experiment).resolve()
     checkpoint = Path(checkpoint).resolve()
     output = Path(output).resolve()
