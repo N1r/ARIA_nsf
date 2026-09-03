@@ -6,13 +6,9 @@ if __name__ == "__main__":
         # VoiceAutoEncoder,
         # subclass_mode_model=True,
         trainer_defaults={
-            "accelerator": "gpu",
-            "strategy": {
-                "class_path": "lightning.pytorch.strategies.DDPStrategy",
-                "init_args": {
-                    "find_unused_parameters": False,
-                },
-            },
+            "accelerator": "auto",
+            "strategy": "auto",
+            "devices": 1,
             "log_every_n_steps": 1,
         },
         save_config_callback=MyConfigCallback,

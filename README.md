@@ -79,7 +79,8 @@ uv run aris doctor
 保留在 Colab kernel 中，因此不受 Colab 系统 Python 版本变化影响，也无需重启运行时。
 教程默认训练 1,000 步并绘制训练/验证 loss，再用该 checkpoint 完成重建与操控。
 这足以观察学习过程和试听初步结果，但不代表模型已经收敛或可直接用于正式实验；
-Release 中的示例 checkpoint 训练了 40,000 步，可作为稳定质量参照。
+为适配 Colab T4 的显存，默认 batch size 为 8。Release 中的示例 checkpoint
+训练了 40,000 步，可作为稳定质量参照。
 
 **直接使用现成预训练模型试一试：** 官方 Release 提供训练好的模型（普通话女声，
 16 kHz）及配套示例数据。先下载并解压

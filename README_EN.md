@@ -83,8 +83,8 @@ Plots and audio players remain in the Colab kernel, so changes to Colab's system
 do not affect ARIS and no runtime restart is needed. The tutorial trains for 1,000 steps,
 plots training and validation loss, then uses that checkpoint for reconstruction and
 manipulation. This is enough to inspect learning and hear an initial result, but it is
-not evidence of convergence or research-ready quality; the release's 40,000-step
-checkpoint provides a stable quality reference.
+not evidence of convergence or research-ready quality. The default batch size is 8 to
+fit a Colab T4; the release's 40,000-step checkpoint provides a stable quality reference.
 
 **Try the Pretrained Model Immediately:**
 The official release provides a trained model (Mandarin female speaker, 16 kHz) and
