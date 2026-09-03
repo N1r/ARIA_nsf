@@ -23,17 +23,12 @@ No dedicated high-performance computing cluster is required: training runs on a 
 (e.g. RTX 4060 or Colab T4) in a few hours for a few tens of minutes of data;
 reconstruction and stimulus generation require no GPU at all and run quickly on a regular CPU.
 
-There are four ways in, by increasing commitment:
+Depending on your workflow, ARIS provides multiple ways to interact:
 
-1. **Google Colab Cloud Workflow (Zero local setup, recommended for beginners)**: Open the [Colab Tutorial](notebooks/ARIS_Tutorial_and_Workflow.ipynb) to run data segmentation, feature extraction, training, synthesis, and the interactive web studio directly in your browser.
-2. **Zero install**: Open the [listening demo](https://n1r.github.io/ARIS_nsf/) and drag parameters to audition acoustic effects.
-3. **Local GUI Workbench (Two commands, mouse-driven)**: Run `uv sync --all-extras && uv run aris studio` to launch a visual slider workspace in your browser (similar to Praat).
-4. **The full pipeline**: Take your own recordings through data preparation → training → stimulus generation (Sections 2–5).
-
-> ### 💡 Note for Phonetics and Linguistics Researchers (Little CS Background?)
-> If you are accustomed to Praat, R, or SPSS and unfamiliar with command-line environments or Python:
-> - **To generate stimuli for perception experiments**: Use the **Google Colab Notebook** or run `uv run aris studio` locally. A web interface opens automatically where you can select recordings, adjust pitch or formant sliders, listen immediately, and download WAV files.
-> - **To train a model on your own voice recordings**: Put your WAV files into a folder and run the 4 straightforward commands in Sections 2–4. ARIS automatically handles silence splitting, F0 tracking, validation, and training.
+1. **Google Colab Cloud Tutorial**: Open the [Colab Tutorial](notebooks/ARIS_Tutorial_and_Workflow.ipynb) to run the full workflow (from audio analysis and training to stimulus manipulation) on cloud GPUs without local configuration.
+2. **Interactive Listening Demo**: Open the [online listening demo](https://n1r.github.io/ARIS_nsf/) to explore acoustic parameter effects.
+3. **Local GUI Workbench (Studio)**: Run `uv sync --all-extras && uv run aris studio` to launch an interactive slider workspace in your browser for parameter exploration and continuum generation.
+4. **Command-Line Interface & Python API**: Suitable for batch stimulus generation, automated experiment scripts, and large-scale training (Sections 2–5 and Section 7).
 
 ## 1. Installation & Quickstart
 
