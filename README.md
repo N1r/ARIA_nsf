@@ -30,7 +30,6 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 | 音高与语调 | `pitch_semitones` | F0 中位数、轨迹形状、有声比例 |
 | 元音共振 | `f1_*`、`f2_*` | F1/F2 轨迹、元音空间、可懂度 |
 | 发声类型 | `glottal_rd_scale`、`noise_gain_db`、`tilt_alpha_delta` | H1–H2、CPP、HNR、谱斜率 |
-| 刺激数字增益（非发声强度） | `output_gain_db` | 峰值、RMS/LUFS、达到数字满幅的采样点数 |
 
 ## 1. 快速上手与依赖安装
 

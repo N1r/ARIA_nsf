@@ -30,7 +30,6 @@ Depending on your workflow, ARIS provides multiple ways to interact:
 | Pitch and intonation | `pitch_semitones` | median F0, contour shape, voiced proportion |
 | Vowel resonance | `f1_*`, `f2_*` | F1/F2 tracks, vowel space, intelligibility |
 | Voice quality | `glottal_rd_scale`, `noise_gain_db`, `tilt_alpha_delta` | H1–H2, CPP, HNR, spectral slope |
-| Stimulus waveform gain (not vocal effort) | `output_gain_db` | peak, RMS/LUFS, clipped-sample count |
 
 ## 1. Installation & Quickstart
 
