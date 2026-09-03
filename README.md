@@ -74,8 +74,9 @@ uv run aris doctor
 ### Google Colab
 
 打开页面顶部的 Colab 链接，将运行时类型设为 **T4 GPU**，然后选择
-**运行时 → 全部运行**。教程同样全程使用 uv：先用官方安装脚本安装 uv，再通过
-`uv pip install --system` 把锁定依赖装入 Colab 当前 kernel；无需重启运行时。
+**运行时 → 全部运行**。教程同样全程使用 uv：uv 会安装 Python 3.11、按
+`uv.lock` 创建项目环境，并通过 `uv run aris ...` 执行 ARIS。绘图和音频播放器
+保留在 Colab kernel 中，因此不受 Colab 系统 Python 版本变化影响，也无需重启运行时。
 教程默认训练 1,000 步并绘制训练/验证 loss，再用该 checkpoint 完成重建与操控。
 这足以观察学习过程和试听初步结果，但不代表模型已经收敛或可直接用于正式实验；
 Release 中的示例 checkpoint 训练了 40,000 步，可作为稳定质量参照。

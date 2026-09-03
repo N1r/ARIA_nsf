@@ -77,9 +77,10 @@ change dependencies, run `uv lock` first and commit the updated lockfile.
 ### Google Colab
 
 Open the Colab link above, select a **T4 GPU** runtime, and choose
-**Runtime → Run all**. The tutorial uses uv throughout: it installs uv with the official
-installer, then uses `uv pip install --system` to install locked dependencies into the
-active Colab kernel. No runtime restart is needed. The tutorial trains for 1,000 steps,
+**Runtime → Run all**. The tutorial uses uv throughout: uv installs Python 3.11, creates
+the project environment from `uv.lock`, and executes ARIS through `uv run aris ...`.
+Plots and audio players remain in the Colab kernel, so changes to Colab's system Python
+do not affect ARIS and no runtime restart is needed. The tutorial trains for 1,000 steps,
 plots training and validation loss, then uses that checkpoint for reconstruction and
 manipulation. This is enough to inspect learning and hear an initial result, but it is
 not evidence of convergence or research-ready quality; the release's 40,000-step
