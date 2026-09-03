@@ -14,7 +14,7 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
 - 交互教程：[`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 
-训练需要一张支持 CUDA 的 NVIDIA GPU（Google Colab T4 即可试跑）；重建与刺激生成也可在 CPU 上运行。
+训练需要支持 CUDA 的 NVIDIA GPU（可通过 Google Colab 免费 T4 实例运行）；重建与刺激操控支持直接在 CPU 上运行。
 
 按使用需求，ARIS 提供以下几种交互路径：
 
@@ -32,7 +32,6 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 | 发声类型 | `glottal_rd_scale`、`noise_gain_db`、`tilt_alpha_delta` | H1–H2、CPP、HNR、谱斜率 |
 | 刺激数字增益（非发声强度） | `output_gain_db` | 峰值、RMS/LUFS、达到数字满幅的采样点数 |
 
-
 ## 1. 快速上手与依赖安装
 
 运行环境：Linux、macOS 或 Windows（建议通过 [WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install) 运行）。
@@ -49,11 +48,11 @@ uv sync --locked --all-extras
 uv run aris doctor
 ```
 
-本文后续命令均使用 `uv run aris ...`，无需激活 `.venv`。依赖有变更时重新执行
+文档中所有命令均使用 `uv run aris ...`，无需手动激活虚拟环境。依赖有变更时重新执行
 `uv sync --locked --all-extras` 即可；若是主动修改项目依赖，请先运行 `uv lock`
 并提交更新后的锁文件。
 
-`doctor` 会检查 Python、音频依赖、PyTorch、CUDA 与 GPU 状态。所有必需项通过后即可继续。
+`aris doctor` 会检查 Python、音频依赖、PyTorch、CUDA 与 GPU 状态。所有必需项通过后即可继续。
 
 ### Google Colab
 
@@ -105,7 +104,7 @@ uv run aris validate data/my_voice                                  # 检查数�
 1. **录音规格**：建议有效音频时长 20–60 分钟。保持录音设备、增益、拾音距离与声学环境一致，避免波形截幅失真与强混响。
 2. **切分与划分**：长录音切分为数秒短句有助于加快训练。若语料包含多个录音场次或词表，应提前规划数据集划分以防信息泄露。
 3. **F0 提取**：推荐 `--f0-method pyworld`（基于 WORLD 的 DIO+StoneMask，兼顾稳定性与速度）；未指定时默认使用自相关法。
-4. **共振峰监督**：训练 `aria-golf` 模型必须添加 `--extract-formants`，该选项在 10 ms 帧长上运行 Praat Burg 分析以提取 F1/F2 监督目标。女声通常使用默认上限（5,500 Hz），男声可按需调整（例如 `--formant-ceiling 5000`）。
+4. **共振峰监督**：训练 `aria-golf` 模型必须添加 `--extract-formants`，该选项以 10 ms 为时间步长运行 Praat Burg 算法提取 F1/F2 监督目标。女声通常使用默认上限（5,500 Hz），男声可按需调整（例如 `--formant-ceiling 5000`）。
 5. **外部音高轨迹（Sidecar）**：对于声调语言或对 F0 精度敏感的研究，可使用 [RMVPE](https://github.com/Dream-High/RMVPE) 或 Praat 提取音高轨迹，保存为同名 `.pv` 文件并通过 `--f0-method sidecar` 载入。`.pv` 为纯文本格式（固定 5 ms 帧移，每行一个浮点数，`0.0` 为无声帧）。若帧数与音频时长不匹配，`prepare` 将直接报错。
 6. **采样率适配**：输入音频无需预先统一采样率，`prepare` 会自动重采样至模型目标采样率。建议始终保留原始录音母带。
 7. **示例语料**：若暂无自备录音，可运行 `uv run aris fetch-corpus data/arctic` 下载约 30 分钟的公开语料 CMU ARCTIC 进行全流程测试。

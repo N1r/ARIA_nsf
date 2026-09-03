@@ -14,7 +14,7 @@ ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable analys
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
 - Tutorial notebook: [`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 
-Training requires a CUDA-capable NVIDIA GPU (a Google Colab T4 is enough for a trial run); resynthesis and stimulus manipulation can also run on CPU.
+Model training requires a CUDA-capable NVIDIA GPU (a free Google Colab T4 instance is sufficient); resynthesis and stimulus manipulation can run directly on CPU.
 
 Depending on your workflow, ARIS provides multiple ways to interact:
 
@@ -32,7 +32,6 @@ Depending on your workflow, ARIS provides multiple ways to interact:
 | Voice quality | `glottal_rd_scale`, `noise_gain_db`, `tilt_alpha_delta` | H1–H2, CPP, HNR, spectral slope |
 | Stimulus waveform gain (not vocal effort) | `output_gain_db` | peak, RMS/LUFS, clipped-sample count |
 
-
 ## 1. Installation & Quickstart
 
 Platforms: Linux, macOS, or Windows (via [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
@@ -49,11 +48,11 @@ uv sync --locked --all-extras
 uv run aris doctor
 ```
 
-Every command below uses `uv run aris ...`; activating `.venv` is unnecessary. Run
+All commands below use `uv run aris ...` without needing to manually activate the virtual environment. Run
 `uv sync --locked --all-extras` again whenever dependencies change. If you intentionally
 change dependencies, run `uv lock` first and commit the updated lockfile.
 
-`aris doctor` checks Python, audio dependencies, PyTorch, CUDA, and GPU status. Continue once all required checks pass.
+`uv run aris doctor` checks Python, audio dependencies, PyTorch, CUDA, and GPU status. Continue once all required checks pass.
 
 ### Google Colab
 
@@ -106,8 +105,8 @@ Data preparation notes:
 1. **Recording Specs**: 20–60 minutes of clean audio recommended. Maintain consistent microphone, distance, gain, and acoustics; avoid clipping and reverberation.
 2. **Segmentation & Splits**: Segmenting long recordings into short utterances speeds up training. Plan train/val/test splits carefully to avoid data leakage across sessions.
 3. **F0 Extraction**: `--f0-method pyworld` is recommended (WORLD DIO+StoneMask, robust and fast); defaults to autocorrelation if WORLD is unavailable.
-4. **Formant Supervision**: Training `aria-golf` requires `--extract-formants`, which runs Praat Burg analysis on a 10 ms grid for F1/F2 supervision. The default 5,500 Hz ceiling fits female speech; use `--formant-ceiling 5000` for male voices if appropriate.
-5. **External Pitch Tracks (Sidecar)**: For tone languages or F0-sensitive tasks, extract pitch contours using [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, and load them via `--f0-method sidecar`. `.pv` files must follow a fixed 5 ms hop (`0.0` for unvoiced). If the frame count does not match audio duration, `prepare` raises an error.
+4. **Formant Supervision**: Training `aria-golf` requires `--extract-formants`, which runs Praat Burg analysis on a 10 ms time step for F1/F2 supervision. The default 5,500 Hz ceiling fits female speech; use `--formant-ceiling 5000` for male voices if appropriate.
+5. **External Pitch Tracks (Sidecar)**: For tone languages or F0-sensitive tasks, extract pitch contours using [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, and load them via `--f0-method sidecar`. `.pv` files must follow a fixed 5 ms hop size (`0.0` for unvoiced). If the frame count does not match audio duration, `prepare` raises an error.
 6. **Sample Rate**: Inputs need not share sample rates; `prepare` resamples them automatically. Retain original unresampled recordings as master copies.
 7. **Example Corpus**: If no recordings are readily available, run `uv run aris fetch-corpus data/arctic` to download ~30 minutes of CMU ARCTIC for pipeline testing.
 
@@ -117,7 +116,7 @@ Once data preparation is complete, initialize experiment configuration and start
 
 ```bash
 uv run aris init-experiment data/my_voice experiments/my_voice --model aria-golf
-uv run aris train experiments/my_voice --dry-run   # print training command without running
+uv run aris train experiments/my_voice --dry-run   # print the training command without executing
 uv run aris train experiments/my_voice
 ```
 
