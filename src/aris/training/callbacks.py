@@ -1,12 +1,11 @@
-import pathlib
 import os
-import torchaudio
-from lightning.pytorch.callbacks import BasePredictionWriter
-from lightning import LightningModule, Trainer
-from lightning.pytorch.callbacks import Callback
-from lightning.pytorch import Trainer, LightningModule
-from lightning.fabric.utilities.cloud_io import get_filesystem
+import pathlib
 from typing import Any, Optional, Sequence
+
+import torchaudio
+from lightning import LightningModule, Trainer
+from lightning.fabric.utilities.cloud_io import get_filesystem
+from lightning.pytorch.callbacks import BasePredictionWriter, Callback
 
 from .autoencoder import VoiceAutoEncoder
 
@@ -60,12 +59,10 @@ class MyConfigCallback(Callback):
     def on_test_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
         if self.already_saved:
             return
-
         if trainer.is_global_zero:
             if trainer.logger is not None:
                 trainer.logger.log_hyperparams(self.config.as_dict())
             self.already_saved = True
-
         self.already_saved = trainer.strategy.broadcast(self.already_saved)
 
     def on_train_start(self, trainer: Trainer, pl_module: LightningModule) -> None:
@@ -73,14 +70,11 @@ class MyConfigCallback(Callback):
             return
 
         log_dir = pathlib.Path(trainer.checkpoint_callback.dirpath).parent
-        assert log_dir is not None
         config_path = os.path.join(str(log_dir), self.config_filename)
         fs = get_filesystem(log_dir)
 
         if not self.overwrite:
-            # check if the file exists on rank 0
             file_exists = fs.isfile(config_path) if trainer.is_global_zero else False
-            # broadcast whether to fail to all ranks
             file_exists = trainer.strategy.broadcast(file_exists)
             if file_exists:
                 raise RuntimeError(
@@ -90,11 +84,7 @@ class MyConfigCallback(Callback):
                     ' or set `LightningCLI(save_config_kwargs={"overwrite": True})` to overwrite the config file.'
                 )
 
-        # save the file on rank 0
         if trainer.is_global_zero:
-            # save only on rank zero to avoid race conditions.
-            # the `log_dir` needs to be created as we rely on the logger to do it usually
-            # but it hasn't logged anything at this point
             fs.makedirs(log_dir, exist_ok=True)
             self.parser.save(
                 self.config,
@@ -106,6 +96,62 @@ class MyConfigCallback(Callback):
             self.already_saved = True
             if trainer.logger is not None:
                 trainer.logger.log_hyperparams(self.config.as_dict())
-
-        # broadcast so that all ranks are in sync on future calls to .setup()
         self.already_saved = trainer.strategy.broadcast(self.already_saved)
+
+
+class TrainingProgressPrinter(Callback):
+    """Print compact step, epoch, and loss updates for non-interactive runs."""
+
+    def __init__(self, every_n_steps: int = 50) -> None:
+        if every_n_steps <= 0:
+            raise ValueError("every_n_steps must be positive")
+        self.every_n_steps = every_n_steps
+
+    def on_train_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: Any,
+        batch: Any,
+        batch_idx: int,
+    ) -> None:
+        del pl_module, outputs, batch, batch_idx
+        if not trainer.is_global_zero:
+            return
+        step = trainer.global_step
+        total = trainer.max_steps
+        if step != 1 and step % self.every_n_steps != 0 and step != total:
+            return
+        loss = _metric_number(trainer.callback_metrics.get("train_loss"))
+        loss_text = f"{loss:.4f}" if loss is not None else "n/a"
+        print(
+            f"[train] step {step}/{total} | epoch {trainer.current_epoch + 1} | "
+            f"loss {loss_text}",
+            flush=True,
+        )
+
+    def on_validation_epoch_end(
+        self, trainer: Trainer, pl_module: LightningModule
+    ) -> None:
+        del pl_module
+        if not trainer.is_global_zero or trainer.sanity_checking:
+            return
+        loss = _metric_number(trainer.callback_metrics.get("val_loss"))
+        if loss is not None:
+            print(
+                f"[valid] step {trainer.global_step}/{trainer.max_steps} | "
+                f"epoch {trainer.current_epoch + 1} | loss {loss:.4f}",
+                flush=True,
+            )
+
+
+def _metric_number(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        return float(value.detach().cpu())
+    except AttributeError:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None

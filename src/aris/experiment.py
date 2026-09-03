@@ -293,6 +293,7 @@ trainer:
   max_steps: {settings["max_steps"]}
   num_sanity_val_steps: 0
   check_val_every_n_epoch: 1
+  enable_progress_bar: false
   gradient_clip_val: 0.5
   strategy: auto
   accelerator: auto
@@ -314,6 +315,9 @@ trainer:
     - class_path: lightning.pytorch.callbacks.LearningRateMonitor
       init_args:
         logging_interval: step
+    - class_path: aris.training.callbacks.TrainingProgressPrinter
+      init_args:
+        every_n_steps: 50
 model:
   class_path: aris.training.autoencoder.VoiceAutoEncoder
   init_args:
