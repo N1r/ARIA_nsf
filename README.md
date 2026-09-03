@@ -77,8 +77,8 @@ uv run aris doctor
 **运行时 → 全部运行**。教程同样全程使用 uv：uv 会安装 Python 3.11、按
 `uv.lock` 创建项目环境，并通过 `uv run aris ...` 执行 ARIS。绘图和音频播放器
 保留在 Colab kernel 中，因此不受 Colab 系统 Python 版本变化影响，也无需重启运行时。
-教程默认训练 1,000 步，再用该 checkpoint 完成重建与操控。
-这足以观察学习过程和试听初步结果，但不代表模型已经收敛或可直接用于正式实验；
+教程默认训练 5,000 步，再用该 checkpoint 完成重建与操控。
+这通常足以在小型单说话人语料上得到有意义的可听结果，但不代表模型已经收敛或可直接用于正式实验；
 为适配 Colab T4 的显存，默认 batch size 为 8。Release 中的示例 checkpoint
 训练了 40,000 步，可作为稳定质量参照。
 
@@ -121,7 +121,7 @@ recordings/
 
 ```bash
 uv run aris split recordings/ segments/ --mode silence        # 按静音切成短句
-uv run aris prepare segments/audio data/my_voice              # 重采样、提取 F0、划分数据集
+uv run aris prepare segments/audio data/my_voice --extract-formants  # 提取 F0 与 Praat F1/F2
 uv run aris validate data/my_voice                            # 确认数据完整可用
 ```
 
@@ -133,7 +133,11 @@ uv run aris validate data/my_voice                            # 确认数据完�
    先规划 split，避免同一项目的近重复版本跨越 train/test 造成信息泄漏。
 3. F0 提取推荐 `--f0-method pyworld`（WORLD 的 DIO+StoneMask，稳定且快）；
    默认 `auto` 在未安装 WORLD 时退回自相关法。
-4. 汉语声调等对 F0 敏感的研究，推荐先用 [RMVPE](https://github.com/Dream-High/RMVPE)
+4. `aria-golf` 训练必须加入 `--extract-formants`。该选项在 10 ms 网格上运行
+   Praat Burg 分析，保存 F1/F2 监督目标；训练时只有 F0 为正且 F1/F2 均有效的
+   帧进入共振峰损失。女声通常可使用默认 5,500 Hz 分析上限，男声可按语料用
+   `--formant-ceiling 5000` 调整。自动轨迹仍需抽查，不能视为人工标注真值。
+5. 汉语声调等对 F0 敏感的研究，推荐先用 [RMVPE](https://github.com/Dream-High/RMVPE)
    或 Praat 提取更可靠的音高轨迹，保存为与每条 WAV 同名的 `.pv` 文件，
    再用 `--f0-method sidecar` 读入。`.pv` 是纯文本格式：每行一个浮点数，
    每行对应固定 5 ms 的一帧，`0.0` 表示无声帧，正数表示该帧 F0（Hz）。
@@ -141,9 +145,9 @@ uv run aris validate data/my_voice                            # 确认数据完�
    `--undefined--` 而不是 `0`——从 Praat 导出后要重采样到 5 ms 网格、把
    `--undefined--` 换成 `0.0`，才能喂给 `prepare`。帧数和音频时长对不上
    时，`prepare` 现在会直接报错，不会静默错位。
-5. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。建议保留未经
+6. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。建议保留未经
    重采样和归一化的原始录音，避免覆盖研究档案。
-6. 手头没有录音时，可用 `uv run aris fetch-corpus data/arctic` 下载
+7. 手头没有录音时，可用 `uv run aris fetch-corpus data/arctic` 下载
    约 30 分钟的公开语料 CMU ARCTIC 试跑全流程；下载完成后用
    `uv run aris prepare data/arctic/selected data/arctic_prepared`
    继续后续步骤。
@@ -169,7 +173,9 @@ uv run aris train experiments/my_voice
    | `aria-golf` | 以上 + F1/F2、谱倾斜 | 显式声源–声道操控 |
 
    `aria-golf` 是 ARIS 解码器在代码中的名称。普通 `golf` 的 LPC 系数不能
-   直接解释为独立的 F1/F2 控制。
+   直接解释为独立的 F1/F2 控制。当前 preset 对齐 v4：除多尺度谱重建外，还使用
+   F1/F2 监督（权重 2.0）、学习残差正则（0.02）和时间平滑项（0.05），以减少
+   learned sections 替代解析共振峰的不可辨识性。
 2. checkpoint 保存在 `experiments/my_voice/runs/checkpoints/`。
 3. 训练需要支持 CUDA 的 PyTorch。默认安装的 Linux 版 PyTorch 已带
    CUDA 支持；如果与你的显卡或驱动不匹配，需要按设备另装对应版本——

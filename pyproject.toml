@@ -36,6 +36,9 @@ world = [
   "pyworld>=0.3.4",
   "setuptools",
 ]
+phonetics = [
+  "praat-parselmouth>=0.4.6",
+]
 visualize = ["matplotlib>=3.6"]
 studio = [
   "gradio>=4,<6",
@@ -61,7 +64,7 @@ train = [
   "torchlpc",
 ]
 all = [
-  "aris[audio,world,visualize,studio,train]",
+  "aris[audio,world,phonetics,visualize,studio,train]",
 ]
 full = [
   "aris[all,dev]",

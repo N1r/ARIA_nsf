@@ -19,17 +19,28 @@ from .manifest import DatasetManifest
 
 
 class ManifestSegmentDataset(Dataset):
-    """Fixed-length overlapping training segments with sample-aligned F0."""
+    """Fixed-length segments with sample-aligned F0 and optional formant targets."""
 
-    def __init__(self, manifest_path, split, duration=1.5, overlap=1.0):
+    def __init__(
+        self, manifest_path, split, duration=1.5, overlap=1.0, load_formants=False
+    ):
         self.manifest = DatasetManifest.load(Path(manifest_path))
         self.records = [record for record in self.manifest.records if record.split == split]
         if not self.records and split == "validation":
             raise ValueError("Manifest has no validation records; increase --validation-ratio")
         self.segment_frames = int(duration * self.manifest.metadata["sample_rate"])
         self.hop_frames = int((duration - overlap) * self.manifest.metadata["sample_rate"])
+        self.formant_hop_frames = int(0.010 * self.manifest.metadata["sample_rate"])
+        self.load_formants = load_formants
         if self.hop_frames <= 0:
             raise ValueError("overlap must be smaller than duration")
+        if load_formants:
+            missing = [record.id for record in self.records if not record.formant_path]
+            if missing:
+                raise ValueError(
+                    "aria-golf requires prepared F1/F2 targets; rerun `aris prepare` "
+                    f"with --extract-formants (missing for {len(missing)} {split} records)"
+                )
         self.items = []
         for record_index, record in enumerate(self.records):
             segment_count = max(
@@ -64,7 +75,38 @@ class ManifestSegmentDataset(Dataset):
             np.interp(target, positions, (f0 <= 0).astype(float), right=float(f0[-1] <= 0)) > 0
         )
         interpolated = np.where(unvoiced, 0, np.interp(target, positions, f0))
-        return segment.astype(np.float32), interpolated.astype(np.float32)
+        segment = segment.astype(np.float32)
+        interpolated = interpolated.astype(np.float32)
+        if not self.load_formants:
+            return segment, interpolated
+
+        with np.load(self.manifest.root / record.formant_path) as features:
+            feature_times = features["time_s"].astype(np.float64)
+            f1_track = features["f1"].astype(np.float32)
+            f2_track = features["f2"].astype(np.float32)
+        frame_count = self.segment_frames // self.formant_hop_frames
+        target_times = (
+            offset / record.sample_rate
+            + np.arange(frame_count, dtype=np.float64) * 0.010
+        )
+        f1 = _nearest_feature_track(feature_times, f1_track, target_times, 0.010)
+        f2 = _nearest_feature_track(feature_times, f2_track, target_times, 0.010)
+        frame_f0 = interpolated[:: self.formant_hop_frames][:frame_count]
+        voiced_gate = ((frame_f0 > 0) & (f1 > 0) & (f2 > 0)).astype(np.float32)
+        return segment, interpolated, f1, f2, voiced_gate
+
+
+def _nearest_feature_track(times, values, target_times, hop_seconds):
+    """Sample a frame track without interpolating across undefined (zero) values."""
+    if not len(times):
+        return np.zeros(len(target_times), dtype=np.float32)
+    right = np.searchsorted(times, target_times, side="left")
+    right = np.clip(right, 0, len(times) - 1)
+    left = np.clip(right - 1, 0, len(times) - 1)
+    choose_left = np.abs(target_times - times[left]) <= np.abs(times[right] - target_times)
+    indices = np.where(choose_left, left, right)
+    valid = np.abs(times[indices] - target_times) <= hop_seconds * 0.51
+    return np.where(valid, values[indices], 0).astype(np.float32)
 
 
 class ManifestInferenceDataset(Dataset):
@@ -117,6 +159,7 @@ class ManifestDataModule(LightningDataModule):
         num_workers: int = 4,
         predict_f0_scale: float = 1.0,
         predict_split: str = "test",
+        load_formants: bool = False,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -128,6 +171,7 @@ class ManifestDataModule(LightningDataModule):
                 split,
                 self.hparams.duration,
                 self.hparams.overlap,
+                self.hparams.load_formants,
             )
 
         if stage in {None, "fit"}:

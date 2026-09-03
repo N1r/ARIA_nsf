@@ -13,7 +13,7 @@ import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 import numpy as np
 
@@ -49,6 +49,7 @@ class DatasetRecord:
     f0_backend: str
     median_f0_hz: float
     voiced_fraction: float
+    formant_path: str = ""
 
 
 @dataclass
@@ -84,7 +85,7 @@ class DatasetManifest:
                             "median_f0_hz",
                             "voiced_fraction",
                         }
-                        else row[field]
+                        else row.get(field, "")
                     )
                     for field in DatasetRecord.__dataclass_fields__
                 }
@@ -146,9 +147,12 @@ def prepare_dataset(
     seed: int = 42,
     min_duration: float = 0.25,
     normalize_peak: Optional[float] = None,
+    extract_formant_targets: bool = False,
+    formant_ceiling: float = 5500.0,
     overwrite: bool = False,
+    progress: Optional[Callable[[int, int], None]] = None,
 ) -> DatasetManifest:
-    """Resample, extract F0, split deterministically, and write a manifest.
+    """Resample, extract acoustic targets, split deterministically, and write a manifest.
 
     The dataset is built in a staging directory and renamed into place only on
     success, so an existing output directory is never partially overwritten.
@@ -173,6 +177,12 @@ def prepare_dataset(
         raise ValueError("F0 limits must satisfy 0 < floor < ceiling")
     if normalize_peak is not None and not 0 < normalize_peak <= 1:
         raise ValueError("normalize_peak must be in (0, 1]")
+    if extract_formant_targets and not 0 < formant_ceiling < sample_rate / 2:
+        raise ValueError("Formant ceiling must be positive and below Nyquist")
+    if extract_formant_targets:
+        # Import before staging so a missing optional dependency fails cleanly.
+        from .formants import extract_formants
+
     files = discover_audio(source)
     if not files:
         raise ValueError(f"No supported audio files found below {source}")
@@ -188,7 +198,7 @@ def prepare_dataset(
     skipped_too_short: list[str] = []
     try:
         splits = _split_map(files, source, seed, validation_ratio, test_ratio)
-        for path in files:
+        for file_index, path in enumerate(files, start=1):
             relative_source = path.relative_to(source).as_posix()
             try:
                 source_hash = _sha256(path)
@@ -198,6 +208,7 @@ def prepare_dataset(
                 item_id = f"{safe_stem}-{source_hash[:10]}"
                 relative_audio = Path("audio") / f"{item_id}.wav"
                 relative_f0 = Path("f0") / f"{item_id}.f0.txt"
+                relative_formants = Path("formants") / f"{item_id}.formants.npz"
 
                 audio, original_rate = read_audio(path)
                 if audio.ndim != 1 or not np.isfinite(audio).all():
@@ -239,6 +250,17 @@ def prepare_dataset(
                 write_wav(staging / relative_audio, audio, sample_rate)
                 (staging / relative_f0).parent.mkdir(parents=True, exist_ok=True)
                 np.savetxt(staging / relative_f0, f0, fmt="%.5f")
+                formant_path = ""
+                if extract_formant_targets:
+                    formants = extract_formants(
+                        audio,
+                        sample_rate,
+                        hop_seconds=0.010,
+                        max_formant_hz=formant_ceiling,
+                    )
+                    (staging / relative_formants).parent.mkdir(parents=True, exist_ok=True)
+                    np.savez_compressed(staging / relative_formants, **formants)
+                    formant_path = relative_formants.as_posix()
                 records.append(
                     DatasetRecord(
                         id=item_id,
@@ -257,12 +279,16 @@ def prepare_dataset(
                         f0_backend=backend,
                         median_f0_hz=float(np.median(voiced)) if voiced.size else 0.0,
                         voiced_fraction=float(np.mean(f0 > 0)),
+                        formant_path=formant_path,
                     )
                 )
             except Exception as error:
                 # One corrupt/mismatched file should not discard the work already
                 # done on every other file in the source tree.
                 skipped_invalid.append({"file": relative_source, "error": str(error)})
+            finally:
+                if progress is not None:
+                    progress(file_index, len(files))
         if not records:
             raise ValueError(
                 f"No usable audio files below {source}: {len(skipped_too_short)} too short, "
@@ -284,6 +310,15 @@ def prepare_dataset(
                 "test_ratio": test_ratio,
                 "min_duration_s": min_duration,
                 "normalize_peak": normalize_peak,
+                "formant_extraction": (
+                    {
+                        "backend": "praat-burg",
+                        "hop_seconds": 0.010,
+                        "max_formant_hz": formant_ceiling,
+                    }
+                    if extract_formant_targets
+                    else None
+                ),
                 "tool": "aris",
                 "python": sys.version.split()[0],
                 "platform": platform.platform(),
@@ -347,7 +382,9 @@ def validate_manifest(manifest: DatasetManifest | Path | str) -> list[str]:
         ids.add(record.id)
         if record.split not in {"train", "validation", "test"}:
             errors.append(f"{record.id}: invalid split {record.split}")
-        for key in ("audio_path", "f0_path"):
+        for key in ("audio_path", "f0_path", "formant_path"):
+            if not getattr(record, key):
+                continue
             path = (manifest.root / getattr(record, key)).resolve()
             if manifest.root not in path.parents:
                 errors.append(f"{record.id}: {key} escapes dataset root")

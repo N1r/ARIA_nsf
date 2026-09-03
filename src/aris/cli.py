@@ -202,6 +202,17 @@ def parser() -> argparse.ArgumentParser:
         help="peak-normalize audio to this level in dBFS; omit to leave levels unchanged",
     )
     prepare.add_argument(
+        "--extract-formants",
+        action="store_true",
+        help="extract 10 ms Praat Burg F1/F2 targets for aria-golf training",
+    )
+    prepare.add_argument(
+        "--formant-ceiling",
+        type=float,
+        default=5500,
+        help="Praat formant-analysis ceiling in Hz (default: %(default)s)",
+    )
+    prepare.add_argument(
         "--overwrite",
         "-f",
         action="store_true",
@@ -248,8 +259,8 @@ def parser() -> argparse.ArgumentParser:
     init.add_argument(
         "--f0-min",
         type=float,
-        default=60,
-        help="lowest F0 the encoder should expect, in Hz (default: %(default)s)",
+        default=None,
+        help="lowest expected F0 in Hz (default: 100 for aria-golf, otherwise 60)",
     )
     init.add_argument(
         "--f0-max",
@@ -512,6 +523,11 @@ def main(argv=None) -> int:
             print(json.dumps(split_summary(result), indent=2))
             return 0
         if args.command == "prepare":
+            def report_preparation(completed: int, total: int) -> None:
+                if completed == 1 or completed % 100 == 0 or completed == total:
+                    target = "audio, F0 and F1/F2" if args.extract_formants else "audio and F0"
+                    print(f"[prepare] {completed}/{total} | {target}", flush=True)
+
             manifest = prepare_dataset(
                 args.source,
                 args.output,
@@ -524,7 +540,10 @@ def main(argv=None) -> int:
                 seed=args.seed,
                 min_duration=args.min_duration,
                 normalize_peak=args.normalize_peak,
+                extract_formant_targets=args.extract_formants,
+                formant_ceiling=args.formant_ceiling,
                 overwrite=args.overwrite,
+                progress=report_preparation,
             )
             print(
                 json.dumps(

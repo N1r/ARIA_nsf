@@ -94,9 +94,19 @@ class VoiceAutoEncoder(pl.LightningModule):
         rreg = residual.pow(2).mean() if residual.numel() > 0 else ctrl_t.new_zeros(())
         # temporal smoothness: penalise abrupt frame-to-frame formant jumps
         if self.formant_smooth_weight > 0 and f1p.shape[1] > 1:
-            sfloss = (F.l1_loss(f1p[:, 1:] / 1000.0, f1p[:, :-1].detach() / 1000.0)
-                      + F.l1_loss(f2p[:, 1:] / 1000.0, f2p[:, :-1].detach() / 1000.0))
-            floss = floss + self.formant_smooth_weight * sfloss
+            adjacent = m[:, 1:] & m[:, :-1]
+            if adjacent.any():
+                sfloss = (
+                    F.l1_loss(
+                        f1p[:, 1:][adjacent] / 1000.0,
+                        f1p[:, :-1][adjacent].detach() / 1000.0,
+                    )
+                    + F.l1_loss(
+                        f2p[:, 1:][adjacent] / 1000.0,
+                        f2p[:, :-1][adjacent].detach() / 1000.0,
+                    )
+                )
+                floss = floss + self.formant_smooth_weight * sfloss
         return floss, rreg
 
     def _aperiodicity_loss(self, params, ap_tgt, vmask):
@@ -188,6 +198,7 @@ class VoiceAutoEncoder(pl.LightningModule):
         loss = self.criterion(
             x_hat[:, : x.shape[1]], x[:, : x_hat.shape[1]]
         ).as_tensor()
+        self.log("train_spectral_loss", loss, sync_dist=True)
 
         if f0_hat is not None:
             f0_target = f0_in_hz[:, :: f0_hat.hop_length].as_tensor()[

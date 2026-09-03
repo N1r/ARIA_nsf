@@ -1,15 +1,20 @@
-# ARIA-GOLF: GOLF source-filter with analytic VocalTractCascade end_filter.
+# ARIA-GOLF v4: analytic vocal-tract cascade with decoupled aperiodicity.
 #
 # Analytic params:  alpha (tilt), F1/B1, F2/B2
 # Learned params:   n_learned=6 biquad sections (F3..F8 region)
-# Total AR order:   1 + 2 + 2 + 6×2 = 17  (vs. 18 for plain GOLF)
-#
 # Controlled manipulation:
 #   model.decoder.end_filter.get_formant_params(ctrl)  →  {alpha, f1, b1, f2, b2}
 
 decoder:
-  class_path: aris.models.sf.SourceFilterSynth
+  class_path: aris.models.sf.SourceFilterSynthAP
   init_args:
+    aperiodicity_filter:
+      class_path: aris.models.filters.AperiodicityFIRFilter
+      init_args:
+        window: hanning
+        conv_method: direct
+        n_mag: 128
+        hf_bias: 2.0
     harm_oscillator:
       class_path: aris.models.synth.DownsampledIndexedGlottalFlowTable
       init_args:
@@ -17,6 +22,7 @@ decoder:
         in_channels: 64
         oversampling: 4
         equal_energy: true
+        table_size: 100
         table_type: derivative
         normalize_method: constant_power
         align_peak: true
@@ -31,7 +37,9 @@ decoder:
       class_path: aris.models.filters.LTVZeroPhaseFIRFilter
       init_args:
         window: hanning
+        conv_method: direct
         n_mag: 128
+        mag_activation: exp
     end_filter:
       class_path: aris.models.analytic_filter.VocalTractCascade
       init_args:
@@ -39,9 +47,17 @@ decoder:
         n_learned: 6
         f1_range: [150, 1300]
         f2_range: [600, 3200]
+        f3_range: [1800, 4000]
+        b1_range: [50, 200]
+        b2_range: [50, 250]
+        b3_range: [40, 540]
+        n_formants: 2
+        max_abs_pole: 0.99
+        use_tilt: true
+        learned_placement: false
     room_filter:
       class_path: aris.models.filters.LTIAcousticFilter
       init_args:
         length: 128
         conv_method: fft
-    subtract_harmonics: false
+    subtract_harmonics: true

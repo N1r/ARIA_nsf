@@ -124,9 +124,19 @@ class TrainingProgressPrinter(Callback):
             return
         loss = _metric_number(trainer.callback_metrics.get("train_loss"))
         loss_text = f"{loss:.4f}" if loss is not None else "n/a"
+        components = []
+        for key, label in (
+            ("train_spectral_loss", "spectral"),
+            ("train_formant_loss", "formant"),
+            ("train_residual_reg", "residual"),
+        ):
+            value = _metric_number(trainer.callback_metrics.get(key))
+            if value is not None:
+                components.append(f"{label} {value:.4f}")
+        detail = " | " + " | ".join(components) if components else ""
         print(
             f"[train] step {step}/{total} | epoch {trainer.current_epoch + 1} | "
-            f"loss {loss_text}",
+            f"loss {loss_text}{detail}",
             flush=True,
         )
 

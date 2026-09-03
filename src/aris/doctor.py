@@ -33,6 +33,7 @@ def checks() -> list[Check]:
         _module("soundfile", "non-WAV input and training"),
         _module("scipy", "measurement-grade resampling"),
         _module("pyworld", "recommended F0 extraction"),
+        _module("parselmouth", "Praat F1/F2 targets for aria-golf"),
         _module("torch", "training and inference"),
         _module("lightning", "training"),
         _module("gradio", "interactive Studio web workspace"),
@@ -62,8 +63,8 @@ def _module(name: str, purpose: str) -> Check:
     found = importlib.util.find_spec(name) is not None
     detail = "installed" if found else "missing"
     if not found:
-        if name in {"soundfile", "scipy", "pyworld"}:
-            extra = "world" if name == "pyworld" else "audio"
+        if name in {"soundfile", "scipy", "pyworld", "parselmouth"}:
+            extra = {"pyworld": "world", "parselmouth": "phonetics"}.get(name, "audio")
             detail += f"; install with: uv sync --extra {extra} (or: uv sync --all-extras)"
         elif name in {"torch", "lightning"}:
             detail += "; install with: uv sync --extra train (or: uv sync --all-extras)"

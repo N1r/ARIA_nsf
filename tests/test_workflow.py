@@ -29,6 +29,69 @@ def _tone(path: Path, frequency: float, seconds: float = 0.30, sample_rate: int 
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_aria_v4_preparation_and_experiment_include_formant_supervision(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            for index in range(30):
+                _tone(source / f"item-{index}.wav", 180 + index)
+            dataset = root / "dataset"
+            manifest = prepare_dataset(
+                source,
+                dataset,
+                sample_rate=16000,
+                f0_method="autocorr",
+                min_duration=0.2,
+                extract_formant_targets=True,
+            )
+            self.assertEqual(manifest.metadata["formant_extraction"]["backend"], "praat-burg")
+            self.assertTrue(all(record.formant_path for record in manifest.records))
+            with np.load(dataset / manifest.records[0].formant_path) as targets:
+                self.assertEqual(
+                    set(targets.files), {"time_s", "f1", "f2", "f3", "b1", "b2", "b3"}
+                )
+
+            experiment = create_experiment(
+                dataset, root / "experiment", model="aria-golf", max_steps=2
+            )
+            config = (experiment / "config.yaml").read_text()
+            decoder = (experiment / "decoder.yaml").read_text()
+            self.assertIn("f0_min: 100.0", config)
+            self.assertIn("formant_loss_weight: 2.0", config)
+            self.assertIn("residual_reg_weight: 0.02", config)
+            self.assertIn("formant_smooth_weight: 0.05", config)
+            self.assertIn("load_formants: true", config)
+            self.assertIn("SourceFilterSynthAP", decoder)
+            self.assertIn("subtract_harmonics: true", decoder)
+
+            try:
+                from aris.lightning import ManifestSegmentDataset
+            except ImportError:
+                self.skipTest("training extras are not installed")
+            sample = ManifestSegmentDataset(dataset / "manifest.csv", "train", load_formants=True)[0]
+            self.assertEqual(len(sample), 5)
+            audio, f0, f1, f2, voiced_gate = sample
+            self.assertEqual(audio.shape, (24000,))
+            self.assertEqual(f0.shape, (24000,))
+            self.assertEqual(f1.shape, f2.shape)
+            self.assertEqual(f1.shape, voiced_gate.shape)
+            self.assertTrue(np.all((voiced_gate == 0) | ((f1 > 0) & (f2 > 0))))
+            frame_f0 = f0[::160][: len(voiced_gate)]
+            self.assertTrue(np.all((voiced_gate == 0) | (frame_f0 > 0)))
+
+    def test_aria_v4_rejects_dataset_without_formant_targets(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            for index in range(30):
+                _tone(source / f"item-{index}.wav", 180 + index)
+            dataset = root / "dataset"
+            prepare_dataset(
+                source, dataset, sample_rate=16000, f0_method="autocorr", min_duration=0.2
+            )
+            with self.assertRaisesRegex(ValueError, "--extract-formants"):
+                create_experiment(dataset, root / "experiment", model="aria-golf")
+
     def test_prepare_validate_report_and_experiment(self):
         with tempfile.TemporaryDirectory() as temporary:
             tmp_path = Path(temporary)

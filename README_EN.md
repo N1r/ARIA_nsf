@@ -80,7 +80,7 @@ Open the Colab link above, select a **T4 GPU** runtime, and choose
 **Runtime → Run all**. The tutorial uses uv throughout: uv installs Python 3.11, creates
 the project environment from `uv.lock`, and executes ARIS through `uv run aris ...`.
 Plots and audio players remain in the Colab kernel, so changes to Colab's system Python
-do not affect ARIS and no runtime restart is needed. The tutorial trains for 1,000 steps,
+do not affect ARIS and no runtime restart is needed. The tutorial trains for 5,000 steps,
 then uses that checkpoint for reconstruction and manipulation. This is enough to hear
 an initial result, but it is not evidence of convergence or research-ready quality.
 The default batch size is 8 to
@@ -127,7 +127,7 @@ Then segment, preprocess, and check:
 
 ```bash
 uv run aris split recordings/ segments/ --mode silence        # cut into short utterances at silences
-uv run aris prepare segments/audio data/my_voice              # resample, extract F0, split the dataset
+uv run aris prepare segments/audio data/my_voice --extract-formants  # extract F0 and Praat F1/F2
 uv run aris validate data/my_voice                            # confirm the dataset is complete and usable
 ```
 
@@ -142,7 +142,13 @@ A few practical notes on data and study design:
 3. For F0 extraction, `--f0-method pyworld` (WORLD's DIO+StoneMask, stable
    and fast) is recommended; the default `auto` falls back to
    autocorrelation when WORLD is not installed.
-4. For tonal languages such as Mandarin, or other F0-sensitive work,
+4. `aria-golf` training requires `--extract-formants`. This runs Praat Burg analysis
+   on a 10 ms grid and stores F1/F2 supervision targets. The formant loss includes only
+   frames with positive F0 and valid F1/F2 estimates. The default 5,500 Hz analysis
+   ceiling is conventional for female speech; use `--formant-ceiling 5000` when more
+   appropriate for the corpus. Audit automatic tracks rather than treating them as
+   hand-annotated ground truth.
+5. For tonal languages such as Mandarin, or other F0-sensitive work,
    extract a more reliable pitch track first with
    [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, save it as a
    `.pv` file next to each WAV, and load it via `--f0-method sidecar`.
@@ -154,10 +160,10 @@ A few practical notes on data and study design:
    substitution before `prepare` will accept it. A frame count that does
    not match the audio duration now raises a clear error instead of
    silently misaligning.
-5. Sample rates need not be unified beforehand; `prepare` resamples to the
+6. Sample rates need not be unified beforehand; `prepare` resamples to the
    model sample rate automatically. Preserve the unresampled, unnormalized source
    recordings rather than overwriting the research archive.
-6. No recordings at hand? `uv run aris fetch-corpus data/arctic`
+7. No recordings at hand? `uv run aris fetch-corpus data/arctic`
    downloads ~30 minutes of the public CMU ARCTIC corpus for a full trial
    run; once downloaded, continue with
    `uv run aris prepare data/arctic/selected data/arctic_prepared`.
@@ -183,7 +189,11 @@ A few notes:
    | `aria-golf` | above + F1/F2, spectral tilt | explicit source–filter manipulation |
 
    `aria-golf` is the code name of the ARIS decoder. The LPC coefficients in regular
-   `golf` cannot be interpreted as independent F1/F2 controls.
+   `golf` cannot be interpreted as independent F1/F2 controls. The current preset is
+   aligned with v4: in addition to multi-scale spectral reconstruction, it applies
+   F1/F2 supervision (weight 2.0), learned-residual regularization (0.02), and temporal
+   formant smoothing (0.05) to reduce non-identifiability between analytic resonances
+   and learned filter sections.
 2. Checkpoints are saved under `experiments/my_voice/runs/checkpoints/`.
 3. Training requires a CUDA-enabled PyTorch. The default Linux install
    already ships with CUDA support; if it does not match your GPU or
