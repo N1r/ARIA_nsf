@@ -72,7 +72,10 @@ class ManifestInferenceDataset(Dataset):
 
     def __init__(self, manifest_path, split="test", f0_scale=1.0):
         self.manifest = DatasetManifest.load(Path(manifest_path))
-        self.records = [record for record in self.manifest.records if record.split == split]
+        if split in (None, "all"):
+            self.records = list(self.manifest.records)
+        else:
+            self.records = [record for record in self.manifest.records if record.split == split]
         self.f0_scale = float(f0_scale)
         if not np.isfinite(self.f0_scale) or self.f0_scale <= 0:
             raise ValueError("f0_scale must be finite and positive")
@@ -113,6 +116,7 @@ class ManifestDataModule(LightningDataModule):
         overlap: float = 1.0,
         num_workers: int = 4,
         predict_f0_scale: float = 1.0,
+        predict_split: str = "test",
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -136,6 +140,7 @@ class ManifestDataModule(LightningDataModule):
         if stage == "predict":
             self.predict_dataset = ManifestInferenceDataset(
                 self.hparams.manifest_path,
+                split=self.hparams.predict_split,
                 f0_scale=self.hparams.predict_f0_scale,
             )
 

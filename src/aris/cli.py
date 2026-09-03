@@ -201,6 +201,12 @@ def parser() -> argparse.ArgumentParser:
         type=float,
         help="peak-normalize audio to this level in dBFS; omit to leave levels unchanged",
     )
+    prepare.add_argument(
+        "--overwrite",
+        "-f",
+        action="store_true",
+        help="overwrite output directory if it already exists",
+    )
 
     validate = commands.add_parser("validate", help="validate a prepared dataset")
     validate.add_argument("dataset", type=Path, help="prepared dataset directory to validate")
@@ -214,6 +220,12 @@ def parser() -> argparse.ArgumentParser:
     )
     init.add_argument(
         "output", type=Path, help="directory to create the experiment in (must not already exist)"
+    )
+    init.add_argument(
+        "--overwrite",
+        "-f",
+        action="store_true",
+        help="overwrite experiment directory if it already exists",
     )
     init.add_argument(
         "--model",
@@ -328,6 +340,18 @@ def parser() -> argparse.ArgumentParser:
             "--variant name:f1_scale=1.1,pitch_semitones=2)"
         ),
     )
+    synthesis.add_argument(
+        "--split",
+        default="test",
+        choices=["test", "train", "validation", "all"],
+        help="dataset split to synthesize (default: %(default)s)",
+    )
+    synthesis.add_argument(
+        "--overwrite",
+        "-f",
+        action="store_true",
+        help="overwrite output directory if it already exists",
+    )
 
     manipulation = commands.add_parser(
         "manipulate",
@@ -343,6 +367,18 @@ def parser() -> argparse.ArgumentParser:
         "output",
         type=Path,
         help="directory to write rendered variants into (must not already exist)",
+    )
+    manipulation.add_argument(
+        "--split",
+        default="test",
+        choices=["test", "train", "validation", "all"],
+        help="dataset split to manipulate (default: %(default)s)",
+    )
+    manipulation.add_argument(
+        "--overwrite",
+        "-f",
+        action="store_true",
+        help="overwrite output directory if it already exists",
     )
     manipulation.add_argument(
         "--semitones",
@@ -488,6 +524,7 @@ def main(argv=None) -> int:
                 seed=args.seed,
                 min_duration=args.min_duration,
                 normalize_peak=args.normalize_peak,
+                overwrite=args.overwrite,
             )
             print(
                 json.dumps(
@@ -521,6 +558,7 @@ def main(argv=None) -> int:
                 slurm_cpus=args.cpus,
                 slurm_memory=args.memory,
                 slurm_exclude=args.exclude,
+                overwrite=args.overwrite,
             )
             print(f"Experiment created: {path}")
             print(f"Dry run: aris train {shlex.quote(str(path))} --dry-run")
@@ -559,6 +597,8 @@ def main(argv=None) -> int:
                 dry_run=args.dry_run,
                 f0_scale=semitones_to_scale(args.semitones),
                 controls=controls,
+                split=args.split,
+                overwrite=args.overwrite,
             )
             if args.dry_run:
                 print(" ".join(shlex.quote(part) for part in command))
@@ -572,6 +612,8 @@ def main(argv=None) -> int:
                 args.output,
                 variants,
                 dry_run=args.dry_run,
+                split=args.split,
+                overwrite=args.overwrite,
             )
             if args.dry_run:
                 for command in commands:

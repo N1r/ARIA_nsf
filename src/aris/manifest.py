@@ -146,6 +146,7 @@ def prepare_dataset(
     seed: int = 42,
     min_duration: float = 0.25,
     normalize_peak: Optional[float] = None,
+    overwrite: bool = False,
 ) -> DatasetManifest:
     """Resample, extract F0, split deterministically, and write a manifest.
 
@@ -157,7 +158,12 @@ def prepare_dataset(
     if not source.is_dir():
         raise ValueError(f"Audio source is not a directory: {source}")
     if output.exists():
-        raise FileExistsError(f"{output} already exists; choose another output directory")
+        if overwrite:
+            shutil.rmtree(output)
+        else:
+            raise FileExistsError(
+                f"{output} already exists; choose another output directory or set overwrite=True"
+            )
     output.parent.mkdir(parents=True, exist_ok=True)
     if validation_ratio < 0 or test_ratio < 0 or validation_ratio + test_ratio >= 1:
         raise ValueError("validation_ratio and test_ratio must be >= 0 and sum to < 1")

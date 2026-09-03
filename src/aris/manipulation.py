@@ -53,9 +53,11 @@ def manipulate_controls(
     experiment: Path,
     checkpoint: Path,
     output: Path,
-    variants: list[ControlVariant],
+    variants: list[ControlVariant] | list[str],
     *,
     dry_run: bool = False,
+    split: str = "test",
+    overwrite: bool = False,
 ) -> list[list[str]]:
     """Render named control variants and write checkpoint-bound provenance."""
     from .controls.specs import parse_variant
@@ -83,7 +85,12 @@ def manipulate_controls(
         for variant in parsed_variants
     ]
     if output.exists():
-        raise FileExistsError(f"Manipulation output already exists: {output}")
+        if overwrite:
+            shutil.rmtree(output)
+        else:
+            raise FileExistsError(
+                f"Manipulation output already exists: {output}; set overwrite=True to replace"
+            )
 
     if dry_run:
         return [
@@ -94,6 +101,7 @@ def manipulate_controls(
                 dry_run=True,
                 f0_scale=semitones_to_scale(variant.controls.get("pitch_semitones", 0.0)),
                 controls=variant.controls,
+                split=split,
             )
             for variant in normalized
         ]
@@ -122,6 +130,7 @@ def manipulate_controls(
                 staging / variant.name,
                 f0_scale=scale,
                 controls=variant.controls,
+                split=split,
             )
             _verify_checkpoint(checkpoint, checkpoint_hash)
             commands.append(command)
@@ -163,6 +172,8 @@ def manipulate_controls(
             json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
+        if output.exists() and overwrite:
+            shutil.rmtree(output)
         staging.rename(output)
         return commands
     except Exception:

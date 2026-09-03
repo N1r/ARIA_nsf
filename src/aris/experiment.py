@@ -42,6 +42,7 @@ def create_experiment(
     slurm_cpus: int = 8,
     slurm_memory: str = "32G",
     slurm_exclude: str = "",
+    overwrite: bool = False,
 ) -> Path:
     """Create a self-contained experiment directory bound to a validated dataset.
 
@@ -71,7 +72,12 @@ def create_experiment(
     output = Path(output).resolve()
     # Refuse non-empty targets so config hashes always describe a single run.
     if output.exists() and any(output.iterdir()):
-        raise FileExistsError(f"Experiment directory is not empty: {output}")
+        if overwrite:
+            shutil.rmtree(output)
+        else:
+            raise FileExistsError(
+                f"Experiment directory is not empty: {output}; set overwrite=True to replace"
+            )
     output.mkdir(parents=True, exist_ok=True)
     run_dir = output / "runs"
     config = _training_config(
@@ -161,6 +167,8 @@ def synthesize(
     dry_run: bool = False,
     f0_scale: float = 1.0,
     controls: Optional[Mapping[str, float]] = None,
+    split: str = "test",
+    overwrite: bool = False,
 ) -> list[str]:
     """Render held-out audio from a checkpoint, optionally with DDSP controls."""
     from .cuda_env import auto_configure_cuda
@@ -194,7 +202,12 @@ def synthesize(
     # Never write into an existing directory: outputs must stay attributable
     # to exactly one checkpoint and control set.
     if output.exists():
-        raise FileExistsError(f"Synthesis output already exists: {output}")
+        if overwrite:
+            shutil.rmtree(output)
+        else:
+            raise FileExistsError(
+                f"Synthesis output already exists: {output}; set overwrite=True to replace"
+            )
     if not dry_run:
         output.parent.mkdir(parents=True, exist_ok=True)
     command = [
@@ -215,6 +228,8 @@ def synthesize(
         str(output),
         "--trainer.callbacks.controls_json",
         json.dumps(control_values, sort_keys=True, separators=(",", ":")),
+        "--data.init_args.predict_split",
+        str(split),
         "--data.init_args.predict_f0_scale",
         str(f0_scale),
     ]
