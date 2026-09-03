@@ -329,8 +329,10 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def validate_manifest(manifest: DatasetManifest) -> list[str]:
+def validate_manifest(manifest: DatasetManifest | Path | str) -> list[str]:
     """Return a list of integrity errors; an empty list means the dataset is valid."""
+    if isinstance(manifest, (str, Path)):
+        manifest = DatasetManifest.load(manifest)
     errors = []
     ids = set()
     for record in manifest.records:

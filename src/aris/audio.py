@@ -121,7 +121,19 @@ def estimate_f0(
     """
     if method in {"auto", "pyworld"}:
         try:
-            import pyworld
+            try:
+                import pyworld
+            except ModuleNotFoundError as err:
+                if "pkg_resources" in str(err):
+                    import sys
+                    import types
+
+                    fake_pkg = types.ModuleType("pkg_resources")
+                    fake_pkg.get_distribution = lambda name: types.SimpleNamespace(version="0.3.5")
+                    sys.modules["pkg_resources"] = fake_pkg
+                    import pyworld
+                else:
+                    raise
 
             x = np.asarray(audio, dtype=np.float64)
             f0, time_axis = pyworld.dio(

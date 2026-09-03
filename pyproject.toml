@@ -32,7 +32,10 @@ audio = [
   "soundfile>=0.12",
   "scipy>=1.9",
 ]
-world = ["pyworld>=0.3.4"]
+world = [
+  "pyworld>=0.3.4",
+  "setuptools",
+]
 visualize = ["matplotlib>=3.6"]
 studio = [
   "gradio>=4,<6",
