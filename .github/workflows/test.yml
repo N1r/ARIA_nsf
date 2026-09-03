@@ -48,5 +48,10 @@ jobs:
       - name: Lint
         run: uv run --no-sync ruff check src tests
 
+      - name: Check notebook names
+        run: >-
+          uv run --no-sync ruff check --select F821
+          notebooks/ARIS_Tutorial_and_Workflow.ipynb
+
       - name: Check formatting
         run: uv run --no-sync ruff format --check src tests

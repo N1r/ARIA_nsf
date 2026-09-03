@@ -25,8 +25,7 @@ def extract_formants(
         from parselmouth.praat import call
     except ImportError as error:
         raise ImportError(
-            "Formant extraction requires the phonetics extra: "
-            "uv sync --extra phonetics"
+            "Formant extraction requires the phonetics extra: uv sync --extra phonetics"
         ) from error
 
     if audio.ndim != 1:
@@ -36,9 +35,7 @@ def extract_formants(
     if max_formant_hz <= 0 or max_formant_hz >= sample_rate / 2:
         raise ValueError("Formant ceiling must be positive and below Nyquist")
 
-    sound = parselmouth.Sound(
-        audio.astype(np.float64, copy=False), sampling_frequency=sample_rate
-    )
+    sound = parselmouth.Sound(audio.astype(np.float64, copy=False), sampling_frequency=sample_rate)
     formant = call(
         sound,
         "To Formant (burg)",
@@ -58,9 +55,7 @@ def extract_formants(
         frequencies = np.zeros(frame_count, dtype=np.float32)
         bandwidths = np.zeros(frame_count, dtype=np.float32)
         for index, time_s in enumerate(times):
-            frequency = call(
-                formant, "Get value at time", number, float(time_s), "Hertz", "Linear"
-            )
+            frequency = call(formant, "Get value at time", number, float(time_s), "Hertz", "Linear")
             bandwidth = call(
                 formant, "Get bandwidth at time", number, float(time_s), "Hertz", "Linear"
             )

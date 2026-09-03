@@ -101,6 +101,29 @@ def test_cli_validate_reports_ok_for_a_valid_dataset(tmp_path, capsys):
     assert captured.out.startswith("OK:")
 
 
+def test_cli_prepare_reports_progress(tmp_path, capsys):
+    source = tmp_path / "raw"
+    for index in range(4):
+        _tone(source / f"item-{index}.wav", 140 + index)
+
+    exit_code = cli.main(
+        [
+            "prepare",
+            str(source),
+            str(tmp_path / "dataset"),
+            "--f0-method",
+            "autocorr",
+            "--min-duration",
+            "0.2",
+        ]
+    )
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "[prepare] 1/4 ( 25.0%) | audio and F0" in output
+    assert "[prepare] 4/4 (100.0%) | audio and F0" in output
+
+
 def test_cli_validate_json_reports_ok_for_a_valid_dataset(tmp_path, capsys):
     dataset = _make_dataset(tmp_path)
 

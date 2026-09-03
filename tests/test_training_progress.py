@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from aris.training.callbacks import TrainingProgressPrinter
+from aris.training.progress import TrainingProgressPrinter
 
 
 def _trainer(*, step: int, train_loss: float = 1.25, val_loss: float = 0.75):
@@ -32,6 +32,4 @@ def test_validation_progress_prints_loss(capsys):
 
     callback.on_validation_epoch_end(_trainer(step=50), None)
 
-    assert capsys.readouterr().out.strip() == (
-        "[valid] step 50/100 | epoch 2 | loss 0.7500"
-    )
+    assert capsys.readouterr().out.strip() == ("[valid] step 50/100 | epoch 2 | loss 0.7500")

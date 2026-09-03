@@ -11,9 +11,7 @@ try:
     from lightning.pytorch import LightningDataModule
     from torch.utils.data import DataLoader, Dataset
 except ImportError as error:
-    raise ImportError(
-        "Training support is not installed. Run: uv sync --extra train"
-    ) from error
+    raise ImportError("Training support is not installed. Run: uv sync --extra train") from error
 
 from .manifest import DatasetManifest
 
@@ -21,9 +19,7 @@ from .manifest import DatasetManifest
 class ManifestSegmentDataset(Dataset):
     """Fixed-length segments with sample-aligned F0 and optional formant targets."""
 
-    def __init__(
-        self, manifest_path, split, duration=1.5, overlap=1.0, load_formants=False
-    ):
+    def __init__(self, manifest_path, split, duration=1.5, overlap=1.0, load_formants=False):
         self.manifest = DatasetManifest.load(Path(manifest_path))
         self.records = [record for record in self.manifest.records if record.split == split]
         if not self.records and split == "validation":
@@ -86,8 +82,7 @@ class ManifestSegmentDataset(Dataset):
             f2_track = features["f2"].astype(np.float32)
         frame_count = self.segment_frames // self.formant_hop_frames
         target_times = (
-            offset / record.sample_rate
-            + np.arange(frame_count, dtype=np.float64) * 0.010
+            offset / record.sample_rate + np.arange(frame_count, dtype=np.float64) * 0.010
         )
         f1 = _nearest_feature_track(feature_times, f1_track, target_times, 0.010)
         f2 = _nearest_feature_track(feature_times, f2_track, target_times, 0.010)

@@ -523,10 +523,12 @@ def main(argv=None) -> int:
             print(json.dumps(split_summary(result), indent=2))
             return 0
         if args.command == "prepare":
+
             def report_preparation(completed: int, total: int) -> None:
-                if completed == 1 or completed % 100 == 0 or completed == total:
+                if completed == 1 or completed % 25 == 0 or completed == total:
                     target = "audio, F0 and F1/F2" if args.extract_formants else "audio and F0"
-                    print(f"[prepare] {completed}/{total} | {target}", flush=True)
+                    percent = 100 * completed / total
+                    print(f"[prepare] {completed}/{total} ({percent:5.1f}%) | {target}", flush=True)
 
             manifest = prepare_dataset(
                 args.source,

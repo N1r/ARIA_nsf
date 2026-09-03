@@ -41,7 +41,9 @@ def checks() -> list[Check]:
 
     if cuda_info["available"]:
         gpu_detail = f"{cuda_info['device_name']} ({cuda_info['memory_total_gb']} GB VRAM, sm_{cuda_info['compute_capability']}, CUDA {cuda_info['cuda_version']})"
-        result.append(Check("CUDA GPU", True, gpu_detail, "fast neural vocoder training and synthesis"))
+        result.append(
+            Check("CUDA GPU", True, gpu_detail, "fast neural vocoder training and synthesis")
+        )
     else:
         result.append(
             Check(

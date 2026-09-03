@@ -24,9 +24,7 @@ from .experiment import _resolve_dataset_path
 from .manifest import DatasetManifest
 from .manipulation import manipulate_controls
 
-_INSTALL_HINT = (
-    "aris studio requires the aris[studio] extra: uv sync --extra studio"
-)
+_INSTALL_HINT = "aris studio requires the aris[studio] extra: uv sync --extra studio"
 CLIPPED_WARN_FRACTION = 0.001
 CLAMPED_WARN_FRACTION = 0.10
 _SKIP_DIR_NAMES = {"studio_output", "node_modules", "__pycache__"}
@@ -110,7 +108,9 @@ def format_variant_metadata(entry: dict) -> str:
             "请降低数字增益 (hard clipping; reduce gain)</span>"
         )
     name = entry.get("name") or entry.get("directory", "?")
-    lines = [f"**{name}** — 控制 (controls): {control_text} · 硬限幅采样比例 (clipped): {clip_text}"]
+    lines = [
+        f"**{name}** — 控制 (controls): {control_text} · 硬限幅采样比例 (clipped): {clip_text}"
+    ]
     for formant, stats in sorted((audit.get("formant_tracking") or {}).items()):
         discrepancy = float(stats.get("max_abs_hz_discrepancy", 0.0))
         clamped = float(stats.get("clamped_frame_fraction", 0.0))
