@@ -27,7 +27,7 @@ def read_audio(path: Path) -> Tuple[np.ndarray, int]:
     except ImportError as error:
         if path.suffix.lower() != ".wav":
             raise RuntimeError(
-                f"{path.suffix} input requires the 'audio' extra: pip install 'aris[audio]'"
+                f"{path.suffix} input requires the 'audio' extra: uv sync --extra audio"
             ) from error
 
     with wave.open(str(path), "rb") as stream:

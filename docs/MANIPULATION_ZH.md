@@ -1,11 +1,11 @@
 # 参数操控指南：用训练好的模型生成实验刺激
 
-假设你已经训练好一个模型，现在想做一件语音学研究者常做的事：拿同一批测试句子，系统地改变某个参数——升高音高、放大 F1、增加气声感——然后生成一组可以拿去做声学测量或知觉实验的音频。这就是 `manipulate` 命令的用途。它的特点是"可审计"：每次运行都会记录用了哪个 checkpoint（含哈希值）、每个条件改了什么参数、输出有没有削波，方便你在论文里如实报告。
+假设你已经训练好一个模型，希望对同一批测试句子系统施加某项模型控制——例如偏移 F0 条件、缩放 F1 轨迹或改变声门源 `R_d`——再生成用于声学测量或知觉实验的一组音频。这就是 `manipulate` 命令的用途。它的特点是“可审计”：每次运行都会记录所用 checkpoint（含哈希值）、每个条件的完整参数，以及输出中是否出现硬限幅采样点，便于复核和报告。
 
-一个最小的例子——把噪声分支降低 6 dB，听听"更干净"的版本：
+一个最小的例子——把随机源分支的数字增益降低 6 dB：
 
 ```bash
-.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
+uv run aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'less_noise:noise_gain_db=-6'
 ```
 
@@ -16,7 +16,7 @@
 不同的模型架构暴露的"控制柄"不一样，所以动手之前先问一下：
 
 ```bash
-.venv/bin/aris controls EXP
+uv run aris controls EXP
 ```
 
 它会列出你这个实验的模型支持的所有参数，以及各自的取值范围和默认值。加 `--json` 可以得到机器可读的版本，适合写进分析脚本。
@@ -40,7 +40,7 @@
 | 参数 | 范围（默认） | 支持模型 | 含义 |
 |---|---|---|---|
 | `pitch_semitones` | `-36..36`（`0`） | 全部 | 音高，以半音计 |
-| `output_gain_db` | `-24..12` dB（`0`） | 全部 | 最终波形的输出电平 |
+| `output_gain_db` | `-24..12` dB（`0`） | 全部 | 保存 WAV 前施加的数字增益 |
 | `noise_gain_db` | `-24..24` dB（`0`） | 全部 | 噪声源分支的增益 |
 | `glottal_rd_scale` | `0.5..2.0`（`1.0`） | `golf`、`aria-golf` | 声门 `R_d` 的乘性缩放 |
 | `f1_scale` | `0.7..1.3`（`1.0`） | 仅 `aria-golf` | F1 轨迹的乘性缩放 |
@@ -53,7 +53,7 @@
 
 **`pitch_semitones`** 把有声帧的 F0 条件乘以 `2^(半音/12)`；无声帧保持为 0，不会被"提"出声来。它不改变时长。输出中实测的 F0 通常接近但不保证严格等于目标比例，正式实验请复测。
 
-**`output_gain_db`** 只是在保存前给波形乘一个增益——它是播放电平，不是"说话用力程度"这样的生理变量。正增益容易触发削波（见后文）。
+**`output_gain_db`** 只是在保存 WAV 前给数字波形乘一个增益。它既不是说话人的发声强度，也不等于经耳机或扬声器呈现时的声压级或感知响度。正增益容易触发削波（见后文）。
 
 **`noise_gain_db`** 改变随机噪声分支的强度，听感上影响气声/噪声感。但它不等于直接设定 HNR 或气声度这些校准过的量；改完之后应该在输出音频上测 HNR、CPP 等指标。
 
@@ -82,7 +82,7 @@
 `--variant` 可以重复任意多次，一个条件里也可以组合多个参数：
 
 ```bash
-.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
+uv run aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'less_noise:noise_gain_db=-6' \
   --variant 'raised_clean:pitch_semitones=3,noise_gain_db=-6,output_gain_db=-3' \
   --variant 'source_shift:glottal_rd_scale=1.2,noise_gain_db=-3'
@@ -91,7 +91,7 @@
 做连续统（continuum）刺激时，就是一档一个条件。比如一个五档的 F1 连续统：
 
 ```bash
-.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
+uv run aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'f1_085:f1_scale=0.85' \
   --variant 'f1_092:f1_scale=0.92' \
   --variant 'f1_100:f1_scale=1.00' \
@@ -104,7 +104,7 @@
 正式跑之前，可以先用 `--dry-run` 检查一遍拼写和取值：
 
 ```bash
-.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT \
+uv run aris manipulate EXP CHECKPOINT OUTPUT \
   --variant 'less_noise:noise_gain_db=-6' \
   --dry-run
 ```
@@ -114,7 +114,7 @@
 如果你已经用 `synthesize` 生成过 baseline 重建，可以顺便让它生成一个试听网页，把原音、重建和所有条件并排放好：
 
 ```bash
-.venv/bin/aris manipulate EXP CHECKPOINT OUTPUT/manipulations \
+uv run aris manipulate EXP CHECKPOINT OUTPUT/manipulations \
   --semitones -4 4 \
   --variant 'less_noise:noise_gain_db=-6' \
   --baseline OUTPUT/reconstruction \
@@ -176,4 +176,4 @@ OUTPUT/
 两点边界说清楚，别以为工具能做但其实做不到：
 
 - **没有时长/语速控制。** ARIS 不改变音频时长；元音时长、VOT 这类需要操控时长的实验设计，要在 ARIS 之前或之后用别的工具处理。
-- **所有控制作用于整条渲染音频，不能只改句子里的一段。** 想只给一个词升调、其余部分不动，`manipulate` 做不到局部操控。要做到目标单元级别的刺激，提前在切分数据（`aris split`/`prepare`）阶段把目标单元切成独立的一条，训练和合成都以这条为单位。
+- **所有控制作用于整条渲染音频，不能只改句子里的一段。** 想只给一个词升调、其余部分不动，`manipulate` 做不到局部操控。要做到目标单元级别的刺激，提前在切分数据（`uv run aris split`/`uv run aris prepare`）阶段把目标单元切成独立的一条，训练和合成都以这条为单位。

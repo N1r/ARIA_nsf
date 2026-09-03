@@ -25,7 +25,7 @@ from .manifest import DatasetManifest
 from .manipulation import manipulate_controls
 
 _INSTALL_HINT = (
-    "aris studio requires the studio extra: uv sync --extra studio (or: pip install 'aris[studio]')"
+    "aris studio requires the aris[studio] extra: uv sync --extra studio"
 )
 CLIPPED_WARN_FRACTION = 0.001
 CLAMPED_WARN_FRACTION = 0.10
@@ -106,11 +106,11 @@ def format_variant_metadata(entry: dict) -> str:
     clip_text = f"{clipped:.3%}"
     if clipped > CLIPPED_WARN_FRACTION:
         clip_text = (
-            f'<span style="color:#c00">⚠️ {clip_text} — 输出削波超过 0.1%，'
-            "请降低增益 (clipping; reduce gain)</span>"
+            f'<span style="color:#c00">⚠️ {clip_text} — 硬限幅采样比例超过 0.1%，'
+            "请降低数字增益 (hard clipping; reduce gain)</span>"
         )
     name = entry.get("name") or entry.get("directory", "?")
-    lines = [f"**{name}** — 控制 (controls): {control_text} · 削波比例 (clipped): {clip_text}"]
+    lines = [f"**{name}** — 控制 (controls): {control_text} · 硬限幅采样比例 (clipped): {clip_text}"]
     for formant, stats in sorted((audit.get("formant_tracking") or {}).items()):
         discrepancy = float(stats.get("max_abs_hz_discrepancy", 0.0))
         clamped = float(stats.get("clamped_frame_fraction", 0.0))
@@ -370,26 +370,26 @@ def build_app(workspace: Path):
         model_md = gr.Markdown()
 
         _FRIENDLY_LABELS = {
-            "pitch_semitones": "音高调整 pitch_semitones (半音)",
-            "output_gain_db": "整体响度 output_gain_db (dB)",
-            "noise_gain_db": "气流杂音 noise_gain_db (dB)",
-            "glottal_rd_scale": "声门波形 glottal_rd_scale (气声 vs 嘎裂紧嗓)",
-            "f1_scale": "第一共振峰比例 f1_scale (舌位高低 / 开口度)",
-            "f2_scale": "第二共振峰比例 f2_scale (舌位前后)",
-            "f1_hz": "第一共振峰绝对值 f1_hz (Hz)",
-            "f2_hz": "第二共振峰绝对值 f2_hz (Hz)",
-            "tilt_alpha_delta": "谱倾斜 tilt_alpha_delta (正数柔和暗淡 / 负数明亮尖锐)",
+            "pitch_semitones": "F0 条件偏移 pitch_semitones (半音)",
+            "output_gain_db": "数字增益 output_gain_db (dB)",
+            "noise_gain_db": "随机源分支增益 noise_gain_db (dB)",
+            "glottal_rd_scale": "声门源参数比例 glottal_rd_scale",
+            "f1_scale": "第一共振峰比例 f1_scale",
+            "f2_scale": "第二共振峰比例 f2_scale",
+            "f1_hz": "第一共振峰目标频率 f1_hz (Hz)",
+            "f2_hz": "第二共振峰目标频率 f2_hz (Hz)",
+            "tilt_alpha_delta": "谱倾斜系数偏移 tilt_alpha_delta",
         }
         _FRIENDLY_INFOS = {
-            "pitch_semitones": "正数提高音高，负数降低音高（12半音=1个八度）",
-            "output_gain_db": "整体输出音频音量放大或衰减（分贝）",
-            "noise_gain_db": "调节发音中的送气与摩擦白噪声强弱",
-            "glottal_rd_scale": "控制声门闭合状态：>1.0 呈现漏气声/耳语感；<1.0 呈现紧喉/嘎裂声 (creaky)",
-            "f1_scale": "按比例平移F1（保留自然语调轮廓）：>1.0 下降舌位/开口增大；<1.0 提升舌位",
-            "f2_scale": "按比例平移F2：>1.0 舌位向前（如/u/变/i/）；<1.0 舌位向后",
-            "f1_hz": "将第一共振峰强制固定在指定绝对Hz值，用于制作感知连续统",
-            "f2_hz": "将第二共振峰强制固定在指定绝对Hz值",
-            "tilt_alpha_delta": "改变高频衰减斜率：>0 柔和暗淡，<0 亮丽清脆",
+            "pitch_semitones": "对有声帧的 F0 条件作半音偏移；不改变时长或无声帧",
+            "output_gain_db": "保存 WAV 前施加的数字增益；不代表发声强度、声压级或感知响度",
+            "noise_gain_db": "调节模型随机源分支的增益；输出上的 HNR、CPP 等指标需另行测量",
+            "glottal_rd_scale": "缩放模型预测的声门源 R_d 参数；方向与效应量应在输出上复测",
+            "f1_scale": "逐帧按比例平移 F1 并保留轨迹形状；调音效应不等同于直接操控舌位",
+            "f2_scale": "逐帧按比例平移 F2 并保留轨迹形状；调音效应不等同于直接操控舌位",
+            "f1_hz": "将模型 F1 轨迹设为指定 Hz 目标；输出共振峰仍需独立复测",
+            "f2_hz": "将模型 F2 轨迹设为指定 Hz 目标；输出共振峰仍需独立复测",
+            "tilt_alpha_delta": "调整模型一阶谱倾斜系数 alpha；它不是 dB/oct，输出效应需复测",
         }
 
         sliders = [

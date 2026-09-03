@@ -37,6 +37,7 @@ report.html
 
 # aris studio render outputs (workspace-local, reproducible from manipulation.json).
 studio_output/
+/out/
 
 # Demo site / LaTeX
 .DS_Store

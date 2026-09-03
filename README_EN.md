@@ -10,23 +10,47 @@
 ## 0. Introduction
 
 ARIS (Analytic Resonance for Interpretable Synthesis) is a differentiable
-analysis-by-synthesis tool made for phonetics researchers: train a DDSP/GOLF vocoder
-on a few tens of minutes of single-speaker recordings, then change F0,
-energy, noise, glottal source shape (`R_d`), or formants (F1/F2, spectral
-tilt) one at a time — with everything else held fixed — to batch-generate
-paired experimental stimuli.
+analysis-by-synthesis tool for phonetics research. Train a DDSP/GOLF vocoder on
+single-speaker recordings, then apply recorded controls to F0, post-synthesis waveform
+gain, stochastic-source gain, glottal-source shape (`R_d`), or vocal-tract resonances (F1/F2 and spectral
+tilt) on the same reconstruction to generate paired stimuli or continua.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
 - Tutorial notebook: [`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 
-Training runs on standard consumer GPUs (e.g., RTX 4060 or Google Colab T4); resynthesis and stimulus manipulation run efficiently on standard CPUs.
+Training requires a CUDA-capable NVIDIA GPU (a Google Colab T4 is enough for a trial run); resynthesis and stimulus manipulation can also run on CPU.
 
 Depending on your workflow, ARIS provides multiple ways to interact:
 
-1. **Google Colab Cloud Tutorial**: Open the [Colab Tutorial](notebooks/ARIS_Tutorial_and_Workflow.ipynb) to run the full workflow (from audio analysis and training to stimulus manipulation) on cloud GPUs without local configuration.
+1. **Google Colab Cloud Tutorial**: Click the **Open in Colab** badge at the top of this page to run the full workflow (from audio analysis and training to stimulus manipulation) on a cloud GPU without local configuration.
 2. **Interactive Listening Demo**: Open the [online listening demo](https://n1r.github.io/ARIS_nsf/) to explore acoustic parameter effects.
-3. **Local GUI Workbench (Studio)**: Run `uv sync --all-extras && uv run aris studio` to launch an interactive slider workspace in your browser for parameter exploration and continuum generation.
+3. **Local GUI Workbench (Studio)**: Run `uv sync --locked --all-extras && uv run aris studio` to launch an interactive slider workspace in your browser for parameter exploration and continuum generation.
 4. **Command-Line Interface & Python API**: Suitable for batch stimulus generation, automated experiment scripts, and large-scale training (Sections 2–5 and Section 7).
+
+### Controls and validation for phonetics research
+
+| Research dimension | ARIS control | Independently remeasure in the output |
+|---|---|---|
+| Pitch and intonation | `pitch_semitones` | median F0, contour shape, voiced proportion |
+| Vowel resonance | `f1_*`, `f2_*` | F1/F2 tracks, vowel space, intelligibility |
+| Voice quality | `glottal_rd_scale`, `noise_gain_db`, `tilt_alpha_delta` | H1–H2, CPP, HNR, spectral slope |
+| Stimulus waveform gain (not vocal effort) | `output_gain_db` | peak, RMS/LUFS, clipped-sample count |
+
+These parameters are **model controls**, not physiological measurements or perceptual
+labels. For example, `output_gain_db` is not vocal effort, and `glottal_rd_scale` is
+not an EGG measurement. For confirmatory work, preregister the target acoustic
+measures, remeasure the actual effect in the generated WAV files, and report
+reconstruction error. ARIS currently provides no duration, speech-rate, or
+within-utterance interval control.
+
+### Recommended research workflow
+
+1. Define the hypothesis, target acoustic measures, and exclusion criteria.
+2. Record one speaker with a consistent signal chain and preserve the source files.
+3. Prepare data, freeze the split, train, and evaluate reconstruction on held-out data.
+4. Start with small single-parameter changes; retain single-factor controls for combinations.
+5. Generate baseline and variants, then blind-listen and independently remeasure them.
+6. Archive the checkpoint, configuration, dataset fingerprint, control metadata, and scripts.
 
 ## 1. Installation & Quickstart
 
@@ -34,24 +58,42 @@ Platforms: Linux, macOS, or Windows (via [WSL](https://learn.microsoft.com/en-us
 
 ### Recommended Installation (Using uv)
 
-All dependencies are defined in `pyproject.toml` and locked in `uv.lock`. With [uv](https://docs.astral.sh/uv/) installed, a single command sets up a synchronized Python 3.11 environment with all audio, training, and web studio dependencies in seconds:
+ARIS uses `pyproject.toml`, `uv.lock`, and [uv](https://docs.astral.sh/uv/) for Python and dependency management. After cloning the repository, run these commands from its root:
 
 ```bash
-# 1. Create virtual environment and sync all extras:
-uv sync --all-extras
+# Create the project environment and sync exactly from the lockfile
+uv sync --locked --all-extras
 
-# 2. Run diagnostic check (via uv run, no need to manually activate):
+# Run diagnostics inside the project environment
 uv run aris doctor
 ```
 
-> **Tip**: If you prefer an activated shell, run `source .venv/bin/activate` to use `aris doctor` and other CLI tools directly. Standard `pip` installation via `pip install -e ".[all]"` is also supported.
+Every command below uses `uv run aris ...`; activating `.venv` is unnecessary. Run
+`uv sync --locked --all-extras` again whenever dependencies change. If you intentionally
+change dependencies, run `uv lock` first and commit the updated lockfile.
 
-`aris doctor` verifies your Python environment, audio packages, CUDA toolkit, and GPU hardware. Once ready, proceed below!
+`aris doctor` checks Python, audio dependencies, PyTorch, CUDA, and GPU status. Continue once all required checks pass.
+
+### Google Colab
+
+Open the Colab link above, select a **T4 GPU** runtime, and choose
+**Runtime → Run all**. The tutorial uses uv throughout: it installs uv with the official
+installer, then uses `uv pip install --system` to install locked dependencies into the
+active Colab kernel. No runtime restart is needed. The tutorial trains for 1,000 steps,
+plots training and validation loss, then uses that checkpoint for reconstruction and
+manipulation. This is enough to inspect learning and hear an initial result, but it is
+not evidence of convergence or research-ready quality; the release's 40,000-step
+checkpoint provides a stable quality reference.
 
 **Try the Pretrained Model Immediately:**
-The repository bundles a trained model (Mandarin female speaker, 16 kHz) and test recordings (if missing locally, download the official release zip: `curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.zip && unzip -q aris_f024_demo.zip`):
+The official release provides a trained model (Mandarin female speaker, 16 kHz) and
+matching test recordings. Download and extract `aris_f024_demo.zip`, then run:
 
 ```bash
+# Download the official demo package (once)
+curl -LO https://github.com/N1r/ARIS_nsf/releases/download/v0.1.0/aris_f024_demo.zip
+unzip -q aris_f024_demo.zip
+
 # 1. Reconstruct baseline audio:
 uv run aris synthesize demo_f024/experiment demo_f024/experiment/runs/checkpoints/last.ckpt out/demo_recon
 
@@ -60,7 +102,7 @@ uv run aris manipulate demo_f024/experiment demo_f024/experiment/runs/checkpoint
   --variant 'f1_up:f1_scale=1.2' \
   --variant 'f1_down:f1_scale=0.85' \
   --variant 'pitch_down:pitch_semitones=-4' \
-  --variant 'breathy:glottal_rd_scale=1.6'
+  --variant 'rd_high:glottal_rd_scale=1.6'
 ```
 
 What success looks like: reconstructed WAV files appear under
@@ -83,19 +125,23 @@ recordings/
 Then segment, preprocess, and check:
 
 ```bash
-.venv/bin/aris split recordings/ segments/ --mode silence        # cut into short utterances at silences
-.venv/bin/aris prepare segments/audio data/my_voice              # resample, extract F0, split the dataset
-.venv/bin/aris validate data/my_voice                            # confirm the dataset is complete and usable
+uv run aris split recordings/ segments/ --mode silence        # cut into short utterances at silences
+uv run aris prepare segments/audio data/my_voice              # resample, extract F0, split the dataset
+uv run aris validate data/my_voice                            # confirm the dataset is complete and usable
 ```
 
-A few practical notes on data:
+A few practical notes on data and study design:
 
-1. 20–60 minutes of audio in total is recommended; cutting long recordings
-   into utterances of a few seconds speeds up training.
-2. For F0 extraction, `--f0-method pyworld` (WORLD's DIO+StoneMask, stable
+1. 20–60 minutes is recommended. Keep microphone, distance, gain, room, and task
+   consistent; avoid waveform overload, reverberation, background sound, and automatic gain.
+   Confirm consent and the permitted uses of the recordings.
+2. Cutting long recordings into utterances of a few seconds speeds up training. If
+   material spans sessions, word lists, or speaking styles, plan the split before a
+   confirmatory study so near-duplicate items do not leak across train and test.
+3. For F0 extraction, `--f0-method pyworld` (WORLD's DIO+StoneMask, stable
    and fast) is recommended; the default `auto` falls back to
    autocorrelation when WORLD is not installed.
-3. For tonal languages such as Mandarin, or other F0-sensitive work,
+4. For tonal languages such as Mandarin, or other F0-sensitive work,
    extract a more reliable pitch track first with
    [RMVPE](https://github.com/Dream-High/RMVPE) or Praat, save it as a
    `.pv` file next to each WAV, and load it via `--f0-method sidecar`.
@@ -107,35 +153,41 @@ A few practical notes on data:
    substitution before `prepare` will accept it. A frame count that does
    not match the audio duration now raises a clear error instead of
    silently misaligning.
-4. Sample rates need not be unified beforehand; `prepare` resamples to the
-   model sample rate automatically.
-5. No recordings at hand? `.venv/bin/aris fetch-corpus data/arctic`
+5. Sample rates need not be unified beforehand; `prepare` resamples to the
+   model sample rate automatically. Preserve the unresampled, unnormalized source
+   recordings rather than overwriting the research archive.
+6. No recordings at hand? `uv run aris fetch-corpus data/arctic`
    downloads ~30 minutes of the public CMU ARCTIC corpus for a full trial
    run; once downloaded, continue with
-   `.venv/bin/aris prepare data/arctic/selected data/arctic_prepared`.
+   `uv run aris prepare data/arctic/selected data/arctic_prepared`.
 
 ## 3. Training
 
 With your data ready, create an experiment directory and start training:
 
 ```bash
-.venv/bin/aris init-experiment data/my_voice experiments/my_voice --model aria-golf
-.venv/bin/aris train experiments/my_voice --dry-run   # print the training command without running it
-.venv/bin/aris train experiments/my_voice
+uv run aris init-experiment data/my_voice experiments/my_voice --model aria-golf
+uv run aris train experiments/my_voice --dry-run   # print the training command without running it
+uv run aris train experiments/my_voice
 ```
 
 A few notes:
 
-1. `--model` is one of `ddsp`, `golf`, `aria-golf`; choose `aria-golf` if
-   you need formant (F1/F2) and spectral-tilt control (`aria-golf` is the
-   code name of the ARIS decoder).
+1. Choose the simplest model that answers the research question:
+
+   | Model | Available controls | Typical use |
+   |---|---|---|
+   | `ddsp` | F0, waveform gain, stochastic-source gain | baseline reconstruction and pitch studies |
+   | `golf` | above + glottal `R_d` | source and voice-quality studies |
+   | `aria-golf` | above + F1/F2, spectral tilt | explicit source–filter manipulation |
+
+   `aria-golf` is the code name of the ARIS decoder. The LPC coefficients in regular
+   `golf` cannot be interpreted as independent F1/F2 controls.
 2. Checkpoints are saved under `experiments/my_voice/runs/checkpoints/`.
 3. Training requires a CUDA-enabled PyTorch. The default Linux install
    already ships with CUDA support; if it does not match your GPU or
-   driver, install the matching build for your machine — tell an AI
-   assistant (ChatGPT, Claude, …) your GPU model and operating system
-   and ask for the install command, or use the selector at
-   [pytorch.org](https://pytorch.org).
+   driver, use the [PyTorch installation selector](https://pytorch.org/get-started/locally/),
+   then install the matching build with `uv add` or `uv pip install`.
 4. On a Slurm cluster, `init-experiment` has already generated a
    ready-to-`sbatch` `train.slurm`; adjust cluster parameters (partition,
    GPU type, etc.) via `init-experiment` options, and fill in the CUDA
@@ -154,12 +206,15 @@ Once training is done, first reconstruct the held-out test recordings with
 the checkpoint to see how the model sounds:
 
 ```bash
-.venv/bin/aris synthesize experiments/my_voice \
+uv run aris synthesize experiments/my_voice \
   experiments/my_voice/runs/checkpoints/last.ckpt out/reconstruction
 ```
 
-The output is reconstructed WAV files; listen against the originals, and if
-they sound close, you are ready for the next step.
+The output is reconstructed WAV files. Do not proceed on a general impression of
+similarity alone: compare original and reconstruction on the held-out test set and
+record at least intelligibility, artifacts, F0 and formant error, duration, waveform amplitude,
+and clipping. Reconstruction error and the experimental control effect are separate
+sources of variation and should be reported separately.
 
 ## 5. Generating manipulated stimuli
 
@@ -167,7 +222,7 @@ This step is what ARIS is really for: change one parameter at a time on top
 of the reconstruction, keeping everything else fixed:
 
 ```bash
-.venv/bin/aris manipulate experiments/my_voice \
+uv run aris manipulate experiments/my_voice \
   experiments/my_voice/runs/checkpoints/last.ckpt out/stimuli \
   --variant 'pitch_down:pitch_semitones=-4' \
   --variant 'f1_up:f1_scale=1.2'
@@ -180,9 +235,9 @@ generated. Available parameters and ranges:
 | Parameter | Range | Meaning | DDSP | GOLF | ARIS-GOLF |
 |---|---|---|:---:|:---:|:---:|
 | `pitch_semitones` | `-36..36` | pitch (semitones) | ✓ | ✓ | ✓ |
-| `output_gain_db` | `-24..12` | overall energy (dB) | ✓ | ✓ | ✓ |
-| `noise_gain_db` | `-24..24` | noise component (dB) | ✓ | ✓ | ✓ |
-| `glottal_rd_scale` | `0.5..2.0` | glottal shape `R_d` (breathy–pressed) | — | ✓ | ✓ |
+| `output_gain_db` | `-24..12` | post-synthesis waveform gain (dB) | ✓ | ✓ | ✓ |
+| `noise_gain_db` | `-24..24` | digital gain on the stochastic-source branch (dB) | ✓ | ✓ | ✓ |
+| `glottal_rd_scale` | `0.5..2.0` | scaling of the model's glottal-source `R_d` | — | ✓ | ✓ |
 | `f1_scale` / `f2_scale` | `0.7..1.3` | first/second formant (ratio) | — | — | ✓ |
 | `f1_hz` / `f2_hz` | `150..1300` / `600..3200` | first/second formant (absolute Hz) | — | — | ✓ |
 | `tilt_alpha_delta` | `-0.25..0.25` | spectral tilt | — | — | ✓ |
@@ -192,6 +247,20 @@ building an evenly-spaced Hz continuum across different stimulus items;
 `f1_scale` / `f2_scale` instead shift each frame's natural contour
 proportionally, keeping its shape. The two cannot be combined on the
 same formant.
+
+### Experimental design and quality control
+
+- The accepted software range is not a validated phonetic range. Pilot small steps,
+  then select effect sizes from acoustic remeasurement and intelligibility checks.
+- Single-parameter conditions are easiest to interpret. For combined controls, retain
+  the baseline and corresponding single-factor conditions.
+- Use one frozen checkpoint for every formal condition. Verify its SHA-256, the dataset
+  fingerprint, and complete control values in `manipulation.json`.
+- Inspect `_render.json` in every condition directory. `clipped_samples` is the number
+  of samples hard-limited after reaching digital full scale; formal materials should
+  normally have a value of `0`. Do not normalize only selected conditions afterward.
+- The comparison report and Studio support quality control, but provide no randomization,
+  blinding, or playback-level calibration and are not perception-experiment platforms.
 
 Hear what each parameter does on the [demo page](https://n1r.github.io/ARIS_nsf/);
 parameter semantics and condition design are covered in the
@@ -204,10 +273,10 @@ you can design conditions and compare results in the browser:
 
 ```bash
 # Launch locally (opens http://127.0.0.1:8765/):
-aris studio
+uv run aris studio
 
 # Launch with a public shareable URL (ideal for Google Colab and remote servers):
-aris studio --share
+uv run aris studio --share
 ```
 
 The page generates parameter sliders for your model, supports named
@@ -220,7 +289,9 @@ the same output and metadata format as the command-line `manipulate`.
 
 ## 7. Python API (Jupyter / Colab / Scripts)
 
-In addition to the CLI, ARIS provides a high-level Python API designed for notebooks and automated scripts:
+ARIS also provides a Python API. Save the following as `workflow.py` and run it with
+`uv run python workflow.py`; launch Jupyter with
+`uv run --with jupyter jupyter lab`.
 
 ```python
 import aris
@@ -252,7 +323,7 @@ aris.manipulate(
     variants=[
         "f1_up:f1_scale=1.2",
         "pitch_down:pitch_semitones=-4",
-        "breathy:glottal_rd_scale=1.6",
+        "rd_high:glottal_rd_scale=1.6",
     ],
 )
 
@@ -263,20 +334,20 @@ aris.launch_studio(workspace=".", share=True)
 ## 8. Command reference
 
 ```text
-aris doctor             check audio, training dependencies, CUDA, and GPU hardware
-aris fetch-corpus       download the CMU ARCTIC example corpus
-aris split              segment continuous recordings
-aris prepare            resample, extract F0, split the dataset
-aris validate           check dataset integrity
-aris init-experiment    create a training experiment directory
-aris train              start training
-aris controls           list manipulation parameters supported by a model
-aris synthesize         reconstruct recordings from a checkpoint
-aris manipulate         generate manipulated stimuli
-aris studio             launch the browser workbench (supports --share for public URL)
+uv run aris doctor             check audio, training dependencies, CUDA, and GPU hardware
+uv run aris fetch-corpus       download the CMU ARCTIC example corpus
+uv run aris split              segment continuous recordings
+uv run aris prepare            resample, extract F0, split the dataset
+uv run aris validate           check dataset integrity
+uv run aris init-experiment    create a training experiment directory
+uv run aris train              start training
+uv run aris controls           list manipulation parameters supported by a model
+uv run aris synthesize         reconstruct recordings from a checkpoint
+uv run aris manipulate         generate manipulated stimuli
+uv run aris studio             launch the browser workbench (supports --share for public URL)
 ```
 
-## 8. Citation
+## 9. Citation
 
 Machine-readable citation metadata is in [CITATION.cff](CITATION.cff).
 
@@ -293,7 +364,7 @@ source-filter models:
 
 Code is released under the MIT license; see [LICENSE](LICENSE).
 
-## 9. Contact
+## 10. Contact
 
 If you run into problems or have suggestions, feel free to open an
 [issue](https://github.com/N1r/ARIS_nsf/issues), or email

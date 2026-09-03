@@ -12,7 +12,7 @@ try:
     from torch.utils.data import DataLoader, Dataset
 except ImportError as error:
     raise ImportError(
-        "Training support is not installed. Run: pip install 'aris[train]'"
+        "Training support is not installed. Run: uv sync --extra train"
     ) from error
 
 from .manifest import DatasetManifest

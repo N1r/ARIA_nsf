@@ -64,13 +64,13 @@ def _module(name: str, purpose: str) -> Check:
     if not found:
         if name in {"soundfile", "scipy", "pyworld"}:
             extra = "world" if name == "pyworld" else "audio"
-            detail += f"; install with: pip install 'aris[{extra}]' (or: pip install 'aris[all]')"
+            detail += f"; install with: uv sync --extra {extra} (or: uv sync --all-extras)"
         elif name in {"torch", "lightning"}:
-            detail += "; install with: pip install 'aris[train]' (or: pip install 'aris[all]')"
+            detail += "; install with: uv sync --extra train (or: uv sync --all-extras)"
         elif name == "gradio":
-            detail += "; install with: pip install 'aris[studio]' (or: pip install 'aris[all]')"
+            detail += "; install with: uv sync --extra studio (or: uv sync --all-extras)"
         else:
-            detail += "; install with: pip install 'aris[all]'"
+            detail += "; install with: uv sync --all-extras"
     return Check(name, found, detail, purpose)
 
 
