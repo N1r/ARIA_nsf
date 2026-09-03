@@ -21,10 +21,10 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 
 按使用需求，ARIS 提供以下几种交互路径：
 
-1. **Google Colab 在线教程**：点击页面顶部的 **Open in Colab** 徽章，无需配置本地环境，直接在云端 GPU 体验端到端工作流（从音频分析、演示训练到语音操控与试听）。
+1. **Google Colab 在线教程**：点击页面顶部的 **Open in Colab** 徽章，无需本地配置，即可直接在云端 GPU 上交互式运行完整分析-合成流程（涵盖音频特征提取、轻量模型训练及声学参数操控）。
 2. **在线试听 Demo**：直接打开[试听页面](https://n1r.github.io/ARIS_nsf/)，调节参数听取音色变化。
 3. **本地图形化工作台 (Studio)**：在仓库目录下运行 `uv sync --locked --all-extras && uv run aris studio`，即可在浏览器可视化界面中拖动滑块调节声学参数并实时试听。
-4. **命令行与 Python API**：适合自定义实验脚本、录音切分与大规模模型训练（见第 2–5 节与第 7 节）。
+4. **命令行接口**：适合自定义实验脚本、录音切分与大规模模型训练（见第 2–5 节及第 7 节命令一览）。
 
 ### 面向语音学研究的控制与验证
 
@@ -35,19 +35,6 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 | 发声类型 | `glottal_rd_scale`、`noise_gain_db`、`tilt_alpha_delta` | H1–H2、CPP、HNR、谱斜率 |
 | 刺激数字增益（非发声强度） | `output_gain_db` | 峰值、RMS/LUFS、达到数字满幅的采样点数 |
 
-这些参数是**模型控制量**，不是生理测量或感知标签。例如，`output_gain_db`
-不等于发声力度，`glottal_rd_scale` 也不等于 EGG 测得的声门参数。正式研究应
-预注册目标声学指标，在生成后的 WAV 上复测实际效应，并报告重建误差。
-ARIS 当前不提供时长、语速或句内局部区间控制。
-
-### 推荐研究流程
-
-1. 明确假设、目标声学指标和排除标准。
-2. 以一致的录音链路采集单说话人材料，并保留原始文件。
-3. 准备数据、固定 split、训练模型，在 held-out test set 上评估重建。
-4. 从小效应量开始设计单参数条件；组合条件保留相应单参数对照。
-5. 生成 baseline 与变体，盲听并独立复测 F0、共振峰、音质和波形幅度。
-6. 归档 checkpoint、配置、数据 fingerprint、操控元数据和分析脚本。
 
 ## 1. 快速上手与依赖安装
 
@@ -74,18 +61,10 @@ uv run aris doctor
 ### Google Colab
 
 打开页面顶部的 Colab 链接，将运行时类型设为 **T4 GPU**，然后选择
-**运行时 → 全部运行**。教程同样全程使用 uv：uv 会安装 Python 3.11、按
-`uv.lock` 创建项目环境，并通过 `uv run aris ...` 执行 ARIS。绘图和音频播放器
-保留在 Colab kernel 中，因此不受 Colab 系统 Python 版本变化影响，也无需重启运行时。
-教程针对 Colab Tesla T4 使用 batch size 32、1,500 步和 `4e-4` 学习率，
-再用该 checkpoint 完成重建与操控。
-这通常足以在小型单说话人语料上得到有意义的可听结果，但不代表模型已经收敛或可直接用于正式实验；
-实测该 batch 的训练显存约 2.2 GB，能为 T4 留出充分余量。Release 中的示例 checkpoint
-训练了 40,000 步，可作为稳定质量参照。
+**运行时 → 全部运行**。教程全程使用 uv 管理环境与依赖，无需手动配置。
+该演示配置（batch size 32、1,500 步）约需 2.2 GB 显存，可在 T4 GPU 上快速生成可听示例；若需要更高质量的模型，可参考 Release 中训练了 40,000 步的检查点。
 
-**直接使用现成预训练模型试一试：** 官方 Release 提供训练好的模型（普通话女声，
-16 kHz）及配套示例数据。先下载并解压
-`aris_f024_demo.zip`，再运行重建与参数操控：
+**使用预训练模型快速验证：** 官方 Release 提供了预训练模型（普通话女声，16 kHz）及配套示例数据。下载解压后即可直接运行重建与参数操控：
 
 ```bash
 # 下载官方示例包（只需执行一次）
@@ -103,13 +82,11 @@ uv run aris manipulate demo_f024/experiment demo_f024/experiment/runs/checkpoint
   --variant 'rd_high:glottal_rd_scale=1.6'
 ```
 
-成功的标志：`out/demo_recon/` 下出现重建的 WAV 文件，`out/demo_stimuli/`
-下出现每个条件一套的 WAV 及记录生成方式的 JSON 元数据。对听 `f1_up`
-变体和重建原声，能听出第一共振峰升高带来的音色变化。
+执行完成后，`out/demo_recon/` 目录将保存重建的 WAV 文件，`out/demo_stimuli/` 目录将生成各操控条件的音频文件及记录生成参数的 JSON 元数据。
 
 ## 2. 准备数据
 
-先把你的录音放进一个文件夹（WAV 格式，单说话人，安静环境）：
+将单说话人录音放入指定目录（WAV 格式，建议在安静低混响环境下采集）：
 
 ```text
 recordings/
@@ -118,95 +95,64 @@ recordings/
 └── ...
 ```
 
-然后依次执行切分、预处理和检查：
+依次执行切分、特征提取与完整性校验：
 
 ```bash
-uv run aris split recordings/ segments/ --mode silence        # 按静音切成短句
-uv run aris prepare segments/audio data/my_voice --extract-formants  # 提取 F0 与 Praat F1/F2
-uv run aris validate data/my_voice                            # 确认数据完整可用
+uv run aris split recordings/ segments/ --mode silence               # 按静音切分为短句
+uv run aris prepare segments/audio data/my_voice --extract-formants # 提取 F0 与 Praat F1/F2 并划分数据集
+uv run aris validate data/my_voice                                  # 检查数据集完整性
 ```
 
-关于数据与实验设计，有几点经验可以参考：
+数据准备要点：
 
-1. 建议总数据量为 20–60 分钟。保持话筒、距离、增益、房间和说话任务一致，
-   避免波形过载失真、混响、背景声和自动增益；同时确认录音授权与数据使用范围。
-2. 长录音切成数秒的短句训练更快。若材料跨录音场次、词表或语体，正式研究应
-   先规划 split，避免同一项目的近重复版本跨越 train/test 造成信息泄漏。
-3. F0 提取推荐 `--f0-method pyworld`（WORLD 的 DIO+StoneMask，稳定且快）；
-   默认 `auto` 在未安装 WORLD 时退回自相关法。
-4. `aria-golf` 训练必须加入 `--extract-formants`。该选项在 10 ms 网格上运行
-   Praat Burg 分析，保存 F1/F2 监督目标；训练时只有 F0 为正且 F1/F2 均有效的
-   帧进入共振峰损失。女声通常可使用默认 5,500 Hz 分析上限，男声可按语料用
-   `--formant-ceiling 5000` 调整。自动轨迹仍需抽查，不能视为人工标注真值。
-5. 汉语声调等对 F0 敏感的研究，推荐先用 [RMVPE](https://github.com/Dream-High/RMVPE)
-   或 Praat 提取更可靠的音高轨迹，保存为与每条 WAV 同名的 `.pv` 文件，
-   再用 `--f0-method sidecar` 读入。`.pv` 是纯文本格式：每行一个浮点数，
-   每行对应固定 5 ms 的一帧，`0.0` 表示无声帧，正数表示该帧 F0（Hz）。
-   注意 Praat 默认的 pitch time step 不是 5 ms，无声帧标的也是
-   `--undefined--` 而不是 `0`——从 Praat 导出后要重采样到 5 ms 网格、把
-   `--undefined--` 换成 `0.0`，才能喂给 `prepare`。帧数和音频时长对不上
-   时，`prepare` 现在会直接报错，不会静默错位。
-6. 采样率不必预先统一，`prepare` 会自动重采样到模型采样率。建议保留未经
-   重采样和归一化的原始录音，避免覆盖研究档案。
-7. 手头没有录音时，可用 `uv run aris fetch-corpus data/arctic` 下载
-   约 30 分钟的公开语料 CMU ARCTIC 试跑全流程；下载完成后用
-   `uv run aris prepare data/arctic/selected data/arctic_prepared`
-   继续后续步骤。
+1. **录音规格**：建议有效音频时长 20–60 分钟。保持录音设备、增益、拾音距离与声学环境一致，避免波形截幅失真与强混响。
+2. **切分与划分**：长录音切分为数秒短句有助于加快训练。若语料包含多个录音场次或词表，应提前规划数据集划分以防信息泄露。
+3. **F0 提取**：推荐 `--f0-method pyworld`（基于 WORLD 的 DIO+StoneMask，兼顾稳定性与速度）；未指定时默认使用自相关法。
+4. **共振峰监督**：训练 `aria-golf` 模型必须添加 `--extract-formants`，该选项在 10 ms 帧长上运行 Praat Burg 分析以提取 F1/F2 监督目标。女声通常使用默认上限（5,500 Hz），男声可按需调整（例如 `--formant-ceiling 5000`）。
+5. **外部音高轨迹（Sidecar）**：对于声调语言或对 F0 精度敏感的研究，可使用 [RMVPE](https://github.com/Dream-High/RMVPE) 或 Praat 提取音高轨迹，保存为同名 `.pv` 文件并通过 `--f0-method sidecar` 载入。`.pv` 为纯文本格式（固定 5 ms 帧移，每行一个浮点数，`0.0` 为无声帧）。若帧数与音频时长不匹配，`prepare` 将直接报错。
+6. **采样率适配**：输入音频无需预先统一采样率，`prepare` 会自动重采样至模型目标采样率。建议始终保留原始录音母带。
+7. **示例语料**：若暂无自备录音，可运行 `uv run aris fetch-corpus data/arctic` 下载约 30 分钟的公开语料 CMU ARCTIC 进行全流程测试。
 
 ## 3. 训练
 
-数据准备好了，就可以生成实验目录、启动训练：
+完成数据准备后，生成实验配置并启动训练：
 
 ```bash
 uv run aris init-experiment data/my_voice experiments/my_voice --model aria-golf
-uv run aris train experiments/my_voice --dry-run   # 打印将要执行的训练命令
+uv run aris train experiments/my_voice --dry-run   # 打印实际执行的训练命令
 uv run aris train experiments/my_voice
 ```
 
-几点说明：
+说明：
 
-1. 按研究假设选择最简单且足够的模型：
+1. **模型选择**：按实验需求选择对应的模型架构：
 
-   | 模型 | 可用控制 | 典型用途 |
+   | 模型 | 可用控制参数 | 典型用途 |
    |---|---|---|
    | `ddsp` | F0、数字增益、随机源增益 | 基线重建与音高实验 |
    | `golf` | 以上 + 声门 `R_d` | 声源与发声类型研究 |
-   | `aria-golf` | 以上 + F1/F2、谱倾斜 | 显式声源–声道操控 |
+   | `aria-golf` | 以上 + F1/F2、谱倾斜 | 显式声源–声道联合操控 |
 
-   `aria-golf` 是 ARIS 解码器在代码中的名称。普通 `golf` 的 LPC 系数不能
-   直接解释为独立的 F1/F2 控制。当前 preset 对齐 v4：除多尺度谱重建外，还使用
-   F1/F2 监督（权重 2.0）、学习残差正则（0.02）和时间平滑项（0.05），以减少
-   learned sections 替代解析共振峰的不可辨识性。
-2. checkpoint 保存在 `experiments/my_voice/runs/checkpoints/`。
-3. 训练需要支持 CUDA 的 PyTorch。默认安装的 Linux 版 PyTorch 已带
-   CUDA 支持；如果与你的显卡或驱动不匹配，需要按设备另装对应版本——
-   请参考 [PyTorch 安装选择器](https://pytorch.org/get-started/locally/)，再用
-   `uv add` 或 `uv pip install` 安装与你的驱动匹配的 PyTorch 构建。
-4. 在 Slurm 集群上，`init-experiment` 已生成可直接 `sbatch` 提交的
-   `train.slurm`；集群参数（partition、GPU 类型等）可用 `init-experiment`
-   的选项调整，提交前按你的集群补上 CUDA module。没有集群则忽略它。
-5. 新建的实验目录是可移动的：把 `init-experiment` 生成的实验目录和它
-   对应的数据集目录一起搬到别处（保持相对位置不变），在任意工作目录下
-   `train`/`synthesize`/`manipulate` 依然能找到数据集。已有的旧实验
-   目录（比如前面下载的 demo）仍按原路径解析，不受影响。
+   `aria-golf` 在多尺度谱重建损失的基础上，引入了 F1/F2 监督与时间平滑约束，确保共振峰参数具有明确的解析物理意义。
+2. **检查点路径**：模型权重自动保存在 `experiments/my_voice/runs/checkpoints/`。
+3. **CUDA 与 PyTorch**：默认环境预装带 CUDA 支持的 PyTorch；若驱动或显卡架构不匹配，请参考 [PyTorch 官网](https://pytorch.org/get-started/locally/)通过 `uv pip install` 安装适配版本。
+4. **集群支持 (Slurm)**：`init-experiment` 会同步生成 `train.slurm` 脚本，可按集群环境调整 GPU 配置后直接 `sbatch` 提交。单机运行可直接忽略该文件。
+5. **路径便携性**：实验目录支持相对路径重定位。将实验目录与对应数据集目录一同移动时（保持二者相对层级），训练与推理脚本仍可自动定位数据。
 
 ## 4. 重建（推理）
 
-训练完成后，先用 checkpoint 重建测试集录音，看看模型质量如何：
+训练完成后，使用检查点对测试集录音进行重合成评估：
 
 ```bash
 uv run aris synthesize experiments/my_voice \
   experiments/my_voice/runs/checkpoints/last.ckpt out/reconstruction
 ```
 
-输出为重建的 WAV 文件。不要只凭“听起来像”进入下一步：应在 held-out test
-set 上把原音与重建并排检查，至少记录可懂度、伪影、F0 偏差、共振峰偏差、
-时长、波形幅度，并统计是否存在达到数字满幅而被硬限幅的采样点。模型重建误差
-和实验操控效应是两个不同来源，应分别报告。
+输出为重建后的 WAV 音频。建议在测试集上对比原音与重建结果，检查可懂度、伪影、F0 与共振峰偏差，并确认是否存在硬截幅（clipping）采样点。
 
 ## 5. 生成操控刺激
 
-这一步是 ARIS 的核心用途：在重建的基础上单独改变某个参数，其余保持不变：
+在语音重建的基础上，可独立调整指定的声学控制参数，批量生成成对刺激或连续统：
 
 ```bash
 uv run aris manipulate experiments/my_voice \
@@ -215,103 +161,46 @@ uv run aris manipulate experiments/my_voice \
   --variant 'f1_up:f1_scale=1.2'
 ```
 
-每个 `--variant` 是一组命名条件（`名字:参数=值,参数=值`），各生成一套
-WAV，附带记录生成方式的 JSON 元数据。可用参数与范围：
+每个 `--variant` 定义一个命名实验条件（格式为 `条件名:参数=值,参数=值`），为每个条件生成独立的音频输出及记录参数配置的 JSON 元数据。
+
+支持的控制参数与调节范围：
 
 | 参数 | 范围 | 含义 | DDSP | GOLF | ARIS-GOLF |
 |---|---|---|:---:|:---:|:---:|
-| `pitch_semitones` | `-36..36` | 音高（半音） | ✓ | ✓ | ✓ |
-| `output_gain_db` | `-24..12` | 保存 WAV 前的数字增益（dB） | ✓ | ✓ | ✓ |
-| `noise_gain_db` | `-24..24` | 随机源分支的数字增益（dB） | ✓ | ✓ | ✓ |
-| `glottal_rd_scale` | `0.5..2.0` | 模型声门源 `R_d` 的比例 | — | ✓ | ✓ |
-| `f1_scale` / `f2_scale` | `0.7..1.3` | 第一/第二共振峰（比例） | — | — | ✓ |
-| `f1_hz` / `f2_hz` | `150..1300` / `600..3200` | 第一/第二共振峰（绝对 Hz） | — | — | ✓ |
-| `tilt_alpha_delta` | `-0.25..0.25` | 谱倾斜 | — | — | ✓ |
+| `pitch_semitones` | `-36..36` | 音高偏移行程（半音） | ✓ | ✓ | ✓ |
+| `output_gain_db` | `-24..12` | 波形数字增益（dB） | ✓ | ✓ | ✓ |
+| `noise_gain_db` | `-24..24` | 随机噪声源增益（dB） | ✓ | ✓ | ✓ |
+| `glottal_rd_scale` | `0.5..2.0` | 声门源波形形状参数 $R_d$ 缩放比例 | — | ✓ | ✓ |
+| `f1_scale` / `f2_scale` | `0.7..1.3` | F1 / F2 相对缩放比例（保留原有轮廓） | — | — | ✓ |
+| `f1_hz` / `f2_hz` | `150..1300` / `600..3200` | F1 / F2 绝对目标频率（Hz） | — | — | ✓ |
+| `tilt_alpha_delta` | `-0.25..0.25` | 谱倾斜系数偏移量 | — | — | ✓ |
 
-`f1_hz` / `f2_hz` 把共振峰设到一个绝对 Hz 值，适合搭建跨条目一致的 Hz
-连续统；`f1_scale` / `f2_scale` 按比例整体平移、保留每帧原有轮廓，更
-适合保留自然语调形状的操控。两者不能对同一共振峰同时使用。
+### 参数说明与质检提示
 
-### 实验设计与质量控制
-
-- 软件允许范围不等于语音学上有效的范围；先以小步长预试，再根据声学复测和
-  可懂度确定最终效应量。
-- 单参数条件最容易解释。多参数条件用于明确的交互假设，并应保留 baseline
-  及对应的单参数条件。
-- 所有正式条件应使用同一个冻结 checkpoint。检查 `manipulation.json` 中的
-  checkpoint SHA-256、数据 fingerprint 和完整控制值。
-- 检查每个条件目录的 `_render.json`。其中 `clipped_samples` 表示达到数字满幅
-  后被硬限幅的采样点数量；正式材料建议该值为 `0`。不要只对个别条件事后归一化。
-- 比较页面和 Studio 适合质检，不包含随机化、盲法或实际播放声压级校准，不能直接
-  替代正式知觉实验平台。
-
-各参数的听感效果可在 [Demo 页面](https://n1r.github.io/ARIS_nsf/)直接
-试听；参数含义与条件设计详见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。
+- **连续统构建**：`f1_hz` / `f2_hz` 将共振峰固定为绝对频率，适合跨条目统一刺激；`f1_scale` / `f2_scale` 按比例平移并保留原有轨迹轮廓。两者不可对同一共振峰同时使用。
+- **可复现性追溯**：每个输出目录附带 `manipulation.json`，完整记录控制参数、数据集特征指纹及检查点 SHA-256 哈希。
+- **防截幅检查**：检查输出目录中的 `_render.json`；若 `clipped_samples > 0` 说明存在数字满幅限幅，建议适当降低 `output_gain_db`。
+- **听感效果与详解**：各参数实际听感可在 [在线 Demo](https://n1r.github.io/ARIS_nsf/) 体验；参数定义与进阶设计详见 [Manipulation 指南](docs/MANIPULATION_ZH.md)。
 
 ## 6. 浏览器工作台（Studio）
 
-不想在命令行里拼 `--variant` 字符串的话，可以在浏览器里完成条件设计和
-试听对比：
+ARIS 提供基于浏览器的交互式工作台，方便可视化调节参数与试听对比：
 
 ```bash
-# 本地启动（自动打开 http://127.0.0.1:8765/）：
+# 本地启动（自动打开 http://127.0.0.1:8765/）
 uv run aris studio
 
-# 在 Google Colab 或远程云服务器上启动（自动生成公网 Gradio 链接）：
+# 在 Google Colab 或远程服务器上启动（生成公网 Gradio 分享链接）
 uv run aris studio --share
 ```
 
-页面按模型自动生成参数滑杆，支持命名条件与连续统生成器（比如 F1 从
-400 到 600 Hz 分五档，一键生成整组刺激）、一键渲染、原始/变体 A/B
-试听，以及时间轴对齐的波形与语谱图对比；检测到硬限幅采样点或共振峰到达模型边界时
-会以红色标出。渲染结果保存在 `studio_output/` 下，与命令行 `manipulate`
-的输出和元数据格式完全一致。
+界面功能特性：
+- **参数调节与连续统构建**：按模型动态生成控制滑块，支持一键生成多步长连续统刺激。
+- **A/B 盲听与视觉对比**：支持原始重建与变体音频的 A/B 快速切换，并提供时间对齐的波形与语谱图展示。
+- **边界与截幅预警**：硬截幅采样点及超出模型合理边界的参数将以红色高亮提示。
+- **统一输出规范**：渲染结果默认保存在 `studio_output/`，其音频和元数据格式与命令行 `manipulate` 完全一致。
 
-## 7. Python API 使用方式（Jupyter / Colab / 脚本）
-
-除命令行外，ARIS 也提供 Python API。把下面代码保存为 `workflow.py`，再用
-`uv run python workflow.py` 执行；Jupyter 可通过
-`uv run --with jupyter jupyter lab` 启动。
-
-```python
-import aris
-
-# 1. 切分长音频 & 提取特征划分数据集
-aris.split("recordings/", "segments/", mode="silence")
-manifest = aris.prepare("segments/audio", "data/my_voice", sample_rate=16000)
-
-# 2. 校验数据集完整性
-errors = aris.validate("data/my_voice")
-assert not errors
-
-# 3. 初始化实验并启动训练
-exp_dir = aris.init_experiment("data/my_voice", "experiments/my_voice", model="aria-golf")
-aris.train(exp_dir)
-
-# 4. 重建语音（推理）
-aris.synthesize(
-    exp_dir,
-    "experiments/my_voice/runs/checkpoints/last.ckpt",
-    "out/recon",
-)
-
-# 5. 生成参数操控刺激（支持直接传入命名字符串或 ControlVariant 对象）
-aris.manipulate(
-    exp_dir,
-    "experiments/my_voice/runs/checkpoints/last.ckpt",
-    "out/stimuli",
-    variants=[
-        "f1_up:f1_scale=1.2",
-        "pitch_down:pitch_semitones=-4",
-        "rd_high:glottal_rd_scale=1.6",
-    ],
-)
-
-# 6. 在 Notebook 中一键启动可视化 Web 工作台
-aris.launch_studio(workspace=".", share=True)
-```
-
-## 8. 命令一览
+## 7. 命令一览
 
 ```text
 uv run aris doctor             检查音频与训练依赖、CUDA 及 GPU 状态
@@ -327,7 +216,7 @@ uv run aris manipulate         生成操控刺激
 uv run aris studio             启动浏览器工作台（支持 --share 生成公网链接）
 ```
 
-## 9. 引用
+## 8. 引用
 
 机器可读的引用信息见 [CITATION.cff](CITATION.cff)。
 
@@ -343,7 +232,7 @@ ARIS 的声码器实现源自 GOLF：
 
 代码以 MIT 协议发布，见 [LICENSE](LICENSE)。
 
-## 10. 联系
+## 9. 联系
 
 遇到问题或有建议，欢迎提 [Issue](https://github.com/N1r/ARIS_nsf/issues)，
 也可以邮件联系 <dingyr@hum.leidenuniv.nl>（Leiden University）。
