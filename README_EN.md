@@ -17,11 +17,9 @@ tilt) one at a time — with everything else held fixed — to batch-generate
 paired experimental stimuli.
 
 - Listening demo: <https://n1r.github.io/ARIS_nsf/>
-- **Interactive Google Colab Notebook**: Click the [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb) badge above to run the complete workflow on free cloud GPUs with zero local setup.
+- Tutorial notebook: [`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 
-No dedicated high-performance computing cluster is required: training runs on a standard gaming GPU
-(e.g. RTX 4060 or Colab T4) in a few hours for a few tens of minutes of data;
-reconstruction and stimulus generation require no GPU at all and run quickly on a regular CPU.
+Training runs on standard consumer GPUs (e.g., RTX 4060 or Google Colab T4); resynthesis and stimulus manipulation run efficiently on standard CPUs.
 
 Depending on your workflow, ARIS provides multiple ways to interact:
 

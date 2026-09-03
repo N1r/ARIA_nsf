@@ -15,10 +15,9 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个为语音学研
 或共振峰（F1/F2、谱倾斜），批量生成成对的实验刺激。
 
 - 试听 Demo：<https://n1r.github.io/ARIS_nsf/>
-- **Google Colab 在线全流程体验**：直接点击上方的 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/N1r/ARIS_nsf/blob/main/notebooks/ARIS_Tutorial_and_Workflow.ipynb) 徽章，免费在云端 GPU 上无需任何配置直接运行全流程。
+- 交互教程：[`notebooks/ARIS_Tutorial_and_Workflow.ipynb`](notebooks/ARIS_Tutorial_and_Workflow.ipynb)
 
-不需要专门的高端计算设备：训练在一张普通游戏显卡（如 RTX 4060）或 Google Colab T4 上即可完成，
-几十分钟数据约训练数小时；重建与刺激生成甚至不需要显卡，普通电脑的 CPU 就能快速运行。
+训练在一张主流显卡（如 RTX 4060 或 Google Colab T4）上即可完成；重建与刺激生成可在普通 CPU 上高效运行。
 
 按使用需求，ARIS 提供以下几种交互路径：
 
