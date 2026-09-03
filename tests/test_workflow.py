@@ -54,7 +54,11 @@ class WorkflowTest(unittest.TestCase):
                 self.assertEqual(set(targets.files), {"time_s", "f1", "f2", "f3", "b1", "b2", "b3"})
 
             experiment = create_experiment(
-                dataset, root / "experiment", model="aria-golf", max_steps=2
+                dataset,
+                root / "experiment",
+                model="aria-golf",
+                max_steps=2,
+                learning_rate=0.0004,
             )
             config = (experiment / "config.yaml").read_text()
             decoder = (experiment / "decoder.yaml").read_text()
@@ -63,6 +67,7 @@ class WorkflowTest(unittest.TestCase):
             self.assertIn("residual_reg_weight: 0.02", config)
             self.assertIn("formant_smooth_weight: 0.05", config)
             self.assertIn("load_formants: true", config)
+            self.assertIn("lr: 0.0004", config)
             self.assertIn("SourceFilterSynthAP", decoder)
             self.assertIn("subtract_harmonics: true", decoder)
 

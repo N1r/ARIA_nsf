@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 
@@ -105,14 +106,25 @@ def _nearest_feature_track(times, values, target_times, hop_seconds):
 
 
 class ManifestInferenceDataset(Dataset):
-    """Complete test recordings in the format expected by the legacy writer."""
+    """Complete selected recordings in the format expected by the prediction writer."""
 
-    def __init__(self, manifest_path, split="test", f0_scale=1.0):
+    def __init__(self, manifest_path, split="test", f0_scale=1.0, item_ids=None):
         self.manifest = DatasetManifest.load(Path(manifest_path))
         if split in (None, "all"):
             self.records = list(self.manifest.records)
         else:
             self.records = [record for record in self.manifest.records if record.split == split]
+        if item_ids:
+            requested = list(item_ids)
+            if len(set(requested)) != len(requested):
+                raise ValueError("Requested item IDs must be unique")
+            by_id = {record.id: record for record in self.records}
+            missing = [item_id for item_id in requested if item_id not in by_id]
+            if missing:
+                raise ValueError(
+                    f"Requested item IDs are not in split {split!r}: {', '.join(missing)}"
+                )
+            self.records = [by_id[item_id] for item_id in requested]
         self.f0_scale = float(f0_scale)
         if not np.isfinite(self.f0_scale) or self.f0_scale <= 0:
             raise ValueError("f0_scale must be finite and positive")
@@ -154,6 +166,7 @@ class ManifestDataModule(LightningDataModule):
         num_workers: int = 4,
         predict_f0_scale: float = 1.0,
         predict_split: str = "test",
+        predict_item_ids: Optional[list[str]] = None,
         load_formants: bool = False,
     ):
         super().__init__()
@@ -181,6 +194,7 @@ class ManifestDataModule(LightningDataModule):
                 self.hparams.manifest_path,
                 split=self.hparams.predict_split,
                 f0_scale=self.hparams.predict_f0_scale,
+                item_ids=self.hparams.predict_item_ids,
             )
 
     def _loader(self, dataset, shuffle=False, drop_last=False):

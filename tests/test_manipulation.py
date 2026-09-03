@@ -187,6 +187,43 @@ class ManipulationTest(unittest.TestCase):
             )
             self.assertAlmostEqual(float(command[-1]), semitones_to_scale(12))
 
+    def test_synthesize_filters_requested_manifest_items(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "raw"
+            for index in range(6):
+                _tone(source / f"item-{index}.wav", 140 + index)
+            dataset = root / "dataset"
+            manifest = prepare_dataset(source, dataset, f0_method="autocorr", min_duration=0.2)
+            experiment = create_experiment(dataset, root / "experiment", max_steps=2)
+            checkpoint = experiment / "fake.ckpt"
+            checkpoint.touch()
+            selected = [record.id for record in manifest.records if record.split == "train"][:2]
+
+            command = synthesize(
+                experiment,
+                checkpoint,
+                root / "output",
+                dry_run=True,
+                split="train",
+                item_ids=selected,
+            )
+
+            option = command.index("--data.init_args.predict_item_ids")
+            self.assertEqual(json.loads(command[option + 1]), selected)
+            wrong_split_id = next(
+                record.id for record in manifest.records if record.split != "train"
+            )
+            with self.assertRaisesRegex(ValueError, "not in split"):
+                synthesize(
+                    experiment,
+                    checkpoint,
+                    root / "other",
+                    dry_run=True,
+                    split="train",
+                    item_ids=[wrong_split_id],
+                )
+
     def test_manipulation_rejects_checkpoint_drift_between_variants(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

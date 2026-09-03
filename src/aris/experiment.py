@@ -13,7 +13,7 @@ import sys
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 from .controls.specs import validate_controls
 from .manifest import DatasetManifest, validate_manifest
@@ -36,6 +36,7 @@ def create_experiment(
     f0_min: Optional[float] = None,
     f0_max: float = 500,
     workers: int = 4,
+    learning_rate: float = 0.0002,
     slurm_partition: str = "gpu",
     slurm_gres: str = "gpu:1",
     slurm_time: str = "04:00:00",
@@ -64,6 +65,8 @@ def create_experiment(
             )
     if f0_min is None:
         f0_min = 100.0 if model == "aria-golf" else 60.0
+    if not math.isfinite(learning_rate) or learning_rate <= 0:
+        raise ValueError("learning_rate must be finite and positive")
     sample_rates = {record.sample_rate for record in manifest.records}
     if sample_rates != {16000}:
         raise ValueError(
@@ -99,6 +102,7 @@ def create_experiment(
         f0_min=f0_min,
         f0_max=f0_max,
         workers=workers,
+        learning_rate=learning_rate,
     )
     config_path = output / "config.yaml"
     config_path.write_text(config, encoding="utf-8")
@@ -178,9 +182,10 @@ def synthesize(
     f0_scale: float = 1.0,
     controls: Optional[Mapping[str, float]] = None,
     split: str = "test",
+    item_ids: Optional[Sequence[str]] = None,
     overwrite: bool = False,
 ) -> list[str]:
-    """Render held-out audio from a checkpoint, optionally with DDSP controls."""
+    """Render selected manifest audio from a checkpoint, optionally with controls."""
     from .cuda_env import auto_configure_cuda
 
     auto_configure_cuda()
@@ -204,6 +209,17 @@ def synthesize(
     manifest = DatasetManifest.load(_resolve_dataset_path(metadata["dataset"], experiment))
     if manifest.fingerprint != metadata["dataset_fingerprint"]:
         raise RuntimeError("Dataset fingerprint changed after this experiment was created")
+    requested_ids = list(item_ids or [])
+    if len(set(requested_ids)) != len(requested_ids) or not all(
+        isinstance(item_id, str) and item_id for item_id in requested_ids
+    ):
+        raise ValueError("item_ids must contain unique non-empty strings")
+    eligible_ids = {
+        record.id for record in manifest.records if split == "all" or record.split == split
+    }
+    missing_ids = [item_id for item_id in requested_ids if item_id not in eligible_ids]
+    if missing_ids:
+        raise ValueError(f"Requested item IDs are not in split {split!r}: {', '.join(missing_ids)}")
     if not checkpoint.is_file():
         raise FileNotFoundError(
             f"Checkpoint not found: {checkpoint} — has training completed? "
@@ -233,6 +249,8 @@ def synthesize(
         str(checkpoint),
         "--trainer.logger",
         "false",
+        "--trainer.enable_model_summary",
+        "false",
         "--trainer.callbacks+=aris.controls.lightning.ControlledPredictionWriter",
         "--trainer.callbacks.output_dir",
         str(output),
@@ -240,6 +258,8 @@ def synthesize(
         json.dumps(control_values, sort_keys=True, separators=(",", ":")),
         "--data.init_args.predict_split",
         str(split),
+        "--data.init_args.predict_item_ids",
+        json.dumps(requested_ids, separators=(",", ":")),
         "--data.init_args.predict_f0_scale",
         str(f0_scale),
     ]
@@ -379,7 +399,7 @@ data:
 optimizer:
   class_path: torch.optim.Adam
   init_args:
-    lr: 0.0002
+    lr: {settings["learning_rate"]}
 """
 
 

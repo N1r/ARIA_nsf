@@ -10,6 +10,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional, Sequence
 
 from . import __version__
 from .controls.specs import ControlVariant, _pitch_variant_name, pitch_variants, validate_controls
@@ -57,6 +58,7 @@ def manipulate_controls(
     *,
     dry_run: bool = False,
     split: str = "test",
+    item_ids: Optional[Sequence[str]] = None,
     overwrite: bool = False,
 ) -> list[list[str]]:
     """Render named control variants and write checkpoint-bound provenance."""
@@ -102,6 +104,7 @@ def manipulate_controls(
                 f0_scale=semitones_to_scale(variant.controls.get("pitch_semitones", 0.0)),
                 controls=variant.controls,
                 split=split,
+                item_ids=item_ids,
             )
             for variant in normalized
         ]
@@ -131,6 +134,7 @@ def manipulate_controls(
                 f0_scale=scale,
                 controls=variant.controls,
                 split=split,
+                item_ids=item_ids,
             )
             _verify_checkpoint(checkpoint, checkpoint_hash)
             commands.append(command)
@@ -160,12 +164,14 @@ def manipulate_controls(
             "created_at": datetime.now(timezone.utc).isoformat(),
             "operation": "ddsp-multi-parameter-control",
             "unvoiced_policy": "preserve-zero",
+            "split": split,
             "model": model,
             "experiment": str(experiment),
             "dataset_fingerprint": experiment_metadata["dataset_fingerprint"],
             "checkpoint": str(checkpoint),
             "checkpoint_sha256": checkpoint_hash,
             "aris_version": __version__,
+            "item_ids": list(item_ids or []),
             "outputs": outputs,
         }
         (staging / "manipulation.json").write_text(
@@ -199,10 +205,14 @@ def build_manipulation_report(
     )
     manipulation_metadata = json.loads((manipulations / "manipulation.json").read_text())
     variants = manipulation_metadata["outputs"]
+    selected_ids = set(manipulation_metadata.get("item_ids") or [])
+    selected_split = manipulation_metadata.get("split", "test")
     rows = []
     missing = []
     for record in manifest.records:
-        if record.split != "test":
+        if selected_ids and record.id not in selected_ids:
+            continue
+        if not selected_ids and selected_split != "all" and record.split != selected_split:
             continue
         files = [
             ("Original", manifest.root / record.audio_path),
@@ -242,7 +252,7 @@ table{{border-collapse:collapse;width:100%;display:block;overflow-x:auto}}
 th,td{{padding:.65rem;border-bottom:1px solid #d9d3c8;text-align:left}}
 audio{{width:230px}}code{{background:#eee;padding:.15rem .3rem}}
 .variant{{font-size:.78rem;color:#66727a;margin-bottom:.2rem}}
-</style></head><body><h1>Held-out DDSP parameter manipulation</h1>
+</style></head><body><h1>Selected-item DDSP parameter manipulation</h1>
 <p>{html.escape(_operation_description(manipulation_metadata))}</p>
 <p>Checkpoint SHA-256: <code>{html.escape(manipulation_metadata["checkpoint_sha256"])}</code></p>
 <table><thead><tr>{headers}</tr></thead><tbody>{"".join(rows)}</tbody></table>

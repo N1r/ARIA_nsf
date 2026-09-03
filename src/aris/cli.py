@@ -275,6 +275,12 @@ def parser() -> argparse.ArgumentParser:
         help="number of data-loading worker processes (default: %(default)s)",
     )
     init.add_argument(
+        "--learning-rate",
+        type=float,
+        default=0.0002,
+        help="Adam learning rate (default: %(default)s)",
+    )
+    init.add_argument(
         "--partition",
         default="gpu",
         help="Slurm partition for the generated train.slurm script (default: %(default)s)",
@@ -358,6 +364,12 @@ def parser() -> argparse.ArgumentParser:
         help="dataset split to synthesize (default: %(default)s)",
     )
     synthesis.add_argument(
+        "--item-id",
+        action="append",
+        default=[],
+        help="render only this manifest item ID; repeat to select several items",
+    )
+    synthesis.add_argument(
         "--overwrite",
         "-f",
         action="store_true",
@@ -384,6 +396,12 @@ def parser() -> argparse.ArgumentParser:
         default="test",
         choices=["test", "train", "validation", "all"],
         help="dataset split to manipulate (default: %(default)s)",
+    )
+    manipulation.add_argument(
+        "--item-id",
+        action="append",
+        default=[],
+        help="render only this manifest item ID; repeat to select several items",
     )
     manipulation.add_argument(
         "--overwrite",
@@ -573,6 +591,7 @@ def main(argv=None) -> int:
                 f0_min=args.f0_min,
                 f0_max=args.f0_max,
                 workers=args.workers,
+                learning_rate=args.learning_rate,
                 slurm_partition=args.partition,
                 slurm_gres=args.gres,
                 slurm_time=args.time,
@@ -619,6 +638,7 @@ def main(argv=None) -> int:
                 f0_scale=semitones_to_scale(args.semitones),
                 controls=controls,
                 split=args.split,
+                item_ids=args.item_id,
                 overwrite=args.overwrite,
             )
             if args.dry_run:
@@ -634,6 +654,7 @@ def main(argv=None) -> int:
                 variants,
                 dry_run=args.dry_run,
                 split=args.split,
+                item_ids=args.item_id,
                 overwrite=args.overwrite,
             )
             if args.dry_run:
