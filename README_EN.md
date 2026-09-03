@@ -81,9 +81,9 @@ Open the Colab link above, select a **T4 GPU** runtime, and choose
 the project environment from `uv.lock`, and executes ARIS through `uv run aris ...`.
 Plots and audio players remain in the Colab kernel, so changes to Colab's system Python
 do not affect ARIS and no runtime restart is needed. The tutorial trains for 1,000 steps,
-plots training and validation loss, then uses that checkpoint for reconstruction and
-manipulation. This is enough to inspect learning and hear an initial result, but it is
-not evidence of convergence or research-ready quality. The default batch size is 8 to
+then uses that checkpoint for reconstruction and manipulation. This is enough to hear
+an initial result, but it is not evidence of convergence or research-ready quality.
+The default batch size is 8 to
 fit a Colab T4; the release's 40,000-step checkpoint provides a stable quality reference.
 
 **Try the Pretrained Model Immediately:**
