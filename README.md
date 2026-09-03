@@ -34,7 +34,7 @@ ARIS（Analytic Resonance for Interpretable Synthesis）是一个面向语音学
 
 ## 1. 快速上手与依赖安装
 
-运行环境：Linux、macOS 或 Windows（建议通过 [WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install) 运行）。
+运行环境：推荐使用 Linux（Windows 用户建议通过 [WSL](https://learn.microsoft.com/zh-cn/windows/wsl/install) 运行）。
 
 ### 推荐安装方式（使用 uv 一键同步）
 

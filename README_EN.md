@@ -34,7 +34,7 @@ Depending on your workflow, ARIS provides multiple ways to interact:
 
 ## 1. Installation & Quickstart
 
-Platforms: Linux, macOS, or Windows (via [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
+Supported Platforms: Linux (recommended) or Windows (via [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)).
 
 ### Recommended Installation (Using uv)
 
